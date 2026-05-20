@@ -1,0 +1,18 @@
+/node_modules
+/.next
+/out
+/build
+/data
+*.tsbuildinfo
+next-env.d.ts
+.env*
+.DS_Store
+
+# IDE / editor
+.vscode/
+.idea/
+.claude/settings.local.json
+
+# logs
+*.log
+npm-debug.log*
