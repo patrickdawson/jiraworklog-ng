@@ -269,7 +269,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
             onChange={(e) => setAutoPause(e.target.checked)}
           />
           <span className="text-[13px]">
-            Timer pausiert automatisch während Pausenzeiten
+            Pausenzeiten automatisch von der Arbeitszeit abziehen
           </span>
         </label>
       </Section>
