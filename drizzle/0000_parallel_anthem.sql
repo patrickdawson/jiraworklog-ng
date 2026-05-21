@@ -12,6 +12,8 @@ CREATE TABLE `settings` (
 	`jira_token` text,
 	`jira_user` text,
 	`jira_password` text,
+	`allgemeines_issue_key` text DEFAULT '' NOT NULL,
+	`add_allgemeines_summary` integer DEFAULT true NOT NULL,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 --> statement-breakpoint
@@ -22,6 +24,7 @@ CREATE TABLE `time_entries` (
 	`ended_at` text,
 	`submitted_at` text,
 	`jira_issue_key` text,
+	`is_allgemeines` integer DEFAULT false NOT NULL,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

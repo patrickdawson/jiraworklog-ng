@@ -17,6 +17,10 @@ export const timeEntries = sqliteTable(
     endedAt: text("ended_at"),
     submittedAt: text("submitted_at"),
     jiraIssueKey: text("jira_issue_key"),
+    /** When true, the entry is booked directly on the configured Allgemeines issue. */
+    isAllgemeines: integer("is_allgemeines", { mode: "boolean" })
+      .notNull()
+      .default(false),
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
@@ -55,6 +59,11 @@ export const settings = sqliteTable("settings", {
   jiraToken: text("jira_token"),
   jiraUser: text("jira_user"),
   jiraPassword: text("jira_password"),
+  /** Issue key that collects a sum worklog of every non-Allgemeines booking. */
+  allgemeinesIssueKey: text("allgemeines_issue_key").notNull().default(""),
+  addAllgemeinesSummary: integer("add_allgemeines_summary", { mode: "boolean" })
+    .notNull()
+    .default(true),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

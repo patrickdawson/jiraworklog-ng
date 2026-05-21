@@ -27,6 +27,13 @@ Eine lokale Web-App zum Erfassen von Arbeitszeiten und direkten Buchen als Workl
 - **API Token & Basic Auth** — Unterstützt sowohl Jira Cloud (API Token) als auch Server/Data Center (Basic Auth)
 - **Status-Badges** — Jeder Eintrag zeigt deutlich ob er bereits gebucht (`gebucht`) oder noch offen (`offen`) ist
 
+### „Allgemeines" — Sammelbuchung & Direktbuchung
+- **Allgemeines-Issue-Key konfigurierbar** — Ein Jira-Issue, der als Sammeltopf für allgemeine Tätigkeiten dient (z. B. `TXPIV-450`)
+- **Pro-Eintrag-Checkbox „Auf Allgemeines buchen"** — Im Timer, in der manuellen Anlage und im Bearbeiten-Dialog: bei aktivierter Checkbox wird die **gesamte Beschreibung** als Worklog-Kommentar verwendet und direkt auf den Allgemeines-Issue gebucht (kein Issue-Key in der Beschreibung nötig)
+- **Flag wird beim Neustarten übernommen** — Der Play-Button eines Eintrags startet einen neuen Timer mit demselben Allgemeines-Status
+- **Automatische Sammelbuchung** — Optional: Bei Buchungen auf andere Issues wird die Summe aller dieser Zeiten zusätzlich als separater Worklog auf den Allgemeines-Issue gebucht. Direktbuchungen auf Allgemeines zählen nicht in diese Summe.
+- **In den Einstellungen deaktivierbar** — Sammelbuchung lässt sich pro Instanz ein- und ausschalten
+
 ### Auswertung
 - **Tagesbalkendiagramm** — Gearbeitete Zeit pro Tag der letzten 14 Tage als SVG-Balkendiagramm
 - **Zeitraum-Filter** — Anzeige für aktuelle Woche, Monat, YTD oder alle Daten
@@ -43,6 +50,7 @@ Eine lokale Web-App zum Erfassen von Arbeitszeiten und direkten Buchen als Workl
 - Tages-Sollzeit (für den KPI-Countdown)
 - Mehrere Pausenfenster konfigurierbar
 - Jira-URL, Projekt-Keys, Authentifizierungsmodus
+- Allgemeines-Issue-Key und automatische Sammelbuchung (ein/aus)
 - Datenhaltung: automatische Bereinigung alter Einträge (konfigurierbare Aufbewahrungsdauer)
 
 ---
@@ -81,6 +89,8 @@ App läuft dann unter [http://localhost:3000](http://localhost:3000).
 
 ## Beschreibungsformat
 
+Standardmäßig wird die Beschreibung in drei Teile geparst:
+
 ```
 Merksatz  ISSUE-123  Worklog-Kommentar für Jira
 ```
@@ -89,4 +99,18 @@ Merksatz  ISSUE-123  Worklog-Kommentar für Jira
 - **ISSUE-123** — Jira Issue-Key (muss einem der konfigurierten Projekt-Keys entsprechen)
 - **Worklog-Kommentar** — Text der als Kommentar im Jira-Worklog erscheint (optional)
 
-Fehlende Issue-Keys werden mit "kein Issue-Key" markiert und beim Buchen übersprungen.
+Fehlende Issue-Keys werden mit „kein Issue-Key" markiert und beim Buchen übersprungen.
+
+### Direktbuchung auf Allgemeines
+
+Wenn die Checkbox **„Auf Allgemeines buchen"** am Eintrag (Timer, manuelle Anlage oder Bearbeiten-Dialog) gesetzt ist, wird:
+
+- der Issue-Key nicht aus der Beschreibung geparst,
+- die **gesamte Beschreibung** als Worklog-Kommentar verwendet,
+- der Eintrag auf den in den Einstellungen konfigurierten Allgemeines-Issue gebucht.
+
+In der Eintragsliste erscheint statt „kein Issue-Key" das Label **Allgemeines**.
+
+### Automatische Sammelbuchung
+
+Ist die Sammelbuchung in den Einstellungen aktiviert und ein Allgemeines-Issue konfiguriert, wird beim Buchen pro Tag **zusätzlich** ein Worklog auf den Allgemeines-Issue erzeugt, dessen Dauer der Summe aller anderen Worklogs des Tages entspricht (ohne Kommentar, in der Vorschau als „(Sammelbuchung)" gekennzeichnet). Direkt auf Allgemeines gebuchte Einträge zählen **nicht** in diese Summe — sie werden ohnehin schon übertragen.

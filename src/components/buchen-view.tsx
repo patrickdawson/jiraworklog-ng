@@ -12,6 +12,7 @@ import {
   submitAllOpenToJira,
   submitDayToJira,
   updateEntry,
+  updateRunningAllgemeines,
   updateRunningDescription,
   type DayBookingPlan,
   type SubmitResult,
@@ -25,7 +26,12 @@ export type JiraScope =
   | { kind: "all" };
 
 export type BuchenData = {
-  running: { id: number; description: string; startedAt: string } | null;
+  running: {
+    id: number;
+    description: string;
+    startedAt: string;
+    isAllgemeines: boolean;
+  } | null;
   todayCommittedSeconds: number;
   overtimeBalanceMinutes: number;
   days: DayGroup[];
@@ -184,8 +190,8 @@ export function BuchenView({ data }: { data: BuchenData }) {
               key={day.dayKey}
               day={day}
               jiraConfigured={config.jiraConfigured}
-              onPlay={async (text) => {
-                const r = await startTimer(text);
+              onPlay={async (text, allgemeines) => {
+                const r = await startTimer(text, allgemeines);
                 if (r.previousDiscarded) {
                   setToast(
                     "Vorheriger Eintrag verworfen (kürzer als 1 Minute).",
@@ -234,6 +240,7 @@ function TimerCard({
   onToast: (msg: string) => void;
 }) {
   const [draft, setDraft] = useState(running?.description ?? "");
+  const [allgemeines, setAllgemeines] = useState(running?.isAllgemeines ?? false);
   const [pending, setPending] = useState(false);
   const lastSyncedRef = useRef(running?.id ?? null);
 
@@ -241,15 +248,16 @@ function TimerCard({
   useEffect(() => {
     if (running?.id !== lastSyncedRef.current) {
       setDraft(running?.description ?? "");
+      setAllgemeines(running?.isAllgemeines ?? false);
       lastSyncedRef.current = running?.id ?? null;
     }
-  }, [running?.id, running?.description]);
+  }, [running?.id, running?.description, running?.isAllgemeines]);
 
   async function onStart() {
     if (pending) return;
     setPending(true);
     try {
-      const r = await startTimer(draft);
+      const r = await startTimer(draft, allgemeines);
       if (r.previousDiscarded) {
         onToast("Vorheriger Eintrag verworfen (kürzer als 1 Minute).");
       }
@@ -276,6 +284,13 @@ function TimerCard({
   async function flushDescription() {
     if (running && draft !== running.description) {
       await updateRunningDescription(draft);
+    }
+  }
+
+  async function toggleAllgemeines(next: boolean) {
+    setAllgemeines(next);
+    if (running) {
+      await updateRunningAllgemeines(next);
     }
   }
 
@@ -322,7 +337,11 @@ function TimerCard({
               else onStart();
             }
           }}
-          placeholder="Woran arbeitest du?  ·  Format: Merksatz  TXR-1234  Worklogtext"
+          placeholder={
+            allgemeines
+              ? "Worklogtext für Allgemeines"
+              : "Woran arbeitest du?  ·  Format: Merksatz  TXR-1234  Worklogtext"
+          }
           className="flex-1 rounded-lg border px-3.5 py-3 text-[15px] outline-none"
           style={{
             background: "var(--surface-2)",
@@ -338,6 +357,17 @@ function TimerCard({
           {formatHms(running ? runningSeconds : 0)}
         </div>
       </div>
+      <label className="mt-3 flex items-center gap-2 text-[13px]">
+        <input
+          type="checkbox"
+          checked={allgemeines}
+          onChange={(e) => toggleAllgemeines(e.target.checked)}
+        />
+        <span style={{ color: "var(--text-2)" }}>
+          Auf Allgemeines buchen (gesamte Beschreibung wird als Worklog-Text
+          verwendet)
+        </span>
+      </label>
     </Card>
   );
 }
@@ -353,7 +383,7 @@ function DaySection({
 }: {
   day: DayGroup;
   jiraConfigured: boolean;
-  onPlay: (description: string) => void;
+  onPlay: (description: string, isAllgemeines: boolean) => void;
   onEdit: (entry: EntryView) => void;
   onSubmitJira: () => void;
 }) {
@@ -408,7 +438,7 @@ function GroupRow({
   onEdit,
 }: {
   group: DescGroup;
-  onPlay: (description: string) => void;
+  onPlay: (description: string, isAllgemeines: boolean) => void;
   onEdit: (entry: EntryView) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -454,10 +484,15 @@ function GroupRow({
           <div
             className="text-[12px] font-semibold"
             style={{
-              color: group.issueKey ? "var(--accent)" : "var(--text-3)",
+              color:
+                group.isAllgemeines || group.issueKey
+                  ? "var(--accent)"
+                  : "var(--text-3)",
             }}
           >
-            {group.issueKey ?? "kein Issue-Key"}
+            {group.isAllgemeines
+              ? "Allgemeines"
+              : (group.issueKey ?? "kein Issue-Key")}
           </div>
         </div>
 
@@ -469,7 +504,7 @@ function GroupRow({
         </div>
         <IconButton
           title="Mit gleicher Beschreibung neu starten"
-          onClick={() => onPlay(group.description)}
+          onClick={() => onPlay(group.description, group.isAllgemeines)}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="h-[14px] w-[14px]">
             <path d="M8 5v14l11-7z" />
@@ -714,6 +749,7 @@ function ManualEntryDialog({ onClose }: { onClose: () => void }) {
   const [description, setDescription] = useState("");
   const [startedAt, setStartedAt] = useState(defaultStartedAt());
   const [endedAt, setEndedAt] = useState(defaultEndedAt());
+  const [isAllgemeines, setIsAllgemeines] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -725,6 +761,7 @@ function ManualEntryDialog({ onClose }: { onClose: () => void }) {
         description,
         startedAt: fromLocalInputValue(startedAt),
         endedAt: fromLocalInputValue(endedAt),
+        isAllgemeines,
       });
       if (res.ok) onClose();
       else setError(res.message ?? "Speichern fehlgeschlagen.");
@@ -740,9 +777,23 @@ function ManualEntryDialog({ onClose }: { onClose: () => void }) {
           <TextInput
             value={description}
             onChange={setDescription}
-            placeholder="Merksatz  TXR-1234  Worklogtext"
+            placeholder={
+              isAllgemeines
+                ? "Worklogtext für Allgemeines"
+                : "Merksatz  TXR-1234  Worklogtext"
+            }
           />
         </Field>
+        <label className="flex items-center gap-2 text-[13px]">
+          <input
+            type="checkbox"
+            checked={isAllgemeines}
+            onChange={(e) => setIsAllgemeines(e.target.checked)}
+          />
+          <span style={{ color: "var(--text-2)" }}>
+            Auf Allgemeines buchen
+          </span>
+        </label>
         <div className="grid grid-cols-2 gap-3.5">
           <Field label="Beginn">
             <TextInput type="datetime-local" value={startedAt} onChange={setStartedAt} />
@@ -781,6 +832,7 @@ function EditEntryDialog({
   const [endedAt, setEndedAt] = useState(
     entry.endedAt ? toLocalInputValue(entry.endedAt) : defaultEndedAt(),
   );
+  const [isAllgemeines, setIsAllgemeines] = useState(entry.isAllgemeines);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -792,6 +844,7 @@ function EditEntryDialog({
         description,
         startedAt: fromLocalInputValue(startedAt),
         endedAt: fromLocalInputValue(endedAt),
+        isAllgemeines,
       });
       if (res.ok) onClose();
       else setError(res.message ?? "Speichern fehlgeschlagen.");
@@ -817,6 +870,16 @@ function EditEntryDialog({
         <Field label="Beschreibung">
           <TextInput value={description} onChange={setDescription} />
         </Field>
+        <label className="flex items-center gap-2 text-[13px]">
+          <input
+            type="checkbox"
+            checked={isAllgemeines}
+            onChange={(e) => setIsAllgemeines(e.target.checked)}
+          />
+          <span style={{ color: "var(--text-2)" }}>
+            Auf Allgemeines buchen
+          </span>
+        </label>
         <div className="grid grid-cols-2 gap-3.5">
           <Field label="Beginn">
             <TextInput type="datetime-local" value={startedAt} onChange={setStartedAt} />
@@ -946,12 +1009,12 @@ function JiraSubmitDialog({
                           {w.timeSpent}
                         </span>
                       </div>
-                      {w.comment && (
+                      {(w.comment || w.isSummary) && (
                         <div
                           className="text-[12px] mt-0.5"
                           style={{ color: "var(--text-2)" }}
                         >
-                          {w.comment}
+                          {w.isSummary ? "(Sammelbuchung)" : w.comment}
                         </div>
                       )}
                     </div>

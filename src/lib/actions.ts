@@ -75,10 +75,15 @@ export type StartTimerResult = {
 /** Stops any running timer, then starts a new one with the given text. */
 export async function startTimer(
   description: string,
+  isAllgemeines = false,
 ): Promise<StartTimerResult> {
   const previous = closeRunningTimer();
   db.insert(timeEntries)
-    .values({ description: description ?? "", startedAt: nowIso() })
+    .values({
+      description: description ?? "",
+      startedAt: nowIso(),
+      isAllgemeines,
+    })
     .run();
   revalidateAll();
   return {
@@ -115,12 +120,24 @@ export async function updateRunningDescription(
   revalidateAll();
 }
 
+/** Toggles the Allgemeines flag on the currently running timer. */
+export async function updateRunningAllgemeines(
+  isAllgemeines: boolean,
+): Promise<void> {
+  db.update(timeEntries)
+    .set({ isAllgemeines, updatedAt: nowIso() })
+    .where(isNull(timeEntries.endedAt))
+    .run();
+  revalidateAll();
+}
+
 // ──────────────────────────── Entries ─────────────────────────────
 
 const manualEntrySchema = z.object({
   description: z.string(),
   startedAt: z.string().min(1),
   endedAt: z.string().min(1),
+  isAllgemeines: z.boolean().optional(),
 });
 
 export type ActionResult = { ok: boolean; message?: string };
@@ -130,6 +147,7 @@ export async function createManualEntry(input: {
   description: string;
   startedAt: string;
   endedAt: string;
+  isAllgemeines?: boolean;
 }): Promise<ActionResult> {
   const parsed = manualEntrySchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: "Ungültige Eingabe." };
@@ -148,6 +166,7 @@ export async function createManualEntry(input: {
       description: parsed.data.description,
       startedAt: start.toISOString(),
       endedAt: end.toISOString(),
+      isAllgemeines: parsed.data.isAllgemeines ?? false,
     })
     .run();
   revalidateAll();
@@ -157,9 +176,14 @@ export async function createManualEntry(input: {
 /** Edits an existing entry. Times are optional (description-only edit allowed). */
 export async function updateEntry(
   id: number,
-  input: { description: string; startedAt?: string; endedAt?: string },
+  input: {
+    description: string;
+    startedAt?: string;
+    endedAt?: string;
+    isAllgemeines?: boolean;
+  },
 ): Promise<ActionResult> {
-  const patch: Record<string, string | null> = {
+  const patch: Record<string, string | boolean | null> = {
     description: input.description ?? "",
     updatedAt: nowIso(),
   };
@@ -175,6 +199,10 @@ export async function updateEntry(
     }
     patch.startedAt = start.toISOString();
     patch.endedAt = end.toISOString();
+  }
+
+  if (typeof input.isAllgemeines === "boolean") {
+    patch.isAllgemeines = input.isAllgemeines;
   }
 
   db.update(timeEntries).set(patch).where(eq(timeEntries.id, id)).run();
@@ -207,6 +235,8 @@ const settingsSchema = z.object({
   jiraToken: z.string().nullable(),
   jiraUser: z.string().nullable(),
   jiraPassword: z.string().nullable(),
+  allgemeinesIssueKey: z.string(),
+  addAllgemeinesSummary: z.boolean(),
 });
 
 export type SettingsInput = z.infer<typeof settingsSchema>;
@@ -237,6 +267,8 @@ export async function updateSettings(
       jiraToken: d.jiraToken,
       jiraUser: d.jiraUser,
       jiraPassword: d.jiraPassword,
+      allgemeinesIssueKey: d.allgemeinesIssueKey.trim().toUpperCase(),
+      addAllgemeinesSummary: d.addAllgemeinesSummary,
       updatedAt: nowIso(),
     })
     .where(eq(settings.id, 1))
@@ -307,6 +339,8 @@ export type PlannedWorklog = {
   minutes: number;
   comment: string;
   entryCount: number;
+  /** True for the auto-appended "Allgemeines" sum worklog. */
+  isSummary?: boolean;
 };
 
 export type SkippedEntry = { description: string; reason: string };
@@ -338,24 +372,44 @@ function buildPlanInternal(
 ): { worklogs: InternalWorklog[]; skipped: SkippedEntry[] } {
   const projectKeys = parseProjectKeys(s.jiraProjectKeys);
   const breaks = parseBreaks(s.breaks);
+  const allgemeinesKey = s.allgemeinesIssueKey.trim().toUpperCase();
   const skipped: SkippedEntry[] = [];
   const valid: Parsed[] = [];
 
   for (const entry of candidates) {
-    const parsed = parseDescription(entry.description, projectKeys);
-    if (!parsed.issueKey) {
-      skipped.push({
-        description: entry.description || "(ohne Beschreibung)",
-        reason: "Kein Issue-Key erkannt",
-      });
-      continue;
-    }
     const seconds = effectiveDurationSeconds(
       entry.startedAt,
       entry.endedAt,
       breaks,
       s.autoPauseEnabled,
     );
+
+    let issueKey: string | undefined;
+    let comment: string;
+
+    if (entry.isAllgemeines) {
+      if (!allgemeinesKey) {
+        skipped.push({
+          description: entry.description || "(ohne Beschreibung)",
+          reason: "Allgemeines-Issue ist nicht konfiguriert",
+        });
+        continue;
+      }
+      issueKey = allgemeinesKey;
+      comment = entry.description.trim();
+    } else {
+      const parsed = parseDescription(entry.description, projectKeys);
+      if (!parsed.issueKey) {
+        skipped.push({
+          description: entry.description || "(ohne Beschreibung)",
+          reason: "Kein Issue-Key erkannt",
+        });
+        continue;
+      }
+      issueKey = parsed.issueKey;
+      comment = parsed.comment;
+    }
+
     if (Math.round(seconds / 60) < 1) {
       skipped.push({
         description: entry.description || "(ohne Beschreibung)",
@@ -365,8 +419,8 @@ function buildPlanInternal(
     }
     valid.push({
       id: entry.id,
-      issueKey: parsed.issueKey,
-      comment: parsed.comment,
+      issueKey,
+      comment,
       seconds,
       started: new Date(entry.startedAt),
     });
@@ -413,6 +467,27 @@ function buildPlanInternal(
         entryCount: 1,
         started: p.started,
         entryIds: [p.id],
+      });
+    }
+  }
+
+  if (s.addAllgemeinesSummary && allgemeinesKey) {
+    const contributing = worklogs.filter((w) => w.issueKey !== allgemeinesKey);
+    const summaryMinutes = contributing.reduce((sum, w) => sum + w.minutes, 0);
+    if (summaryMinutes > 0) {
+      const started = contributing.reduce(
+        (min, w) => (w.started < min ? w.started : min),
+        contributing[0].started,
+      );
+      worklogs.push({
+        issueKey: allgemeinesKey,
+        minutes: summaryMinutes,
+        timeSpent: formatDurationHoursMinutes(summaryMinutes),
+        comment: "",
+        entryCount: contributing.reduce((n, w) => n + w.entryCount, 0),
+        started,
+        entryIds: [],
+        isSummary: true,
       });
     }
   }

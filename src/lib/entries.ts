@@ -13,6 +13,7 @@ export type EntryView = {
   issueKey: string | undefined;
   comment: string;
   effectiveSeconds: number;
+  isAllgemeines: boolean;
 };
 
 export type DescGroup = {
@@ -21,6 +22,7 @@ export type DescGroup = {
   entries: EntryView[];
   totalSeconds: number;
   allSubmitted: boolean;
+  isAllgemeines: boolean;
 };
 
 export type DayGroup = {
@@ -60,6 +62,7 @@ export function toEntryView(
     issueKey: parsed.issueKey,
     comment: parsed.comment,
     effectiveSeconds,
+    isAllgemeines: entry.isAllgemeines,
   };
 }
 
@@ -83,7 +86,7 @@ export function buildDayGroups(
   for (const [key, dayEntries] of byDay) {
     const byDesc = new Map<string, EntryView[]>();
     for (const view of dayEntries) {
-      const descKey = view.description.trim();
+      const descKey = `${view.isAllgemeines ? "A" : "P"}|${view.description.trim()}`;
       const bucket = byDesc.get(descKey);
       if (bucket) bucket.push(view);
       else byDesc.set(descKey, [view]);
@@ -97,6 +100,7 @@ export function buildDayGroups(
         entries: es,
         totalSeconds: es.reduce((s, e) => s + e.effectiveSeconds, 0),
         allSubmitted: es.every((e) => e.submittedAt !== null),
+        isAllgemeines: es[0].isAllgemeines,
       };
     });
     groups.sort((a, b) =>

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6bb13389-506d-46fe-85d2-f453d89f5861",
+  "id": "ac54a114-18a7-4d9c-9242-56ca2cb785f5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "settings": {
@@ -107,6 +107,22 @@
           "notNull": false,
           "autoincrement": false
         },
+        "allgemeines_issue_key": {
+          "name": "allgemeines_issue_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "add_allgemeines_summary": {
+          "name": "add_allgemeines_summary",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "text",
@@ -167,6 +183,14 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "is_allgemeines": {
+          "name": "is_allgemeines",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
