@@ -290,7 +290,9 @@ export async function testJiraConnection(input: {
   }
   let auth: JiraAuth | null = null;
   if (input.jiraAuthMode === "token") {
-    auth = input.jiraToken ? { mode: "token", token: input.jiraToken } : null;
+    auth = input.jiraToken?.trim()
+      ? { mode: "token", token: input.jiraToken.trim() }
+      : null;
   } else if (input.jiraUser && input.jiraPassword) {
     auth = {
       mode: "basic",

@@ -1,13 +1,15 @@
 // Jira worklog integration — ported from jiraworklog/lib/{jira-worklog,auth}.ts,
 // using fetch instead of axios.
 
+import { formatJiraFetchError } from "@/lib/jira/fetch-error";
+
 export type JiraAuth =
   | { mode: "token"; token: string }
   | { mode: "basic"; user: string; password: string };
 
 function authHeader(auth: JiraAuth): string {
   if (auth.mode === "token") {
-    return `Bearer ${auth.token}`;
+    return `Bearer ${auth.token.trim()}`;
   }
   const encoded = Buffer.from(`${auth.user}:${auth.password}`).toString(
     "base64",
@@ -57,10 +59,7 @@ export async function postWorklogToJira(
       }),
     });
   } catch (err) {
-    throw new Error(
-      `Keine HTTP-Antwort vom Server (Netzwerk, Timeout, oder falsche URL). (${issueKey})`,
-      { cause: err },
-    );
+    throw new Error(`${formatJiraFetchError(err)} (${issueKey})`, { cause: err });
   }
 
   if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
@@ -93,15 +92,13 @@ export async function checkCredentials(
   try {
     res = await fetch(url, {
       redirect: "manual",
-      headers: { Authorization: authHeader(auth) },
+      headers: {
+        Authorization: authHeader(auth),
+        Accept: "application/json",
+      },
     });
   } catch (err) {
-    return {
-      ok: false,
-      reason: `Keine Verbindung zum Server. Bitte Jira-URL prüfen. (${
-        err instanceof Error ? err.message : String(err)
-      })`,
-    };
+    return { ok: false, reason: formatJiraFetchError(err) };
   }
 
   if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
