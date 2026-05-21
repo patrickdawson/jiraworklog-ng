@@ -7,12 +7,12 @@ CREATE TABLE `settings` (
 	`booking_mode` text DEFAULT 'grouped' NOT NULL,
 	`data_retention_days` integer DEFAULT 90 NOT NULL,
 	`jira_url` text DEFAULT '' NOT NULL,
-	`jira_project_keys` text DEFAULT '[]' NOT NULL,
+	`jira_project_keys` text DEFAULT '["DS","TXAT","TXPIV","TXR","TXRS","TX4B","TX3B","TXAM","PQX"]' NOT NULL,
 	`jira_auth_mode` text DEFAULT 'token' NOT NULL,
 	`jira_token` text,
 	`jira_user` text,
 	`jira_password` text,
-	`allgemeines_issue_key` text DEFAULT '' NOT NULL,
+	`allgemeines_issue_key` text DEFAULT 'TXPIV-450' NOT NULL,
 	`add_allgemeines_summary` integer DEFAULT true NOT NULL,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

@@ -76,7 +76,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'[]'"
+          "default": "'[\"DS\",\"TXAT\",\"TXPIV\",\"TXR\",\"TXRS\",\"TX4B\",\"TX3B\",\"TXAM\",\"PQX\"]'"
         },
         "jira_auth_mode": {
           "name": "jira_auth_mode",
@@ -113,7 +113,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "''"
+          "default": "'TXPIV-450'"
         },
         "add_allgemeines_summary": {
           "name": "add_allgemeines_summary",

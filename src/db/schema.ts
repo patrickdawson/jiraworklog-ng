@@ -51,7 +51,21 @@ export const settings = sqliteTable("settings", {
   dataRetentionDays: integer("data_retention_days").notNull().default(90),
   jiraUrl: text("jira_url").notNull().default(""),
   /** JSON array of project keys, e.g. `["TXR","TXA","TX4B"]`. */
-  jiraProjectKeys: text("jira_project_keys").notNull().default("[]"),
+  jiraProjectKeys: text("jira_project_keys")
+    .notNull()
+    .default(
+      JSON.stringify([
+        "DS",
+        "TXAT",
+        "TXPIV",
+        "TXR",
+        "TXRS",
+        "TX4B",
+        "TX3B",
+        "TXAM",
+        "PQX",
+      ]),
+    ),
   jiraAuthMode: text("jira_auth_mode")
     .$type<JiraAuthMode>()
     .notNull()
@@ -60,7 +74,9 @@ export const settings = sqliteTable("settings", {
   jiraUser: text("jira_user"),
   jiraPassword: text("jira_password"),
   /** Issue key that collects a sum worklog of every non-Allgemeines booking. */
-  allgemeinesIssueKey: text("allgemeines_issue_key").notNull().default(""),
+  allgemeinesIssueKey: text("allgemeines_issue_key")
+    .notNull()
+    .default("TXPIV-450"),
   addAllgemeinesSummary: integer("add_allgemeines_summary", { mode: "boolean" })
     .notNull()
     .default(true),
