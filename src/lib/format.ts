@@ -21,6 +21,26 @@ export function formatSignedHm(totalMinutes: number): string {
 }
 
 /**
+ * Minutes → signed `±hh:mm` using an ASCII `-`, suitable as an input value
+ * the user can edit. (`formatSignedHm` uses a Unicode minus for display.)
+ */
+export function formatSignedHmInput(totalMinutes: number): string {
+  const sign = totalMinutes < 0 ? "-" : "+";
+  return `${sign}${formatHm(Math.abs(totalMinutes))}`;
+}
+
+/** Parses `±hh:mm` (or `hh:mm`) into signed minutes; returns null on failure. */
+export function parseSignedHm(value: string): number | null {
+  const match = value.trim().match(/^([+-−])?(\d{1,3}):(\d{2})$/);
+  if (!match) return null;
+  const sign = match[1] === "-" || match[1] === "−" ? -1 : 1;
+  const h = Number(match[2]);
+  const m = Number(match[3]);
+  if (m >= 60) return null;
+  return sign * (h * 60 + m);
+}
+
+/**
  * Minutes → Jira `timeSpent` format, e.g. `"1h 30m"` or `"45m"`.
  * Ported from jiraworklog/lib/duration.ts.
  */

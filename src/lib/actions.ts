@@ -131,6 +131,34 @@ export async function updateRunningAllgemeines(
   revalidateAll();
 }
 
+/**
+ * Updates the start time of the currently running timer. Used when the user
+ * realises they pressed start too late and wants to back-date the timer live.
+ */
+export async function updateRunningStartedAt(
+  startedAtIso: string,
+): Promise<ActionResult> {
+  const running = getRunningEntry();
+  if (!running) {
+    return { ok: false, message: "Kein laufender Timer." };
+  }
+  const start = new Date(startedAtIso);
+  if (isNaN(start.getTime())) {
+    return { ok: false, message: "Ungültiges Datum." };
+  }
+  const now = new Date();
+  if (start.getTime() >= now.getTime()) {
+    return { ok: false, message: "Start muss in der Vergangenheit liegen." };
+  }
+  const iso = start.toISOString();
+  db.update(timeEntries)
+    .set({ startedAt: iso, updatedAt: nowIso() })
+    .where(eq(timeEntries.id, running.id))
+    .run();
+  revalidateAll();
+  return { ok: true };
+}
+
 // ──────────────────────────── Entries ─────────────────────────────
 
 const manualEntrySchema = z.object({
@@ -237,6 +265,7 @@ const settingsSchema = z.object({
   jiraPassword: z.string().nullable(),
   allgemeinesIssueKey: z.string(),
   addAllgemeinesSummary: z.boolean(),
+  overtimeBaselineMinutes: z.number().int(),
 });
 
 export type SettingsInput = z.infer<typeof settingsSchema>;
@@ -269,6 +298,7 @@ export async function updateSettings(
       jiraPassword: d.jiraPassword,
       allgemeinesIssueKey: d.allgemeinesIssueKey.trim().toUpperCase(),
       addAllgemeinesSummary: d.addAllgemeinesSummary,
+      overtimeBaselineMinutes: d.overtimeBaselineMinutes,
       updatedAt: nowIso(),
     })
     .where(eq(settings.id, 1))

@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `overtime_baseline_minutes` integer DEFAULT 0 NOT NULL;

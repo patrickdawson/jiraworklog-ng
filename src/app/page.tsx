@@ -29,6 +29,7 @@ export default function BuchenPage() {
   const overtime = overtimeBalanceMinutes(
     workedSecondsByDay(entries, cfg),
     s.regularWorkMinutes,
+    s.overtimeBaselineMinutes,
   );
 
   return (

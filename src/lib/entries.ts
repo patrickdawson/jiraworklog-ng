@@ -123,12 +123,15 @@ export function buildDayGroups(
 /**
  * Overtime balance in minutes: for every day that has tracked time, the worked
  * minutes minus the regular target (weekdays only — weekend work is all overtime).
+ * An optional `baselineMinutes` represents overtime carried in from before the
+ * tool was used.
  */
 export function overtimeBalanceMinutes(
   workedByDay: Map<string, number>,
   regularWorkMinutes: number,
+  baselineMinutes = 0,
 ): number {
-  let balance = 0;
+  let balance = baselineMinutes;
   for (const [key, seconds] of workedByDay) {
     const [y, m, d] = key.split("-").map(Number);
     const weekday = new Date(y, m - 1, d).getDay();

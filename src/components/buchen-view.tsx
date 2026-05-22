@@ -14,6 +14,7 @@ import {
   updateEntry,
   updateRunningAllgemeines,
   updateRunningDescription,
+  updateRunningStartedAt,
   type DayBookingPlan,
   type SubmitResult,
 } from "@/lib/actions";
@@ -242,6 +243,8 @@ function TimerCard({
   const [draft, setDraft] = useState(running?.description ?? "");
   const [allgemeines, setAllgemeines] = useState(running?.isAllgemeines ?? false);
   const [pending, setPending] = useState(false);
+  const [editStart, setEditStart] = useState(false);
+  const [startDraft, setStartDraft] = useState("");
   const lastSyncedRef = useRef(running?.id ?? null);
 
   // When the running entry changes (start/stop), reset the local draft.
@@ -249,6 +252,7 @@ function TimerCard({
     if (running?.id !== lastSyncedRef.current) {
       setDraft(running?.description ?? "");
       setAllgemeines(running?.isAllgemeines ?? false);
+      setEditStart(false);
       lastSyncedRef.current = running?.id ?? null;
     }
   }, [running?.id, running?.description, running?.isAllgemeines]);
@@ -292,6 +296,29 @@ function TimerCard({
     if (running) {
       await updateRunningAllgemeines(next);
     }
+  }
+
+  function beginEditStart() {
+    if (!running) return;
+    setStartDraft(toLocalInputValue(running.startedAt));
+    setEditStart(true);
+  }
+
+  async function commitStartEdit() {
+    if (!running) {
+      setEditStart(false);
+      return;
+    }
+    const iso = fromLocalInputValue(startDraft);
+    if (iso === running.startedAt) {
+      setEditStart(false);
+      return;
+    }
+    const res = await updateRunningStartedAt(iso);
+    if (!res.ok) {
+      onToast(res.message ?? "Startzeit konnte nicht geändert werden.");
+    }
+    setEditStart(false);
   }
 
   return (
@@ -357,6 +384,59 @@ function TimerCard({
           {formatHms(running ? runningSeconds : 0)}
         </div>
       </div>
+      {running && (
+        <div className="mt-3 flex items-center gap-2 text-[13px]">
+          <span style={{ color: "var(--text-2)" }}>Gestartet</span>
+          {editStart ? (
+            <>
+              <input
+                type="datetime-local"
+                value={startDraft}
+                autoFocus
+                onChange={(e) => setStartDraft(e.target.value)}
+                onBlur={commitStartEdit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitStartEdit();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setEditStart(false);
+                  }
+                }}
+                className="rounded-md border px-2 py-1 text-[13px] outline-none"
+                style={{
+                  background: "var(--surface-2)",
+                  borderColor: "var(--border-strong)",
+                  color: "var(--text)",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setEditStart(false)}
+                className="text-[12px]"
+                style={{ color: "var(--text-3)" }}
+              >
+                Abbrechen
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={beginEditStart}
+              className="rounded-md border px-2 py-0.5 text-[13px] font-semibold tabular-nums"
+              style={{
+                background: "var(--surface-2)",
+                borderColor: "var(--border-strong)",
+                color: "var(--text)",
+              }}
+              title="Startzeit anpassen"
+            >
+              {formatRunningStart(running.startedAt)}
+            </button>
+          )}
+        </div>
+      )}
       <label className="mt-3 flex items-center gap-2 text-[13px]">
         <input
           type="checkbox"
@@ -370,6 +450,22 @@ function TimerCard({
       </label>
     </Card>
   );
+}
+
+function formatRunningStart(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  const hhmm = `${String(d.getHours()).padStart(2, "0")}:${String(
+    d.getMinutes(),
+  ).padStart(2, "0")}`;
+  if (sameDay) return hhmm;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}.${mm}. ${hhmm}`;
 }
 
 // ────────────────────────── Day section ─────────────────────────

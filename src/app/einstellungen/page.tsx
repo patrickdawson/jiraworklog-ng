@@ -24,6 +24,7 @@ export default function EinstellungenPage() {
         jiraPassword: s.jiraPassword,
         allgemeinesIssueKey: s.allgemeinesIssueKey,
         addAllgemeinesSummary: s.addAllgemeinesSummary,
+        overtimeBaselineMinutes: s.overtimeBaselineMinutes,
       }}
     />
   );

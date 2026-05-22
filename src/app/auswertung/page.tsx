@@ -80,7 +80,11 @@ export default async function AuswertungPage({
   };
 
   const byDay = workedSecondsByDay(entries, cfg);
-  const totalOvertime = overtimeBalanceMinutes(byDay, s.regularWorkMinutes);
+  const totalOvertime = overtimeBalanceMinutes(
+    byDay,
+    s.regularWorkMinutes,
+    s.overtimeBaselineMinutes,
+  );
 
   const { from, to } = rangeBounds(range);
   const dayKeys = enumerateDays(from, to);

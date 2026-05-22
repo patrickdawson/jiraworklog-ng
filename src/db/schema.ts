@@ -80,6 +80,10 @@ export const settings = sqliteTable("settings", {
   addAllgemeinesSummary: integer("add_allgemeines_summary", { mode: "boolean" })
     .notNull()
     .default(true),
+  /** Starting overtime balance in minutes (signed) brought in from before the tool was used. */
+  overtimeBaselineMinutes: integer("overtime_baseline_minutes")
+    .notNull()
+    .default(0),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

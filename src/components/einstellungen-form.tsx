@@ -8,6 +8,7 @@ import {
   updateSettings,
   type SettingsInput,
 } from "@/lib/actions";
+import { formatSignedHmInput, parseSignedHm } from "@/lib/format";
 import type { BreakWindow } from "@/lib/work-time";
 
 type Initial = SettingsInput & {
@@ -55,6 +56,9 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
   const [addAllgemeinesSummary, setAddAllgemeinesSummary] = useState(
     initial.addAllgemeinesSummary,
   );
+  const [overtimeBaseline, setOvertimeBaseline] = useState(
+    formatSignedHmInput(initial.overtimeBaselineMinutes),
+  );
 
   const [saveStatus, setSaveStatus] = useState<{
     tone: "ok" | "err";
@@ -77,6 +81,14 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
       });
       return;
     }
+    const baselineMin = parseSignedHm(overtimeBaseline);
+    if (baselineMin === null) {
+      setSaveStatus({
+        tone: "err",
+        msg: "Überstunden-Startwert bitte als ±hh:mm angeben.",
+      });
+      return;
+    }
     setPending(true);
     try {
       const res = await updateSettings({
@@ -94,6 +106,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         jiraPassword: jPassword || null,
         allgemeinesIssueKey: allgemeinesKey,
         addAllgemeinesSummary,
+        overtimeBaselineMinutes: baselineMin,
       });
       setSaveStatus(
         res.ok
@@ -214,6 +227,19 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
           <Field label="Tagesziel (hh:mm) — Default = Regelarbeitszeit">
             <TextInput value={target} onChange={setTarget} placeholder="07:00" />
           </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Überstunden-Startwert (±hh:mm)">
+            <TextInput
+              value={overtimeBaseline}
+              onChange={setOvertimeBaseline}
+              placeholder="+00:00"
+            />
+          </Field>
+          <div className="text-[12px] self-end pb-2" style={{ color: "var(--text-3)" }}>
+            Bereits vorhandenes Überstundensaldo, das vor dem Einsatz dieses Tools
+            angefallen ist. Wird zum berechneten Saldo addiert.
+          </div>
         </div>
       </Section>
 
