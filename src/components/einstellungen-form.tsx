@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Card, PageHeader } from "@/components/ui";
 import {
   cleanupOldEntries,
@@ -59,6 +59,13 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
   const [overtimeBaseline, setOvertimeBaseline] = useState(
     formatSignedHmInput(initial.overtimeBaselineMinutes),
   );
+  const [themeMode, setThemeMode] = useState<"system" | "light" | "dark">(
+    initial.themeMode,
+  );
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeMode;
+  }, [themeMode]);
 
   const [saveStatus, setSaveStatus] = useState<{
     tone: "ok" | "err";
@@ -107,6 +114,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         allgemeinesIssueKey: allgemeinesKey,
         addAllgemeinesSummary,
         overtimeBaselineMinutes: baselineMin,
+        themeMode,
       });
       setSaveStatus(
         res.ok
@@ -314,6 +322,24 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
             ]}
           />
         </Field>
+      </Section>
+
+      <Section title="Darstellung">
+        <Field label="Farbschema">
+          <Select
+            value={themeMode}
+            onChange={(v) => setThemeMode(v as "system" | "light" | "dark")}
+            options={[
+              { value: "system", label: "Systemeinstellung übernehmen" },
+              { value: "light", label: "Hell" },
+              { value: "dark", label: "Dunkel" },
+            ]}
+          />
+        </Field>
+        <div className="text-[12px]" style={{ color: "var(--text-3)" }}>
+          Die Änderung greift sofort als Vorschau und wird mit „Speichern&rdquo;
+          dauerhaft übernommen.
+        </div>
       </Section>
 
       <Section title="Jira-Anbindung">

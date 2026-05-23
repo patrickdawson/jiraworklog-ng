@@ -266,6 +266,7 @@ const settingsSchema = z.object({
   allgemeinesIssueKey: z.string(),
   addAllgemeinesSummary: z.boolean(),
   overtimeBaselineMinutes: z.number().int(),
+  themeMode: z.enum(["system", "light", "dark"]),
 });
 
 export type SettingsInput = z.infer<typeof settingsSchema>;
@@ -299,6 +300,7 @@ export async function updateSettings(
       allgemeinesIssueKey: d.allgemeinesIssueKey.trim().toUpperCase(),
       addAllgemeinesSummary: d.addAllgemeinesSummary,
       overtimeBaselineMinutes: d.overtimeBaselineMinutes,
+      themeMode: d.themeMode,
       updatedAt: nowIso(),
     })
     .where(eq(settings.id, 1))

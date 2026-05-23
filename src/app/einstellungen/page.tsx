@@ -25,6 +25,7 @@ export default function EinstellungenPage() {
         allgemeinesIssueKey: s.allgemeinesIssueKey,
         addAllgemeinesSummary: s.addAllgemeinesSummary,
         overtimeBaselineMinutes: s.overtimeBaselineMinutes,
+        themeMode: s.themeMode,
       }}
     />
   );

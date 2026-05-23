@@ -7,6 +7,9 @@ export type BookingMode = (typeof BOOKING_MODES)[number];
 export const JIRA_AUTH_MODES = ["token", "basic"] as const;
 export type JiraAuthMode = (typeof JIRA_AUTH_MODES)[number];
 
+export const THEME_MODES = ["system", "light", "dark"] as const;
+export type ThemeMode = (typeof THEME_MODES)[number];
+
 /** A single tracked time span. `endedAt = null` ⇒ the timer is still running. */
 export const timeEntries = sqliteTable(
   "time_entries",
@@ -84,6 +87,11 @@ export const settings = sqliteTable("settings", {
   overtimeBaselineMinutes: integer("overtime_baseline_minutes")
     .notNull()
     .default(0),
+  /** UI theme: follow OS (`system`) or force `light` / `dark`. */
+  themeMode: text("theme_mode")
+    .$type<ThemeMode>()
+    .notNull()
+    .default("system"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

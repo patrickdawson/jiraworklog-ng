@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
+import { getSettings } from "@/db/queries";
 
 export const metadata: Metadata = {
   title: "JiraWorklog Tracker",
   description: "Lokale Zeiterfassung mit Jira-Anbindung",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { themeMode } = getSettings();
   return (
-    <html lang="de" className="h-full antialiased">
+    <html lang="de" className="h-full antialiased" data-theme={themeMode}>
       <body className="min-h-full">
         <div className="grid min-h-screen grid-cols-[232px_1fr]">
           <Sidebar />
