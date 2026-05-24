@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   formatHms,
   formatHm,
@@ -7,6 +7,7 @@ import {
   parseSignedHm,
   formatDurationHoursMinutes,
   dayKey,
+  dayLabel,
   clockTime,
 } from "../format";
 
@@ -120,5 +121,32 @@ describe("clockTime", () => {
   it("returns HH:MM from an ISO timestamp", () => {
     const iso = new Date(2026, 4, 24, 9, 5).toISOString();
     expect(clockTime(iso)).toBe("09:05");
+  });
+});
+
+describe("dayLabel", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 20, 12, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns "Heute" for today', () => {
+    expect(dayLabel(dayKey(new Date()))).toBe("Heute");
+  });
+
+  it('returns "Gestern" for yesterday', () => {
+    expect(dayLabel(dayKey(new Date(Date.now() - 86_400_000)))).toBe("Gestern");
+  });
+
+  it("returns formatted weekday label for a Monday", () => {
+    expect(dayLabel("2026-05-18")).toBe("Montag, 18.05.2026");
+  });
+
+  it("returns correct weekday for a Sunday", () => {
+    expect(dayLabel("2026-05-17")).toBe("Sonntag, 17.05.2026");
   });
 });
