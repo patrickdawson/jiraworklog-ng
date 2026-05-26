@@ -18,7 +18,7 @@ export default function RootLayout({
   const { themeMode } = getSettings();
   return (
     <html lang="de" className="h-full antialiased" data-theme={themeMode}>
-      <body className="min-h-full">
+      <body className="min-h-full" suppressHydrationWarning>
         <div className="grid min-h-screen grid-cols-[232px_1fr]">
           <Sidebar />
           <div className="overflow-x-hidden">{children}</div>

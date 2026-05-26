@@ -20,8 +20,7 @@ export function formatJiraFetchError(err: unknown): string {
   if (tlsHint) {
     return (
       "Keine Verbindung zum Server (TLS/Zertifikat). " +
-      "Internes Jira verwendet oft ein nicht von Node vertrautes Zertifikat — " +
-      "Dev-Server neu starten. " +
+      "Bei Proxy oder Sonderzertifikaten ggf. JIRA_TLS_STRICT=1 prüfen und Dev-Server neu starten. " +
       `(${parts.join(" · ")})`
     );
   }

@@ -312,30 +312,30 @@ export async function updateSettings(
 /** Tests Jira credentials without persisting them. */
 export async function testJiraConnection(input: {
   jiraUrl: string;
-  jiraAuthMode: "token" | "basic";
   jiraToken: string | null;
   jiraUser: string | null;
-  jiraPassword: string | null;
+  jiraPassword?: string | null;
 }): Promise<ActionResult> {
   if (!input.jiraUrl.trim()) {
     return { ok: false, message: "Bitte zuerst eine Jira-URL angeben." };
   }
-  let auth: JiraAuth | null = null;
-  if (input.jiraAuthMode === "token") {
-    auth = input.jiraToken?.trim()
-      ? { mode: "token", token: input.jiraToken.trim() }
-      : null;
-  } else if (input.jiraUser && input.jiraPassword) {
-    auth = {
-      mode: "basic",
-      user: input.jiraUser,
-      password: input.jiraPassword,
+  const user = input.jiraUser?.trim();
+  const password =
+    input.jiraToken?.trim() || input.jiraPassword?.trim() || null;
+  if (!user || !password) {
+    return {
+      ok: false,
+      message: "Bitte Atlassian-E-Mail und API-Token angeben.",
     };
   }
-  if (!auth) {
-    return { ok: false, message: "Zugangsdaten unvollständig." };
+  if (!user.includes("@")) {
+    return {
+      ok: false,
+      message: "Bitte die Atlassian-Konto-E-Mail-Adresse angeben.",
+    };
   }
 
+  const auth: JiraAuth = { user, password };
   const result = await checkCredentials(input.jiraUrl.trim(), auth);
   return result.ok
     ? { ok: true, message: `Verbunden als ${result.displayName}.` }

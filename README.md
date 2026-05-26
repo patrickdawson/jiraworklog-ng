@@ -24,7 +24,7 @@ Eine lokale Web-App zum Erfassen von Arbeitszeiten und direkten Buchen als Workl
 - **Worklog-Vorschau** — Vor dem Buchen wird eine Vorschau aller zu buchenden Worklogs angezeigt
 - **Tagesweise oder alles auf einmal buchen** — Pro Tag oder alle offenen Einträge in einem Schritt nach Jira übertragen
 - **Buchungsmodi** — Einträge gleicher Beschreibung bündeln (gruppiert) oder jeden Eintrag einzeln buchen
-- **API Token (Bearer) & Basic Auth** — Personal Access Tokens für Jira Server/Data Center (Bearer) sowie Benutzer/Passwort (Basic Auth)
+- **Jira Cloud (Basic Auth)** — Atlassian-Konto-E-Mail und [API-Token](https://id.atlassian.com/manage-profile/security/api-tokens) (kein Bearer-PAT, kein Kontopasswort)
 - **Status-Badges** — Jeder Eintrag zeigt deutlich ob er bereits gebucht (`gebucht`) oder noch offen (`offen`) ist
 
 ### „Allgemeines" — Sammelbuchung & Direktbuchung
@@ -85,9 +85,13 @@ npm run dev
 
 App läuft dann unter [http://localhost:3000](http://localhost:3000).
 
-### Internes Jira (TLS)
+### Jira Cloud
 
-Die App akzeptiert standardmäßig interne Jira-Zertifikate, die Node sonst ablehnt (`NODE_TLS_REJECT_UNAUTHORIZED=0` via `src/instrumentation.ts`). Zum Erzwingen echter Zertifikatsprüfung: `JIRA_TLS_STRICT=1` setzen und den Server neu starten.
+In den Einstellungen die Cloud-URL eintragen (z. B. `https://yourorg.atlassian.net`, ohne Pfad am Ende), Atlassian-E-Mail und API-Token hinterlegen, dann „Verbindung testen“.
+
+### TLS (optional)
+
+Jira Cloud nutzt öffentliche Zertifikate. Für Legacy-On-Prem mit internem CA akzeptiert die App standardmäßig auch nicht vertrauenswürdige Zertifikate (`src/instrumentation.ts`). Zum Erzwingen echter Prüfung: `JIRA_TLS_STRICT=1` setzen und den Server neu starten.
 
 ---
 

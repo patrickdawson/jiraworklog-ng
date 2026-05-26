@@ -15,17 +15,22 @@ export function parseProjectKeys(json: string | null | undefined): string[] {
   }
 }
 
-/** Builds the Jira auth object from settings, or `null` if incomplete. */
+/** API token from settings (Cloud: stored in `jira_token`, legacy in `jira_password`). */
+function resolveApiToken(s: SettingsRow): string | null {
+  const token = s.jiraToken?.trim();
+  if (token) return token;
+  return s.jiraPassword?.trim() || null;
+}
+
+/** Builds Jira Cloud auth (Atlassian email + API token), or `null` if incomplete. */
 export function deriveJiraAuth(s: SettingsRow): JiraAuth | null {
-  if (s.jiraAuthMode === "token") {
-    return s.jiraToken ? { mode: "token", token: s.jiraToken } : null;
-  }
-  return s.jiraUser && s.jiraPassword
-    ? { mode: "basic", user: s.jiraUser, password: s.jiraPassword }
-    : null;
+  const user = s.jiraUser?.trim();
+  const password = resolveApiToken(s);
+  if (!user || !password) return null;
+  return { user, password };
 }
 
 /** Whether Jira is configured well enough to attempt a booking. */
 export function isJiraConfigured(s: SettingsRow): boolean {
-  return Boolean(s.jiraUrl) && deriveJiraAuth(s) !== null;
+  return Boolean(s.jiraUrl?.trim()) && deriveJiraAuth(s) !== null;
 }

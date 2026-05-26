@@ -72,7 +72,7 @@ export const settings = sqliteTable("settings", {
   jiraAuthMode: text("jira_auth_mode")
     .$type<JiraAuthMode>()
     .notNull()
-    .default("token"),
+    .default("basic"),
   jiraToken: text("jira_token"),
   jiraUser: text("jira_user"),
   jiraPassword: text("jira_password"),

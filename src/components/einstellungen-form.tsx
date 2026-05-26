@@ -44,12 +44,10 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
     initial.jiraProjectKeys,
   );
   const [newKey, setNewKey] = useState("");
-  const [authMode, setAuthMode] = useState<"token" | "basic">(
-    initial.jiraAuthMode,
+  const [token, setToken] = useState(
+    initial.jiraToken ?? initial.jiraPassword ?? "",
   );
-  const [token, setToken] = useState(initial.jiraToken ?? "");
   const [jUser, setJUser] = useState(initial.jiraUser ?? "");
-  const [jPassword, setJPassword] = useState(initial.jiraPassword ?? "");
   const [allgemeinesKey, setAllgemeinesKey] = useState(
     initial.allgemeinesIssueKey,
   );
@@ -107,10 +105,10 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         dataRetentionDays: Number(retention) || initial.dataRetentionDays,
         jiraUrl,
         jiraProjectKeys: projectKeys,
-        jiraAuthMode: authMode,
+        jiraAuthMode: "basic",
         jiraToken: token || null,
         jiraUser: jUser || null,
-        jiraPassword: jPassword || null,
+        jiraPassword: null,
         allgemeinesIssueKey: allgemeinesKey,
         addAllgemeinesSummary,
         overtimeBaselineMinutes: baselineMin,
@@ -132,10 +130,8 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
     try {
       const res = await testJiraConnection({
         jiraUrl,
-        jiraAuthMode: authMode,
         jiraToken: token || null,
         jiraUser: jUser || null,
-        jiraPassword: jPassword || null,
       });
       setTestStatus({
         tone: res.ok ? "ok" : "err",
@@ -347,7 +343,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
           <TextInput
             value={jiraUrl}
             onChange={setJiraUrl}
-            placeholder="https://jira.example.com"
+            placeholder="https://yourorg.atlassian.net"
           />
         </Field>
         <Field label="Projekt-Keys (für die Format-Auftrennung des Beschreibungstexts)">
@@ -402,34 +398,16 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         </Field>
 
         <div className="grid grid-cols-3 gap-4">
-          <Field label="Auth-Modus">
-            <Select
-              value={authMode}
-              onChange={(v) => setAuthMode(v as "token" | "basic")}
-              options={[
-                { value: "token", label: "API-Token (Bearer)" },
-                { value: "basic", label: "Basic Auth" },
-              ]}
+          <Field label="Atlassian-E-Mail">
+            <TextInput
+              value={jUser}
+              onChange={setJUser}
+              placeholder="name@example.com"
             />
           </Field>
-          {authMode === "token" ? (
-            <Field label="Token">
-              <TextInput value={token} onChange={setToken} type="password" />
-            </Field>
-          ) : (
-            <>
-              <Field label="Benutzer">
-                <TextInput value={jUser} onChange={setJUser} />
-              </Field>
-              <Field label="Passwort">
-                <TextInput
-                  value={jPassword}
-                  onChange={setJPassword}
-                  type="password"
-                />
-              </Field>
-            </>
-          )}
+          <Field label="API-Token">
+            <TextInput value={token} onChange={setToken} type="password" />
+          </Field>
           <Field label="&nbsp;">
             <button
               type="button"
@@ -445,6 +423,19 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
               Verbindung testen
             </button>
           </Field>
+        </div>
+        <div className="text-[12px] -mt-1" style={{ color: "var(--text-3)" }}>
+          Jira Cloud: API-Token unter{" "}
+          <a
+            href="https://id.atlassian.com/manage-profile/security/api-tokens"
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+            style={{ color: "var(--accent)" }}
+          >
+            id.atlassian.com
+          </a>{" "}
+          erstellen (nicht das Kontopasswort verwenden).
         </div>
         {testStatus && (
           <div
