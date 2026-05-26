@@ -1,3 +1,4 @@
+import { RangeControls } from "@/components/auswertung-export";
 import { Card, KpiCard, PageHeader } from "@/components/ui";
 import { getAllEntries, getSettings } from "@/db/queries";
 import {
@@ -5,44 +6,24 @@ import {
   workedSecondsByDay,
 } from "@/lib/entries";
 import { formatHm, formatSignedHm } from "@/lib/format";
+import {
+  parseRangeKind,
+  rangeQuery,
+  resolveRange,
+  type RangeKind,
+} from "@/lib/report-range";
 import { parseProjectKeys } from "@/lib/settings";
 import { parseBreaks } from "@/lib/work-time";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-type Range = "week" | "month" | "ytd" | "all";
-const RANGES: { key: Range; label: string }[] = [
+const RANGES: { key: RangeKind; label: string }[] = [
   { key: "week", label: "Woche" },
   { key: "month", label: "Monat" },
   { key: "ytd", label: "YTD" },
   { key: "all", label: "Alle" },
 ];
-
-function rangeBounds(range: Range): { from: Date; to: Date } {
-  const now = new Date();
-  const to = new Date(now);
-  to.setHours(23, 59, 59, 999);
-
-  if (range === "week") {
-    const from = new Date(now);
-    const day = from.getDay(); // 0 Sun .. 6 Sat
-    const diff = day === 0 ? 6 : day - 1; // back to Monday
-    from.setDate(from.getDate() - diff);
-    from.setHours(0, 0, 0, 0);
-    return { from, to };
-  }
-  if (range === "month") {
-    return {
-      from: new Date(now.getFullYear(), now.getMonth(), 1),
-      to,
-    };
-  }
-  if (range === "ytd") {
-    return { from: new Date(now.getFullYear(), 0, 1), to };
-  }
-  return { from: new Date(2000, 0, 1), to };
-}
 
 function isoDayKey(d: Date): string {
   const y = d.getFullYear();
@@ -65,11 +46,11 @@ function enumerateDays(from: Date, to: Date): string[] {
 export default async function AuswertungPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; anchor?: string }>;
 }) {
   const params = await searchParams;
-  const range: Range = (RANGES.find((r) => r.key === params.range)?.key ??
-    "month") as Range;
+  const kind = parseRangeKind(params.range);
+  const resolved = resolveRange(kind, params.anchor ?? null);
 
   const s = getSettings();
   const entries = getAllEntries();
@@ -86,8 +67,7 @@ export default async function AuswertungPage({
     s.overtimeBaselineMinutes,
   );
 
-  const { from, to } = rangeBounds(range);
-  const dayKeys = enumerateDays(from, to);
+  const dayKeys = enumerateDays(resolved.from, resolved.to);
 
   let rangeSeconds = 0;
   let daysWorked = 0;
@@ -99,8 +79,8 @@ export default async function AuswertungPage({
     }
   }
 
-  // This week (Mon..Sun) total
-  const thisWeek = rangeBounds("week");
+  // "Diese Woche" always reflects the current calendar week, not the selection.
+  const thisWeek = resolveRange("week", null);
   let thisWeekSeconds = 0;
   for (const k of enumerateDays(thisWeek.from, thisWeek.to)) {
     thisWeekSeconds += byDay.get(k) ?? 0;
@@ -111,13 +91,11 @@ export default async function AuswertungPage({
     weekTargetMin - thisWeekSeconds / 60,
   );
 
-  // Averages over the selected range
   const totalDays = dayKeys.length;
   const weeksInRange = Math.max(1, totalDays / 7);
   const avgPerWeekMin = rangeSeconds / 60 / weeksInRange;
   const avgPerWorkedDayMin = daysWorked > 0 ? rangeSeconds / 60 / daysWorked : 0;
 
-  // Bar chart data — last ≤14 days from the range, oldest first.
   const chartDays = dayKeys.slice(-14);
   const chartData = chartDays.map((k) => ({
     key: k,
@@ -125,41 +103,44 @@ export default async function AuswertungPage({
   }));
 
   return (
-    <main className="px-8 py-7">
+    <main className="px-4 py-5 sm:px-8 sm:py-7">
       <PageHeader
         title="Auswertung"
-        subtitle={`Zeitraum · ${
-          RANGES.find((r) => r.key === range)?.label ?? ""
-        }`}
+        subtitle={`Zeitraum · ${resolved.label}`}
         actions={
-          <div className="flex gap-2">
-            {RANGES.map((r) => (
-              <Link
-                key={r.key}
-                href={`/auswertung?range=${r.key}`}
-                className="rounded-lg border px-3 py-1.5 text-[13px] font-semibold"
-                style={
-                  r.key === range
-                    ? {
-                        background: "var(--accent)",
-                        borderColor: "var(--accent)",
-                        color: "#fff",
-                      }
-                    : {
-                        background: "var(--surface)",
-                        borderColor: "var(--border-strong)",
-                        color: "var(--text)",
-                      }
-                }
-              >
-                {r.label}
-              </Link>
-            ))}
+          <div className="flex flex-col gap-2 w-full lg:w-auto lg:flex-row lg:items-center lg:gap-2.5">
+            <div className="flex gap-2">
+              {RANGES.map((r) => (
+                <Link
+                  key={r.key}
+                  href={`/auswertung${rangeQuery(r.key, resolved.kind === "all" ? "" : resolved.anchor)}`}
+                  className="rounded-lg border px-3 py-1.5 text-[13px] font-semibold flex-1 text-center sm:flex-none"
+                  style={
+                    r.key === kind
+                      ? {
+                          background: "var(--accent)",
+                          borderColor: "var(--accent)",
+                          color: "#fff",
+                          cursor: "pointer",
+                        }
+                      : {
+                          background: "var(--surface)",
+                          borderColor: "var(--border-strong)",
+                          color: "var(--text)",
+                          cursor: "pointer",
+                        }
+                  }
+                >
+                  {r.label}
+                </Link>
+              ))}
+            </div>
+            <RangeControls resolved={resolved} />
           </div>
         }
       />
 
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-1 gap-3.5 mb-5 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           label="Ø Arbeitszeit / Woche"
           value={formatHm(Math.round(avgPerWeekMin))}

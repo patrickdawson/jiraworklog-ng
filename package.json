@@ -9,9 +9,12 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "node scripts/db-sample.mjs seed",
+    "db:unseed": "node scripts/db-sample.mjs clean"
   },
   "dependencies": {
+    "@react-pdf/renderer": "4.5.1",
     "better-sqlite3": "^12.10.0",
     "drizzle-orm": "^0.45.2",
     "next": "16.2.6",
