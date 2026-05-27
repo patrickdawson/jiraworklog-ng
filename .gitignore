@@ -16,3 +16,9 @@ next-env.d.ts
 # logs
 *.log
 npm-debug.log*
+
+# playwright e2e
+/tests/.tmp/
+/test-results/
+/playwright-report/
+/playwright/.cache/
