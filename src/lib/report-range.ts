@@ -1,9 +1,21 @@
-export const RANGE_KINDS = ["week", "month", "ytd", "all"] as const;
+export const RANGE_KINDS = ["week", "sprint", "month", "ytd", "all"] as const;
 export type RangeKind = (typeof RANGE_KINDS)[number];
+
+export type SprintConfig = {
+  /** Reference start day (YYYY-MM-DD) of any past, present, or future sprint. */
+  anchorDate: string;
+  /** Length of one sprint in days. */
+  lengthDays: number;
+};
+
+export const DEFAULT_SPRINT_CONFIG: SprintConfig = {
+  anchorDate: "2026-01-07",
+  lengthDays: 14,
+};
 
 export type ResolvedRange = {
   kind: RangeKind;
-  /** Canonical anchor as `YYYY-MM-DD` for week/month/ytd; empty for `all`. */
+  /** Canonical anchor as `YYYY-MM-DD` for week/sprint/month/ytd; empty for `all`. */
   anchor: string;
   from: Date;
   to: Date;
@@ -13,6 +25,8 @@ export type ResolvedRange = {
   slug: string;
   /** Whether prev/next navigation is meaningful for this range kind. */
   navigable: boolean;
+  /** Sprint length in days — set only when kind === "sprint". */
+  sprintLengthDays?: number;
 };
 
 const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", {
@@ -93,6 +107,7 @@ export function resolveRange(
   kind: RangeKind,
   anchorRaw: string | null | undefined,
   now: Date = new Date(),
+  sprintConfig: SprintConfig = DEFAULT_SPRINT_CONFIG,
 ): ResolvedRange {
   const anchorDate = parseAnchor(anchorRaw);
 
@@ -112,6 +127,42 @@ export function resolveRange(
       label,
       slug: `${iso.year}-W${pad(iso.week)}`,
       navigable: true,
+    };
+  }
+
+  if (kind === "sprint") {
+    const length = Math.max(1, Math.round(sprintConfig.lengthDays));
+    const sprintAnchor = parseAnchor(sprintConfig.anchorDate);
+    // Compute the calendar-day delta in UTC to avoid DST shifts skewing the
+    // millisecond-difference by ±1 hour across spring/autumn boundaries.
+    const utcAnchor = Date.UTC(
+      anchorDate.getFullYear(),
+      anchorDate.getMonth(),
+      anchorDate.getDate(),
+    );
+    const utcSprintAnchor = Date.UTC(
+      sprintAnchor.getFullYear(),
+      sprintAnchor.getMonth(),
+      sprintAnchor.getDate(),
+    );
+    const diffDays = Math.floor((utcAnchor - utcSprintAnchor) / 86_400_000);
+    const sprintIndex = Math.floor(diffDays / length);
+    const from = new Date(sprintAnchor);
+    from.setDate(from.getDate() + sprintIndex * length);
+    const to = new Date(from);
+    to.setDate(to.getDate() + length - 1);
+    const label = `Sprint · ${pad(from.getDate())}.${pad(
+      from.getMonth() + 1,
+    )}.–${pad(to.getDate())}.${pad(to.getMonth() + 1)}.${to.getFullYear()}`;
+    return {
+      kind,
+      anchor: localDayKey(from),
+      from: startOfDay(from),
+      to: endOfDay(to),
+      label,
+      slug: `sprint-${localDayKey(from)}`,
+      navigable: true,
+      sprintLengthDays: length,
     };
   }
 
@@ -174,6 +225,11 @@ export function shiftRange(
   const base = parseAnchor(resolved.anchor);
   if (resolved.kind === "week") {
     base.setDate(base.getDate() + delta * 7);
+    return localDayKey(base);
+  }
+  if (resolved.kind === "sprint") {
+    const length = resolved.sprintLengthDays ?? DEFAULT_SPRINT_CONFIG.lengthDays;
+    base.setDate(base.getDate() + delta * length);
     return localDayKey(base);
   }
   if (resolved.kind === "month") {

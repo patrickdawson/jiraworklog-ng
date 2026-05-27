@@ -580,8 +580,9 @@ function GroupRow({
           <div
             className="text-[12px] font-semibold"
             style={{
-              color:
-                group.isAllgemeines || group.issueKey
+              color: group.isAllgemeines
+                ? "var(--teal)"
+                : group.issueKey
                   ? "var(--accent)"
                   : "var(--text-3)",
             }}

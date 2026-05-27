@@ -11,9 +11,13 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const kind = parseRangeKind(url.searchParams.get("range"));
   const anchor = url.searchParams.get("anchor");
-  const range = resolveRange(kind, anchor);
+  const settings = getSettings();
+  const range = resolveRange(kind, anchor, new Date(), {
+    anchorDate: settings.sprintAnchorDate,
+    lengthDays: settings.sprintLengthDays,
+  });
 
-  const report = buildReport(getAllEntries(), getSettings(), range);
+  const report = buildReport(getAllEntries(), settings, range);
   const buffer = await renderToBuffer(<WorklogPdf report={report} />);
 
   return new Response(new Uint8Array(buffer), {

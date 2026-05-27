@@ -2,6 +2,7 @@ import { RangeControls } from "@/components/auswertung-export";
 import { Card, KpiCard, PageHeader } from "@/components/ui";
 import { getAllEntries, getSettings } from "@/db/queries";
 import {
+  concreteSecondsByDay,
   overtimeBalanceMinutes,
   workedSecondsByDay,
 } from "@/lib/entries";
@@ -20,6 +21,7 @@ export const dynamic = "force-dynamic";
 
 const RANGES: { key: RangeKind; label: string }[] = [
   { key: "week", label: "Woche" },
+  { key: "sprint", label: "Sprint" },
   { key: "month", label: "Monat" },
   { key: "ytd", label: "YTD" },
   { key: "all", label: "Alle" },
@@ -50,9 +52,12 @@ export default async function AuswertungPage({
 }) {
   const params = await searchParams;
   const kind = parseRangeKind(params.range);
-  const resolved = resolveRange(kind, params.anchor ?? null);
-
   const s = getSettings();
+  const resolved = resolveRange(kind, params.anchor ?? null, new Date(), {
+    anchorDate: s.sprintAnchorDate,
+    lengthDays: s.sprintLengthDays,
+  });
+
   const entries = getAllEntries();
   const cfg = {
     projectKeys: parseProjectKeys(s.jiraProjectKeys),
@@ -61,6 +66,7 @@ export default async function AuswertungPage({
   };
 
   const byDay = workedSecondsByDay(entries, cfg);
+  const concreteByDay = concreteSecondsByDay(entries, cfg);
   const totalOvertime = overtimeBalanceMinutes(
     byDay,
     s.regularWorkMinutes,
@@ -70,14 +76,22 @@ export default async function AuswertungPage({
   const dayKeys = enumerateDays(resolved.from, resolved.to);
 
   let rangeSeconds = 0;
+  let rangeConcreteSeconds = 0;
   let daysWorked = 0;
   for (const k of dayKeys) {
     const seconds = byDay.get(k) ?? 0;
+    rangeConcreteSeconds += concreteByDay.get(k) ?? 0;
     if (seconds > 0) {
       rangeSeconds += seconds;
       daysWorked += 1;
     }
   }
+  const concreteQuotePct =
+    rangeSeconds > 0
+      ? Math.round((rangeConcreteSeconds * 100) / rangeSeconds)
+      : 0;
+  const targetPct = s.concreteIssueTargetPercent;
+  const quoteMet = rangeSeconds > 0 && concreteQuotePct >= targetPct;
 
   // "Diese Woche" always reflects the current calendar week, not the selection.
   const thisWeek = resolveRange("week", null);
@@ -101,6 +115,15 @@ export default async function AuswertungPage({
     key: k,
     seconds: byDay.get(k) ?? 0,
   }));
+  const quoteChartData = chartDays.map((k) => {
+    const total = byDay.get(k) ?? 0;
+    const concrete = concreteByDay.get(k) ?? 0;
+    return {
+      key: k,
+      percent: total > 0 ? Math.round((concrete * 100) / total) : 0,
+      hasData: total > 0,
+    };
+  });
 
   return (
     <main className="px-4 py-5 sm:px-8 sm:py-7">
@@ -113,7 +136,7 @@ export default async function AuswertungPage({
               {RANGES.map((r) => (
                 <Link
                   key={r.key}
-                  href={`/auswertung${rangeQuery(r.key, resolved.kind === "all" ? "" : resolved.anchor)}`}
+                  href={`/auswertung${rangeQuery(r.key, r.key === resolved.kind ? resolved.anchor : "")}`}
                   className="rounded-lg border px-3 py-1.5 text-[13px] font-semibold flex-1 text-center sm:flex-none"
                   style={
                     r.key === kind
@@ -140,7 +163,7 @@ export default async function AuswertungPage({
         }
       />
 
-      <div className="grid grid-cols-1 gap-3.5 mb-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3.5 mb-5 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard
           label="Ø Arbeitszeit / Woche"
           value={formatHm(Math.round(avgPerWeekMin))}
@@ -166,15 +189,126 @@ export default async function AuswertungPage({
               : "Soll erreicht"
           }
         />
+        <KpiCard
+          label="Quote konkrete Issues"
+          value={`${concreteQuotePct} %`}
+          tone={
+            rangeSeconds === 0 ? "default" : quoteMet ? "pos" : "neg"
+          }
+          meta={
+            rangeSeconds === 0
+              ? "Keine Erfassung im Zeitraum"
+              : `Ziel: ${targetPct} %`
+          }
+        />
       </div>
 
-      <Card>
-        <div className="text-[15px] font-semibold mb-3">
-          Gearbeitete Zeit pro Tag
-        </div>
-        <DailyBars data={chartData} regularMinutes={s.regularWorkMinutes} />
-      </Card>
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+        <Card>
+          <div className="text-[15px] font-semibold mb-3">
+            Gearbeitete Zeit pro Tag
+          </div>
+          <DailyBars data={chartData} regularMinutes={s.regularWorkMinutes} />
+        </Card>
+        <Card>
+          <div className="text-[15px] font-semibold mb-3">
+            Quote konkrete Issues pro Tag
+          </div>
+          <QuoteBars data={quoteChartData} targetPercent={targetPct} />
+        </Card>
+      </div>
     </main>
+  );
+}
+
+function QuoteBars({
+  data,
+  targetPercent,
+}: {
+  data: { key: string; percent: number; hasData: boolean }[];
+  targetPercent: number;
+}) {
+  if (data.length === 0) {
+    return (
+      <div
+        className="text-center py-10 text-[13px]"
+        style={{ color: "var(--text-2)" }}
+      >
+        Noch keine Daten im gewählten Zeitraum.
+      </div>
+    );
+  }
+
+  const width = 720;
+  const height = 220;
+  const padding = { top: 24, right: 20, bottom: 30, left: 40 };
+  const innerW = width - padding.left - padding.right;
+  const innerH = height - padding.top - padding.bottom;
+  const barW = innerW / data.length;
+  const targetY = padding.top + innerH - (targetPercent * innerH) / 100;
+
+  const WEEKDAY_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+      <line
+        x1={padding.left}
+        y1={padding.top + innerH}
+        x2={width - padding.right}
+        y2={padding.top + innerH}
+        stroke="var(--border)"
+      />
+      <line
+        x1={padding.left}
+        y1={targetY}
+        x2={width - padding.right}
+        y2={targetY}
+        stroke="var(--border-strong)"
+        strokeDasharray="4 4"
+      />
+      <text
+        x={padding.left + 4}
+        y={targetY - 4}
+        fill="var(--text-3)"
+        fontSize="10"
+      >
+        Ziel {targetPercent}%
+      </text>
+      {data.map((d, i) => {
+        const h = (d.percent * innerH) / 100;
+        const x = padding.left + i * barW + barW * 0.15;
+        const y = padding.top + innerH - h;
+        const w = barW * 0.7;
+        const fill = !d.hasData
+          ? "var(--surface-2)"
+          : d.percent >= targetPercent
+            ? "var(--pos)"
+            : "var(--accent)";
+        const [y_, m_, day_] = d.key.split("-").map(Number);
+        const weekday = new Date(y_, m_ - 1, day_).getDay();
+        return (
+          <g key={d.key}>
+            <rect
+              x={x}
+              y={d.hasData ? y : padding.top + innerH - 2}
+              width={w}
+              height={d.hasData ? Math.max(0, h) : 2}
+              rx="3"
+              fill={fill}
+            />
+            <text
+              x={padding.left + i * barW + barW / 2}
+              y={padding.top + innerH + 18}
+              fontSize="10.5"
+              textAnchor="middle"
+              fill="var(--text-3)"
+            >
+              {WEEKDAY_SHORT[weekday]} {day_}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 

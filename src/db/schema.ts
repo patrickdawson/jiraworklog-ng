@@ -92,6 +92,16 @@ export const settings = sqliteTable("settings", {
     .$type<ThemeMode>()
     .notNull()
     .default("system"),
+  /** Reference start date (YYYY-MM-DD) from which all sprints are counted. */
+  sprintAnchorDate: text("sprint_anchor_date")
+    .notNull()
+    .default("2026-01-07"),
+  /** Length of a sprint in days. */
+  sprintLengthDays: integer("sprint_length_days").notNull().default(14),
+  /** Target percentage of time spent on concrete (non-Allgemeines) issues. */
+  concreteIssueTargetPercent: integer("concrete_issue_target_percent")
+    .notNull()
+    .default(60),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

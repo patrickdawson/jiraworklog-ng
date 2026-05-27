@@ -22,6 +22,13 @@
       "when": 1779340767567,
       "tag": "0002_add_theme_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1779340767568,
+      "tag": "0003_add_sprint_and_kpi",
+      "breakpoints": true
     }
   ]
 }

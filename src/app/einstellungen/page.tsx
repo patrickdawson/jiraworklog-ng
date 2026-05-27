@@ -26,6 +26,9 @@ export default function EinstellungenPage() {
         addAllgemeinesSummary: s.addAllgemeinesSummary,
         overtimeBaselineMinutes: s.overtimeBaselineMinutes,
         themeMode: s.themeMode,
+        sprintAnchorDate: s.sprintAnchorDate,
+        sprintLengthDays: s.sprintLengthDays,
+        concreteIssueTargetPercent: s.concreteIssueTargetPercent,
       }}
     />
   );

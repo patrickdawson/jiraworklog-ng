@@ -160,3 +160,29 @@ export function workedSecondsByDay(
   }
   return map;
 }
+
+/**
+ * Effective worked seconds per local day for entries that count toward
+ * concrete-issue work — i.e. entries NOT flagged as Allgemeines. Entries
+ * without a parseable issue key still count as "concrete" here, on the
+ * assumption that the user simply forgot to add the key.
+ */
+export function concreteSecondsByDay(
+  entries: TimeEntry[],
+  cfg: EntryAnalysisConfig,
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const entry of entries) {
+    if (!entry.endedAt) continue;
+    if (entry.isAllgemeines) continue;
+    const seconds = effectiveDurationSeconds(
+      entry.startedAt,
+      entry.endedAt,
+      cfg.breaks,
+      cfg.autoPauseEnabled,
+    );
+    const key = dayKey(entry.startedAt);
+    map.set(key, (map.get(key) ?? 0) + seconds);
+  }
+  return map;
+}

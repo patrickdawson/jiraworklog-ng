@@ -60,6 +60,15 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
   const [themeMode, setThemeMode] = useState<"system" | "light" | "dark">(
     initial.themeMode,
   );
+  const [sprintAnchorDate, setSprintAnchorDate] = useState(
+    initial.sprintAnchorDate,
+  );
+  const [sprintLengthDays, setSprintLengthDays] = useState(
+    String(initial.sprintLengthDays),
+  );
+  const [concreteTarget, setConcreteTarget] = useState(
+    String(initial.concreteIssueTargetPercent),
+  );
 
   useEffect(() => {
     document.documentElement.dataset.theme = themeMode;
@@ -94,6 +103,29 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
       });
       return;
     }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(sprintAnchorDate)) {
+      setSaveStatus({
+        tone: "err",
+        msg: "Sprint-Ankerdatum bitte als YYYY-MM-DD angeben.",
+      });
+      return;
+    }
+    const sprintLen = Number(sprintLengthDays);
+    if (!Number.isInteger(sprintLen) || sprintLen < 1 || sprintLen > 365) {
+      setSaveStatus({
+        tone: "err",
+        msg: "Sprint-Länge bitte als ganze Zahl zwischen 1 und 365 angeben.",
+      });
+      return;
+    }
+    const targetPct = Number(concreteTarget);
+    if (!Number.isInteger(targetPct) || targetPct < 0 || targetPct > 100) {
+      setSaveStatus({
+        tone: "err",
+        msg: "Ziel-Prozentwert bitte als ganze Zahl zwischen 0 und 100 angeben.",
+      });
+      return;
+    }
     setPending(true);
     try {
       const res = await updateSettings({
@@ -113,6 +145,9 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         addAllgemeinesSummary,
         overtimeBaselineMinutes: baselineMin,
         themeMode,
+        sprintAnchorDate,
+        sprintLengthDays: sprintLen,
+        concreteIssueTargetPercent: targetPct,
       });
       setSaveStatus(
         res.ok
@@ -476,6 +511,37 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         <div className="mt-2 text-[12px]" style={{ color: "var(--text-3)" }}>
           Direkte Buchungen auf den „Allgemeines&rdquo;-Issue werden unverändert
           übertragen und nicht zusätzlich in die Sammelbuchung aufgenommen.
+        </div>
+      </Section>
+
+      <Section title="Sprint & KPI">
+        <div className="grid grid-cols-3 gap-4">
+          <Field label="Sprint-Ankerdatum">
+            <TextInput
+              value={sprintAnchorDate}
+              onChange={setSprintAnchorDate}
+              type="date"
+            />
+          </Field>
+          <Field label="Sprint-Länge (Tage)">
+            <TextInput
+              value={sprintLengthDays}
+              onChange={setSprintLengthDays}
+              type="number"
+            />
+          </Field>
+          <Field label="Ziel konkrete Issues (%)">
+            <TextInput
+              value={concreteTarget}
+              onChange={setConcreteTarget}
+              type="number"
+            />
+          </Field>
+        </div>
+        <div className="mt-1 text-[12px]" style={{ color: "var(--text-3)" }}>
+          Beliebiger Tag aus einem vergangenen oder aktuellen Sprint reicht als
+          Anker — alle anderen Sprints werden daraus berechnet. Die Quote misst
+          den Anteil der Zeit, die nicht auf „Allgemeines&rdquo; gebucht wurde.
         </div>
       </Section>
 

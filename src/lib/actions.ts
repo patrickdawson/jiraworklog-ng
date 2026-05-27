@@ -267,6 +267,9 @@ const settingsSchema = z.object({
   addAllgemeinesSummary: z.boolean(),
   overtimeBaselineMinutes: z.number().int(),
   themeMode: z.enum(["system", "light", "dark"]),
+  sprintAnchorDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  sprintLengthDays: z.number().int().min(1).max(365),
+  concreteIssueTargetPercent: z.number().int().min(0).max(100),
 });
 
 export type SettingsInput = z.infer<typeof settingsSchema>;
@@ -301,6 +304,9 @@ export async function updateSettings(
       addAllgemeinesSummary: d.addAllgemeinesSummary,
       overtimeBaselineMinutes: d.overtimeBaselineMinutes,
       themeMode: d.themeMode,
+      sprintAnchorDate: d.sprintAnchorDate,
+      sprintLengthDays: d.sprintLengthDays,
+      concreteIssueTargetPercent: d.concreteIssueTargetPercent,
       updatedAt: nowIso(),
     })
     .where(eq(settings.id, 1))

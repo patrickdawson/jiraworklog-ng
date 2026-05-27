@@ -144,6 +144,23 @@ function AnchorPicker({ resolved }: { resolved: ResolvedRange }) {
     );
   }
 
+  if (resolved.kind === "sprint") {
+    return (
+      <input
+        type="date"
+        value={resolved.anchor}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
+          router.push(`/auswertung${rangeQuery("sprint", value)}`);
+        }}
+        className={inputClassName}
+        style={inputStyle}
+        aria-label="Tag im Sprint"
+      />
+    );
+  }
+
   // week
   return (
     <input
