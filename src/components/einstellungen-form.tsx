@@ -230,6 +230,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         actions={
           <button
             type="button"
+            data-testid="settings-save"
             onClick={onSave}
             disabled={pending}
             className="rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition-opacity disabled:opacity-60"
@@ -443,9 +444,17 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
           <Field label="API-Token">
             <TextInput value={token} onChange={setToken} type="password" />
           </Field>
-          <Field label="&nbsp;">
+          <div className="block mb-3">
+            <div
+              className="text-[12px] mb-1.5"
+              aria-hidden
+              style={{ color: "var(--text-2)" }}
+            >
+              &nbsp;
+            </div>
             <button
               type="button"
+              data-testid="settings-test-connection"
               onClick={onTest}
               disabled={pending}
               className="w-full rounded-lg border px-3 py-2 text-[13px] font-semibold disabled:opacity-60"
@@ -457,7 +466,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
             >
               Verbindung testen
             </button>
-          </Field>
+          </div>
         </div>
         <div className="text-[12px] -mt-1" style={{ color: "var(--text-3)" }}>
           Jira Cloud: API-Token unter{" "}

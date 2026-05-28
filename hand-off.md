@@ -20,26 +20,28 @@ Status at hand-off: 7/7 green, lint clean, `npx tsc --noEmit` clean.
 
 1. **Decide whether `playwright-report/` and `test-results/` should be artifacted.** Currently ignored — if CI is added later (PR-6), the workflow should upload these on failure.
 
-## Known quirk (worth fixing in PR-2)
+## Known quirk (FIXED in PR-2)
 
-The "Verbindung testen" button has no accessible name because `EinstellungenForm` wraps it in `<Field label="&nbsp;">` (the Field component renders the label inside a `<label>` element, and a `&nbsp;` becomes the button's accessible name). The test works around this with `page.locator('button', { hasText: 'Verbindung testen' })`. Fix idea for PR-2: render the button outside the `Field`, or change the label to a visually-hidden but accessible string — then the test can go back to `getByRole('button', { name: 'Verbindung testen' })`.
+~~The "Verbindung testen" button has no accessible name because `EinstellungenForm` wraps it in `<Field label="&nbsp;">`.~~ Fixed in PR-2: the button now renders inside a plain `<div>` (with an `aria-hidden` `&nbsp;` spacer for vertical alignment) instead of a `<label>`, so its accessible name is "Verbindung testen". The existing `jira-connection.spec.ts` still uses the `page.locator('button', { hasText: 'Verbindung testen' })` workaround (PR-2 made no test changes), but future specs can use `getByRole('button', { name: 'Verbindung testen' })` or `getByTestId('settings-test-connection')`.
 
 ## Next PRs (priority order)
 
-### PR-2 — `data-testid` pass (low-risk, no test changes)
+### PR-2 — `data-testid` pass (DONE) ✅
 
-Single PR, no test code changes. Add these eight test IDs:
+All eight test IDs added; no test code changes; lint + `tsc --noEmit` clean; 7/7 existing e2e green.
 
-| Component file | Element | `data-testid` |
-|---|---|---|
-| `src/components/buchen-view.tsx` | Timer toggle button | `timer-toggle` |
-| `src/components/einstellungen-form.tsx` | "Speichern" button | `settings-save` |
-| `src/components/einstellungen-form.tsx` | "Verbindung testen" button | `settings-test-connection` (and fix the `<Field label="&nbsp;">` wrapping while you're there) |
-| `src/components/buchen-view.tsx` | "Nach Jira buchen" button | `open-jira-submit` |
-| `src/components/buchen-view.tsx` | Confirm button inside `JiraSubmitDialog` | `jira-submit-confirm` |
-| `src/components/buchen-view.tsx` | Each entry row | `entry-row` + `data-entry-id={entry.id}` |
-| `src/components/buchen-view.tsx` | "+ Eintrag" / new manual entry button | `manual-entry-new` |
-| `src/components/auswertung-export.tsx` | PDF download button | `pdf-download` |
+| Component file | Element | `data-testid` | Notes |
+|---|---|---|---|
+| `src/components/buchen-view.tsx` | Timer toggle button | `timer-toggle` | raw `<button>` |
+| `src/components/einstellungen-form.tsx` | "Speichern" button | `settings-save` | |
+| `src/components/einstellungen-form.tsx` | "Verbindung testen" button | `settings-test-connection` | `<Field label="&nbsp;">` replaced with a plain `<div>` + `aria-hidden` spacer |
+| `src/components/buchen-view.tsx` | per-day "Nach Jira buchen" button | `open-jira-submit` | the **per-day** button in `DaySection` (scope `kind: "day"`). The header "Nach Jira buchen (N)" button (scope `kind: "all"`) is **not** tagged. |
+| `src/components/buchen-view.tsx` | Confirm button inside `JiraSubmitDialog` | `jira-submit-confirm` | "Jetzt buchen" |
+| `src/components/buchen-view.tsx` | Each entry row | `entry-row` + `data-entry-id={entry.id}` | On single-entry `GroupRow`s (the row *is* the entry) **and** on expanded `EntryRow`s. Multi-entry group header rows are **not** tagged. |
+| `src/components/buchen-view.tsx` | "+ Eintrag" / new manual entry button | `manual-entry-new` | via new `testId` prop on the shared `Button` |
+| `src/components/auswertung-export.tsx` | PDF download button | `pdf-download` | the "Als PDF" button in `RangeControls` |
+
+Implementation note: the shared `Button` component in `buchen-view.tsx` gained an optional `testId?: string` prop (applied as `data-testid`) so `manual-entry-new` and `jira-submit-confirm` could be tagged without raw-button refactors.
 
 ### PR-3 — timer + manual entry scenarios
 

@@ -125,7 +125,9 @@ export function BuchenView({ data }: { data: BuchenData }) {
                 Nach Jira buchen ({totalUnsubmitted})
               </Button>
             )}
-            <Button onClick={() => setManualOpen(true)}>+ Eintrag</Button>
+            <Button testId="manual-entry-new" onClick={() => setManualOpen(true)}>
+              + Eintrag
+            </Button>
           </>
         }
       />
@@ -326,6 +328,7 @@ function TimerCard({
       <div className="flex items-center gap-4">
         <button
           type="button"
+          data-testid="timer-toggle"
           onClick={running ? onStop : onStart}
           disabled={pending}
           className="flex h-[52px] w-[52px] flex-shrink-0 items-center justify-center rounded-full text-white transition-opacity disabled:opacity-60"
@@ -502,6 +505,7 @@ function DaySection({
           {day.unsubmittedCount > 0 && jiraConfigured && (
             <button
               type="button"
+              data-testid="open-jira-submit"
               onClick={onSubmitJira}
               className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white"
               style={{ background: "var(--accent)" }}
@@ -558,6 +562,9 @@ function GroupRow({
       <div
         className="flex items-center gap-3 px-4 py-3"
         style={{ borderColor: "var(--border)" }}
+        {...(singleEntry
+          ? { "data-testid": "entry-row", "data-entry-id": singleEntry.id }
+          : {})}
       >
         <button
           type="button"
@@ -667,6 +674,8 @@ function EntryRow({
   }
   return (
     <div
+      data-testid="entry-row"
+      data-entry-id={entry.id}
       className="flex items-center gap-3 px-4 py-2.5 pl-12 text-[13px]"
       style={{ color: "var(--text-2)" }}
     >
@@ -737,12 +746,14 @@ function Button({
   variant = "default",
   disabled,
   type = "button",
+  testId,
 }: {
   children: ReactNode;
   onClick?: () => void;
   variant?: "default" | "primary" | "danger";
   disabled?: boolean;
   type?: "button" | "submit";
+  testId?: string;
 }) {
   const styles =
     variant === "primary"
@@ -761,6 +772,7 @@ function Button({
   return (
     <button
       type={type}
+      data-testid={testId}
       onClick={onClick}
       disabled={disabled}
       className="rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition-opacity disabled:opacity-60"
@@ -1173,6 +1185,7 @@ function JiraSubmitDialog({
           {!result?.ok && (
             <Button
               variant="primary"
+              testId="jira-submit-confirm"
               onClick={onConfirm}
               disabled={
                 pending || plan === null || plan.worklogs.length === 0
