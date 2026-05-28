@@ -68,11 +68,19 @@ Implementation notes:
 - Both tests `seedSettings({ addAllgemeinesSummary: false })` in `beforeEach`. The baseline enables the summary worklog, which would post a **second** worklog (to the summary issue) per submission and double up the `/__mock/received` entries. Disabling it keeps one concrete entry → exactly one POST.
 - Gotcha: the shared `Modal`'s header "×" button has `aria-label="Schließen"`, which collides with the footer "Schließen" button under `getByRole("button", { name: "Schließen" })` (strict-mode → 2 matches). Use `dialog.locator("button", { hasText: "Schließen" })` (text, not accessible name) to target the footer button unambiguously. ("Abbrechen" on the error path has no such collision.)
 
-### PR-5 — Auswertung range filter + PDF download
+### PR-5 — Auswertung range filter + PDF download (DONE) ✅
 
-Spec: `auswertung.spec.ts`. Cover:
-- Seed entries across multiple days. Navigate `/auswertung`, switch range (Woche / Sprint / Monat / YTD), assert the KPI numbers update.
-- Click the PDF download button, await `page.waitForEvent('download')`, save to a temp file, assert non-zero size and `application/pdf` magic bytes (`%PDF-`).
+Spec: `auswertung.spec.ts` (3 tests). 16/16 e2e green, lint + `tsc --noEmit` clean.
+
+- **Range period updates KPIs**: seed 8h on one March day + 4h on each of two April days (all concrete, baseline has auto-pause off + no breaks → worked time is exactly `ended − started`). Navigate `?range=month&anchor=2026-03-01` (Ø/Tag = `08:00`, Quote = `100 %`), click the "Nächster Zeitraum" arrow to step to April (Ø/Tag = `04:00`), then `?range=week&anchor=2026-04-14` to confirm the *kind* switch re-filters (Ø/Woche `01:52` for the April month → `08:00` for the April week). Finally an empty month (`2026-02-01`) shows Ø/Tag `00:00` + "Keine Erfassung im Zeitraum".
+- **Range buttons navigate**: click the "Woche" range link, assert URL gains `range=week` and the page still renders.
+- **PDF export**: `page.waitForEvent('download')` around the `pdf-download` click, assert `suggestedFilename() === "stundenzettel-2026-03.pdf"`, read `download.path()`, assert non-zero size and `%PDF-` magic bytes.
+
+Implementation notes:
+- **All dates are fixed 2026 calendar days, navigated via explicit `anchor` query params — not relative to `new Date()`.** `resolveRange` for week/sprint/month is purely anchor-driven (run-date independent), so anchored navigation gives deterministic KPI values regardless of when the suite runs. Avoid asserting exact YTD values: YTD caps `to` at `now` for the current year, so its totals depend on the run date.
+- KPI assertions use a `kpiValue(page, label)` helper: `getByText(label, { exact: true }).locator("xpath=following-sibling::div[1]")` — the `KpiCard` renders the label div immediately followed by the big value div.
+- KPI values render via `formatHm` as `HH:MM` (e.g. `08:00`), **not** `8h 0m`.
+- The `"Überstundensaldo"` and `"Diese Woche"` KPIs are computed over *all* entries / the *current* calendar week regardless of the selected range, so they're not useful signals for "range changed the numbers" — assert `Ø Arbeitszeit / Tag` or `/ Woche` instead.
 
 ### PR-6 — CI workflow (deferred)
 
@@ -96,6 +104,10 @@ tests/
     smoke.spec.ts
     settings.spec.ts
     jira-connection.spec.ts
+    timer.spec.ts
+    manual-entry.spec.ts
+    jira-submit.spec.ts
+    auswertung.spec.ts
     helpers/
       db.ts
       jira-mock.ts
