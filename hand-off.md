@@ -43,15 +43,18 @@ All eight test IDs added; no test code changes; lint + `tsc --noEmit` clean; 7/7
 
 Implementation note: the shared `Button` component in `buchen-view.tsx` gained an optional `testId?: string` prop (applied as `data-testid`) so `manual-entry-new` and `jira-submit-confirm` could be tagged without raw-button refactors.
 
-### PR-3 — timer + manual entry scenarios
+### PR-3 — timer + manual entry scenarios (DONE) ✅
 
-Spec files: `timer.spec.ts`, `manual-entry.spec.ts`. Cover:
-- Start timer with description containing an issue key (e.g. `TEST-123 some work`), wait a few seconds, stop, assert the entry exists in the day section and `getEntries()` shows the right `jiraIssueKey`.
-- Start, stop immediately (<60s) — assert no entry persisted (relies on `MIN_TRACKED_SECONDS = 60` in `src/lib/actions.ts`).
-- Open the manual-entry dialog, fill start/end and description, save, assert row visible + DB has it.
-- `seedEntries(...)` an existing entry, open edit dialog, change description, save, assert change reflected.
+Spec files: `timer.spec.ts` (2 tests), `manual-entry.spec.ts` (2 tests). 11/11 e2e green, lint + `tsc --noEmit` clean.
 
-For time-sensitive flows: prefer `seedEntries` + UI assertion over real wall-clock waits. For the `<60s` case, time-travel is messier — either accept a few-seconds real wait or refactor the action to accept an injected clock (out of scope for this PR).
+- **Timer persist**: start with `TEST-123 some work`, back-date the "Gestartet" start by 30 min via the edit field so the tracked duration clears the 60s discard threshold (no wall-clock wait), stop, assert the day-section row shows `TEST-123` and `getEntries()` has the entry with `endedAt` set.
+- **Timer discard (<60s)**: start, stop immediately, assert the discard toast appears and no entry persisted (relies on `MIN_TRACKED_SECONDS = 60` in `src/lib/actions.ts`). The hand-off's two suggested approaches both used: discard case stops immediately (genuinely <60s); persist case uses the start-edit field rather than a refactor. No clock injection / code refactor was needed.
+- **Manual create**: open the manual-entry dialog, fill description/Beginn/Ende, save, assert row visible + DB row.
+- **Manual edit**: `seedEntries(...)` an existing entry, open edit dialog, change description, save, assert change reflected in UI + DB.
+
+Gotcha discovered: `page.getByLabel("Beschreibung")` does **substring** matching and a page-wide search collided with the always-rendered TimerCard checkbox label "Auf Allgemeines buchen (gesamte **Beschreibung** wird als Worklog-Text verwendet)". Root-cause fix: the shared `Modal` in `buchen-view.tsx` now carries `role="dialog"` + `aria-modal="true"` + `aria-label={title}` (a real a11y improvement), and dialog specs scope field lookups with `page.getByRole("dialog").getByLabel(...)`. Future specs touching any modal (incl. PR-4's `JiraSubmitDialog`) should do the same rather than searching the whole page.
+
+Also fixed in this PR: `eslint.config.mjs` now ignores `playwright-report/**`, `test-results/**`, and `tests/.tmp/**` — running the suite generates those gitignored artifacts and ESLint was linting the minified trace bundles (164 phantom errors).
 
 ### PR-4 — Jira submit (book to Jira) flows
 

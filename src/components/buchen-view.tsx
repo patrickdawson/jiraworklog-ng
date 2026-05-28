@@ -799,6 +799,9 @@ function Modal({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className="w-full max-w-xl rounded-xl border"
         style={{
           background: "var(--surface)",
