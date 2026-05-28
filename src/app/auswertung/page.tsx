@@ -76,22 +76,30 @@ export default async function AuswertungPage({
   const dayKeys = enumerateDays(resolved.from, resolved.to);
 
   let rangeSeconds = 0;
-  let rangeConcreteSeconds = 0;
   let daysWorked = 0;
+  // The concrete-issue quote only considers days with actual concrete work.
+  // Days with only Allgemeines bookings (sick leave, holidays, admin) or no
+  // bookings at all (weekends) must not drag the quote down.
+  let quoteSeconds = 0;
+  let quoteConcreteSeconds = 0;
   for (const k of dayKeys) {
     const seconds = byDay.get(k) ?? 0;
-    rangeConcreteSeconds += concreteByDay.get(k) ?? 0;
+    const concrete = concreteByDay.get(k) ?? 0;
     if (seconds > 0) {
       rangeSeconds += seconds;
       daysWorked += 1;
     }
+    if (concrete > 0) {
+      quoteSeconds += seconds;
+      quoteConcreteSeconds += concrete;
+    }
   }
   const concreteQuotePct =
-    rangeSeconds > 0
-      ? Math.round((rangeConcreteSeconds * 100) / rangeSeconds)
+    quoteSeconds > 0
+      ? Math.round((quoteConcreteSeconds * 100) / quoteSeconds)
       : 0;
   const targetPct = s.concreteIssueTargetPercent;
-  const quoteMet = rangeSeconds > 0 && concreteQuotePct >= targetPct;
+  const quoteMet = quoteSeconds > 0 && concreteQuotePct >= targetPct;
 
   // "Diese Woche" always reflects the current calendar week, not the selection.
   const thisWeek = resolveRange("week", null);
@@ -120,8 +128,8 @@ export default async function AuswertungPage({
     const concrete = concreteByDay.get(k) ?? 0;
     return {
       key: k,
-      percent: total > 0 ? Math.round((concrete * 100) / total) : 0,
-      hasData: total > 0,
+      percent: concrete > 0 ? Math.round((concrete * 100) / total) : 0,
+      hasData: concrete > 0,
     };
   });
 
@@ -193,10 +201,10 @@ export default async function AuswertungPage({
           label="Quote konkrete Issues"
           value={`${concreteQuotePct} %`}
           tone={
-            rangeSeconds === 0 ? "default" : quoteMet ? "pos" : "neg"
+            quoteSeconds === 0 ? "default" : quoteMet ? "pos" : "neg"
           }
           meta={
-            rangeSeconds === 0
+            quoteSeconds === 0
               ? "Keine Erfassung im Zeitraum"
               : `Ziel: ${targetPct} %`
           }
