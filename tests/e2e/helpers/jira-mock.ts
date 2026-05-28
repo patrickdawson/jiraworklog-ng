@@ -1,4 +1,5 @@
 import { MOCK_JIRA_URL } from "./db";
+import type { ReceivedRequest } from "../mocks/jira-server";
 
 type Expectation = {
   method: string;
@@ -47,4 +48,11 @@ export async function expectWorklog(opts: {
     status: opts.status,
     body: opts.body,
   });
+}
+
+/** Every request the mock has seen since the last reset, in arrival order. */
+export async function getReceived(): Promise<ReceivedRequest[]> {
+  const res = await adminFetch("received", { method: "GET" });
+  const data = (await res.json()) as { received: ReceivedRequest[] };
+  return data.received;
 }

@@ -56,12 +56,17 @@ Gotcha discovered: `page.getByLabel("Beschreibung")` does **substring** matching
 
 Also fixed in this PR: `eslint.config.mjs` now ignores `playwright-report/**`, `test-results/**`, and `tests/.tmp/**` — running the suite generates those gitignored artifacts and ESLint was linting the minified trace bundles (164 phantom errors).
 
-### PR-4 — Jira submit (book to Jira) flows
+### PR-4 — Jira submit (book to Jira) flows (DONE) ✅
 
-Spec: `jira-submit.spec.ts`. Cover:
-- **Happy path**: `seedEntries` with unsubmitted entries for a single day, open the "Nach Jira buchen" dialog, mock `POST /rest/api/2/issue/:key/worklog` → 201, confirm, assert the row shows the "gebucht" badge and `getEntries()` rows have `submittedAt` set.
-- **Error path**: mock 400 with a Jira error payload — assert error UI, assert `submittedAt` is still null.
-- Optional: assert the mock `/__mock/received` log contains the correct `timeSpent` / `started` / `Authorization` Basic header.
+Spec: `jira-submit.spec.ts` (2 tests). 13/13 e2e green, lint + `tsc --noEmit` clean.
+
+- **Happy path**: `seedEntries` a single unsubmitted `TEST-123` entry for today, `expectWorklog({ issueKey: "TEST-123", status: 201 })`, open the per-day dialog (`open-jira-submit`), confirm (`jira-submit-confirm`), assert the success box, close, assert the row shows the "gebucht" badge and `getEntries()` has `submittedAt` set + `jiraIssueKey === "TEST-123"`. Also asserts the `/__mock/received` POST body (`timeSpent` `"1h 0m"`, `started`, `comment`) and decodes the Basic `Authorization` header to `tester@example.com:test-token`.
+- **Error path**: `expectWorklog({ issueKey: "TEST-999", status: 400, body: {...} })` — assert the "Buchung mit Fehlern." box + the Jira rejection detail, assert `submittedAt`/`jiraIssueKey` are still null, then close and confirm the row stays "offen" and remains bookable.
+
+Implementation notes:
+- Added `getReceived()` to `tests/e2e/helpers/jira-mock.ts` (wraps `GET /__mock/received`, returns `ReceivedRequest[]`) — the helper the hand-off flagged as "easy to add".
+- Both tests `seedSettings({ addAllgemeinesSummary: false })` in `beforeEach`. The baseline enables the summary worklog, which would post a **second** worklog (to the summary issue) per submission and double up the `/__mock/received` entries. Disabling it keeps one concrete entry → exactly one POST.
+- Gotcha: the shared `Modal`'s header "×" button has `aria-label="Schließen"`, which collides with the footer "Schließen" button under `getByRole("button", { name: "Schließen" })` (strict-mode → 2 matches). Use `dialog.locator("button", { hasText: "Schließen" })` (text, not accessible name) to target the footer button unambiguously. ("Abbrechen" on the error path has no such collision.)
 
 ### PR-5 — Auswertung range filter + PDF download
 
