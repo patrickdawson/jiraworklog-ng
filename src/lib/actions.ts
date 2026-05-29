@@ -15,6 +15,10 @@ import {
 import { parseDescription } from "@/lib/parse-description";
 import { deriveJiraAuth, parseProjectKeys } from "@/lib/settings";
 import { effectiveDurationSeconds, parseBreaks } from "@/lib/work-time";
+import {
+  isForceBookingEnabled,
+  setForceBookingState,
+} from "@/lib/force-booking";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -540,10 +544,11 @@ function buildDayPlan(dayKeyStr: string): {
   skipped: SkippedEntry[];
 } {
   const s = getSettings();
+  const force = isForceBookingEnabled();
   const candidates = getAllEntries().filter(
     (e) =>
       e.endedAt !== null &&
-      e.submittedAt === null &&
+      (force || e.submittedAt === null) &&
       dayKey(e.startedAt) === dayKeyStr,
   );
   return buildPlanInternal(candidates, s);
@@ -555,8 +560,9 @@ function buildAllOpenPlan(): {
   skipped: SkippedEntry[];
 } {
   const s = getSettings();
+  const force = isForceBookingEnabled();
   const candidates = getAllEntries().filter(
-    (e) => e.endedAt !== null && e.submittedAt === null,
+    (e) => e.endedAt !== null && (force || e.submittedAt === null),
   );
 
   const byDay = new Map<string, typeof candidates>();
@@ -690,4 +696,20 @@ export async function submitDayToJira(
 export async function submitAllOpenToJira(): Promise<SubmitResult> {
   const { worklogs, skipped } = buildAllOpenPlan();
   return postPlanToJira(worklogs, skipped);
+}
+
+// ───────────────────────── Force booking ──────────────────────────
+
+/** Reads the runtime-only force-booking switch (not persisted). */
+export async function getForceBooking(): Promise<boolean> {
+  return isForceBookingEnabled();
+}
+
+/**
+ * Toggles the runtime-only force-booking switch. Enabling it makes the booking
+ * flow re-submit already-booked entries. Resets to off on app restart.
+ */
+export async function setForceBooking(enabled: boolean): Promise<void> {
+  setForceBookingState(enabled);
+  revalidateAll();
 }

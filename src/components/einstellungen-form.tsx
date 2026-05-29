@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Card, PageHeader } from "@/components/ui";
 import {
   cleanupOldEntries,
+  setForceBooking,
   testJiraConnection,
   updateSettings,
   type SettingsInput,
@@ -13,6 +14,7 @@ import type { BreakWindow } from "@/lib/work-time";
 
 type Initial = SettingsInput & {
   breaks: BreakWindow[];
+  forceBooking: boolean;
 };
 
 function minutesToHm(minutes: number): string {
@@ -69,6 +71,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
   const [concreteTarget, setConcreteTarget] = useState(
     String(initial.concreteIssueTargetPercent),
   );
+  const [forceBooking, setForceBookingState] = useState(initial.forceBooking);
 
   useEffect(() => {
     document.documentElement.dataset.theme = themeMode;
@@ -200,6 +203,11 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
     } finally {
       setPending(false);
     }
+  }
+
+  async function toggleForceBooking(next: boolean) {
+    setForceBookingState(next);
+    await setForceBooking(next);
   }
 
   function addBreak() {
@@ -576,7 +584,52 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
           </div>
         )}
       </Section>
+
+      <DangerSection title="Gefahrenzone">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={forceBooking}
+            onChange={(e) => toggleForceBooking(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span className="text-[13px]">
+            <span className="font-semibold">Force-Buchung aktivieren</span> —
+            erlaubt das erneute Senden bereits gebuchter Einträge an Jira.
+          </span>
+        </label>
+        <div className="mt-2 text-[12px]" style={{ color: "var(--neg)" }}>
+          Achtung: Dies kann doppelte Worklogs in Jira erzeugen. Die Einstellung
+          wird nicht gespeichert und ist nach einem Neustart der App wieder
+          deaktiviert.
+        </div>
+      </DangerSection>
     </main>
+  );
+}
+
+function DangerSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="mb-5">
+      <div
+        className="rounded-xl border p-5"
+        style={{ background: "var(--neg-soft)", borderColor: "var(--neg)" }}
+      >
+        <div
+          className="text-[14px] font-semibold mb-4"
+          style={{ color: "var(--neg)" }}
+        >
+          {title}
+        </div>
+        {children}
+      </div>
+    </div>
   );
 }
 

@@ -1,5 +1,6 @@
 import { EinstellungenForm } from "@/components/einstellungen-form";
 import { getSettings } from "@/db/queries";
+import { isForceBookingEnabled } from "@/lib/force-booking";
 import { parseProjectKeys } from "@/lib/settings";
 import { parseBreaks } from "@/lib/work-time";
 
@@ -29,6 +30,7 @@ export default function EinstellungenPage() {
         sprintAnchorDate: s.sprintAnchorDate,
         sprintLengthDays: s.sprintLengthDays,
         concreteIssueTargetPercent: s.concreteIssueTargetPercent,
+        forceBooking: isForceBookingEnabled(),
       }}
     />
   );
