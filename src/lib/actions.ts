@@ -646,11 +646,15 @@ async function postPlanToJira(
   let bookedWorklogs = 0;
   let bookedEntries = 0;
 
-  for (const wl of worklogs) {
+  // Bind the narrowed auth so it stays non-null inside the closure below.
+  const jiraAuth: JiraAuth = auth;
+  const allgemeinesKey = s.allgemeinesIssueKey.trim().toUpperCase();
+
+  async function bookWorklog(wl: InternalWorklog): Promise<boolean> {
     try {
       await postWorklogToJira({
         jiraUrl: s.jiraUrl,
-        auth,
+        auth: jiraAuth,
         issueKey: wl.issueKey,
         timeSpent: wl.timeSpent,
         started: wl.started,
@@ -669,9 +673,35 @@ async function postPlanToJira(
       }
       bookedWorklogs += 1;
       bookedEntries += wl.entryIds.length;
+      return true;
     } catch (err) {
       errors.push(err instanceof Error ? err.message : String(err));
+      return false;
     }
+  }
+
+  // The "Allgemeines" summary worklog mirrors the sum of the concrete-issue
+  // worklogs. It must be booked LAST and only for the time that actually made
+  // it into Jira — otherwise a single failed concrete worklog (e.g. missing
+  // permissions) would inflate the summary, and re-booking after fixing the
+  // permission would double-count that time on the summary issue.
+  const summaryWorklog = worklogs.find((w) => w.isSummary);
+  let bookedSummaryMinutes = 0;
+
+  for (const wl of worklogs) {
+    if (wl.isSummary) continue;
+    const ok = await bookWorklog(wl);
+    if (ok && wl.issueKey !== allgemeinesKey) {
+      bookedSummaryMinutes += wl.minutes;
+    }
+  }
+
+  if (summaryWorklog && bookedSummaryMinutes > 0) {
+    await bookWorklog({
+      ...summaryWorklog,
+      minutes: bookedSummaryMinutes,
+      timeSpent: formatDurationHoursMinutes(bookedSummaryMinutes),
+    });
   }
 
   revalidateAll();
