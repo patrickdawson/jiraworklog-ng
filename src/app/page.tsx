@@ -6,6 +6,7 @@ import {
   workedSecondsByDay,
 } from "@/lib/entries";
 import { dayKey } from "@/lib/format";
+import { isForceBookingEnabled } from "@/lib/force-booking";
 import { isJiraConfigured, parseProjectKeys } from "@/lib/settings";
 import { parseBreaks } from "@/lib/work-time";
 
@@ -52,6 +53,7 @@ export default function BuchenPage() {
           breaks: cfg.breaks,
           bookingMode: s.bookingMode,
           jiraConfigured: isJiraConfigured(s),
+          forceBooking: isForceBookingEnabled(),
         },
       }}
     />

@@ -42,8 +42,18 @@ export type BuchenData = {
     breaks: BreakWindow[];
     bookingMode: "grouped" | "individual";
     jiraConfigured: boolean;
+    forceBooking: boolean;
   };
 };
+
+/**
+ * How many of a day's finished entries can be sent to Jira right now. In force
+ * mode every finished entry is (re-)bookable; otherwise only unsubmitted ones.
+ */
+function bookableCount(day: DayGroup, forceBooking: boolean): number {
+  if (!forceBooking) return day.unsubmittedCount;
+  return day.groups.reduce((sum, g) => sum + g.entries.length, 0);
+}
 
 export function BuchenView({ data }: { data: BuchenData }) {
   const { running, todayCommittedSeconds, overtimeBalanceMinutes, days, config } =
@@ -102,8 +112,11 @@ export function BuchenView({ data }: { data: BuchenData }) {
     return () => clearTimeout(id);
   }, [toast]);
 
-  const hasAnyUnsubmitted = days.some((d) => d.unsubmittedCount > 0);
-  const totalUnsubmitted = days.reduce((s, d) => s + d.unsubmittedCount, 0);
+  const totalBookable = days.reduce(
+    (s, d) => s + bookableCount(d, config.forceBooking),
+    0,
+  );
+  const hasAnyBookable = totalBookable > 0;
 
   return (
     <main className="px-8 py-7">
@@ -117,12 +130,12 @@ export function BuchenView({ data }: { data: BuchenData }) {
         })}
         actions={
           <>
-            {hasAnyUnsubmitted && config.jiraConfigured && (
+            {hasAnyBookable && config.jiraConfigured && (
               <Button
-                variant="primary"
+                variant={config.forceBooking ? "danger" : "primary"}
                 onClick={() => setJiraScope({ kind: "all" })}
               >
-                Nach Jira buchen ({totalUnsubmitted})
+                Nach Jira buchen ({totalBookable})
               </Button>
             )}
             <Button onClick={() => setManualOpen(true)}>+ Eintrag</Button>
@@ -141,6 +154,21 @@ export function BuchenView({ data }: { data: BuchenData }) {
           role="status"
         >
           {toast}
+        </div>
+      )}
+
+      {config.forceBooking && (
+        <div
+          className="mb-4 rounded-lg border px-4 py-2.5 text-[13px] font-semibold"
+          style={{
+            background: "var(--neg-soft)",
+            borderColor: "var(--neg)",
+            color: "var(--neg)",
+          }}
+          role="alert"
+        >
+          ⚠️ Force-Buchung aktiv — bereits gebuchte Einträge werden beim Buchen
+          erneut nach Jira übertragen. In den Einstellungen deaktivierbar.
         </div>
       )}
 
@@ -191,6 +219,7 @@ export function BuchenView({ data }: { data: BuchenData }) {
               key={day.dayKey}
               day={day}
               jiraConfigured={config.jiraConfigured}
+              forceBooking={config.forceBooking}
               onPlay={async (text, allgemeines) => {
                 const r = await startTimer(text, allgemeines);
                 if (r.previousDiscarded) {
@@ -222,6 +251,7 @@ export function BuchenView({ data }: { data: BuchenData }) {
         <JiraSubmitDialog
           scope={jiraScope}
           bookingMode={config.bookingMode}
+          forceBooking={config.forceBooking}
           onClose={() => setJiraScope(null)}
         />
       )}
@@ -473,16 +503,19 @@ function formatRunningStart(iso: string): string {
 function DaySection({
   day,
   jiraConfigured,
+  forceBooking,
   onPlay,
   onEdit,
   onSubmitJira,
 }: {
   day: DayGroup;
   jiraConfigured: boolean;
+  forceBooking: boolean;
   onPlay: (description: string, isAllgemeines: boolean) => void;
   onEdit: (entry: EntryView) => void;
   onSubmitJira: () => void;
 }) {
+  const bookable = bookableCount(day, forceBooking);
   return (
     <div className="mb-5">
       <div className="flex items-center justify-between px-1 pb-2">
@@ -499,12 +532,14 @@ function DaySection({
           >
             {formatHms(day.totalSeconds)}
           </span>
-          {day.unsubmittedCount > 0 && jiraConfigured && (
+          {bookable > 0 && jiraConfigured && (
             <button
               type="button"
               onClick={onSubmitJira}
               className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white"
-              style={{ background: "var(--accent)" }}
+              style={{
+                background: forceBooking ? "var(--neg)" : "var(--accent)",
+              }}
             >
               Nach Jira buchen
             </button>
@@ -1016,10 +1051,12 @@ function EditEntryDialog({
 function JiraSubmitDialog({
   scope,
   bookingMode,
+  forceBooking,
   onClose,
 }: {
   scope: JiraScope;
   bookingMode: "grouped" | "individual";
+  forceBooking: boolean;
   onClose: () => void;
 }) {
   const [plan, setPlan] = useState<DayBookingPlan | null>(null);
@@ -1067,6 +1104,20 @@ function JiraSubmitDialog({
             ? "Einträge gleicher Beschreibung werden gebündelt."
             : "Jeder Eintrag wird einzeln als Worklog gebucht."}
         </div>
+
+        {forceBooking && (
+          <div
+            className="rounded-lg border px-3 py-2 text-[12.5px] font-semibold"
+            style={{
+              background: "var(--neg-soft)",
+              borderColor: "var(--neg)",
+              color: "var(--neg)",
+            }}
+          >
+            Force-Buchung: Auch bereits gebuchte Einträge werden erneut nach Jira
+            übertragen — das kann zu doppelten Worklogs führen.
+          </div>
+        )}
 
         {plan === null ? (
           <div className="text-[13px]" style={{ color: "var(--text-2)" }}>
