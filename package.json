@@ -2,6 +2,7 @@
   "name": "jiraworklog-ng",
   "version": "0.1.0",
   "private": true,
+  "main": ".electron-dist/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,7 +14,11 @@
     "db:seed": "node scripts/db-sample.mjs seed",
     "db:unseed": "node scripts/db-sample.mjs clean",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "electron:dev": "wait-on http://localhost:3000 && tsc --project tsconfig.electron.json && electron .",
+    "dev:electron": "concurrently --kill-others \"npm run dev\" \"npm run electron:dev\"",
+    "electron:compile": "tsc --project tsconfig.electron.json",
+    "electron:start": "npm run electron:compile && electron ."
   },
   "dependencies": {
     "@react-pdf/renderer": "4.5.1",
@@ -31,10 +36,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.3",
     "drizzle-kit": "^0.31.10",
+    "electron": "^34.5.8",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "menubar": "^9.5.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.10"
   }
 }

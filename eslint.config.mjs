@@ -7,6 +7,7 @@ const eslintConfig = defineConfig([
   ...nextTs,
   globalIgnores([
     ".next/**",
+    ".electron-dist/**",
     "out/**",
     "build/**",
     "drizzle/**",
