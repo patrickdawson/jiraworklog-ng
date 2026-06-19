@@ -73,7 +73,6 @@ const styles = StyleSheet.create({
   totalsLine: { flexDirection: "row", alignItems: "baseline" },
   totalsLabel: { fontSize: 10, color: "#374151", marginRight: 8 },
   totalsValue: { fontSize: 14, fontFamily: "Helvetica-Bold" },
-  totalsNote: { fontSize: 9, color: "#6b7280", marginTop: 3 },
   pageNumber: {
     position: "absolute",
     bottom: 22,
@@ -139,7 +138,9 @@ export function WorklogPdf({ report }: { report: WorklogReport }) {
           <View style={styles.table}>
             <TableHeader />
             {report.rows.map((row, i) => {
-              const issueText = row.issueKey ?? "—";
+              const issueText = row.isAllgemeines
+                ? `Allg. · ${row.category ?? "—"}`
+                : (row.issueKey ?? "—");
               return (
                 <View
                   key={`${row.startedAt}-${i}`}
@@ -168,7 +169,13 @@ export function WorklogPdf({ report }: { report: WorklogReport }) {
                     </Text>
                   </View>
                   <View style={[styles.cell, styles.cellIssue]}>
-                    <Text style={row.issueKey ? undefined : styles.muted}>
+                    <Text
+                      style={
+                        row.issueKey || row.isAllgemeines
+                          ? undefined
+                          : styles.muted
+                      }
+                    >
                       {issueText}
                     </Text>
                   </View>
@@ -191,11 +198,6 @@ export function WorklogPdf({ report }: { report: WorklogReport }) {
             <Text style={styles.totalsLabel}>Gesamtzeit:</Text>
             <Text style={styles.totalsValue}>{formatHm(totalMinutes)}</Text>
           </View>
-          {report.sammelbuchungIssueKey && (
-            <Text style={styles.totalsNote}>
-              Entspricht Sammelbuchung {report.sammelbuchungIssueKey}
-            </Text>
-          )}
         </View>
 
         <Text

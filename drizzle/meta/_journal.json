@@ -29,6 +29,13 @@
       "when": 1779340767568,
       "tag": "0003_add_sprint_and_kpi",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1779340767569,
+      "tag": "0004_add_category_remove_allgemeines",
+      "breakpoints": true
     }
   ]
 }

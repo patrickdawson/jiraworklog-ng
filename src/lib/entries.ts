@@ -1,4 +1,4 @@
-import type { TimeEntry } from "@/db/schema";
+import type { AllgemeinesCategory, TimeEntry } from "@/db/schema";
 import { dayKey, dayLabel } from "./format";
 import { parseDescription } from "./parse-description";
 import { effectiveDurationSeconds, type BreakWindow } from "./work-time";
@@ -14,6 +14,7 @@ export type EntryView = {
   comment: string;
   effectiveSeconds: number;
   isAllgemeines: boolean;
+  category: AllgemeinesCategory | null;
 };
 
 export type DescGroup = {
@@ -23,6 +24,7 @@ export type DescGroup = {
   totalSeconds: number;
   allSubmitted: boolean;
   isAllgemeines: boolean;
+  category: AllgemeinesCategory | null;
 };
 
 export type DayGroup = {
@@ -63,6 +65,7 @@ export function toEntryView(
     comment: parsed.comment,
     effectiveSeconds,
     isAllgemeines: entry.isAllgemeines,
+    category: entry.category,
   };
 }
 
@@ -86,7 +89,9 @@ export function buildDayGroups(
   for (const [key, dayEntries] of byDay) {
     const byDesc = new Map<string, EntryView[]>();
     for (const view of dayEntries) {
-      const descKey = `${view.isAllgemeines ? "A" : "P"}|${view.description.trim()}`;
+      const descKey = `${
+        view.isAllgemeines ? `A:${view.category ?? ""}` : "P"
+      }|${view.description.trim()}`;
       const bucket = byDesc.get(descKey);
       if (bucket) bucket.push(view);
       else byDesc.set(descKey, [view]);
@@ -101,6 +106,7 @@ export function buildDayGroups(
         totalSeconds: es.reduce((s, e) => s + e.effectiveSeconds, 0),
         allSubmitted: es.every((e) => e.submittedAt !== null),
         isAllgemeines: es[0].isAllgemeines,
+        category: es[0].category,
       };
     });
     groups.sort((a, b) =>
@@ -112,7 +118,11 @@ export function buildDayGroups(
       label: dayLabel(key),
       groups,
       totalSeconds: groups.reduce((s, g) => s + g.totalSeconds, 0),
-      unsubmittedCount: dayEntries.filter((e) => e.submittedAt === null).length,
+      // Allgemeines entries are never booked to Jira, so they don't count as
+      // "open" work waiting to be submitted.
+      unsubmittedCount: dayEntries.filter(
+        (e) => e.submittedAt === null && !e.isAllgemeines,
+      ).length,
     });
   }
 

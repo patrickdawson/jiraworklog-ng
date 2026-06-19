@@ -28,8 +28,6 @@ const BASELINE: SettingsBaseline = {
   jiraPassword: null,
   jiraAuthMode: "basic",
   jiraProjectKeys: JSON.stringify(["TEST", "DEMO", "TXR"]),
-  allgemeinesIssueKey: "TEST-1",
-  addAllgemeinesSummary: true,
   themeMode: "light",
   bookingMode: "grouped",
   autoPauseEnabled: false,

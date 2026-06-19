@@ -178,8 +178,31 @@ function AnchorPicker({ resolved }: { resolved: ResolvedRange }) {
   );
 }
 
+/** First day (`YYYY-MM-01`) of the month the resolved range points at. */
+function monthAnchor(resolved: ResolvedRange): string {
+  const base = resolved.anchor || new Date().toISOString().slice(0, 10);
+  return `${base.slice(0, 7)}-01`;
+}
+
+async function downloadPdf(href: string, filename: string): Promise<void> {
+  const res = await fetch(href);
+  if (!res.ok) {
+    throw new Error(`PDF konnte nicht erstellt werden (${res.status})`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
   const [loading, setLoading] = useState(false);
+  const [loadingMonth, setLoadingMonth] = useState(false);
 
   const prev = shiftRange(resolved, -1);
   const next = shiftRange(resolved, 1);
@@ -195,24 +218,31 @@ export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
       if (resolved.kind !== "all" && resolved.anchor) {
         params.set("anchor", resolved.anchor);
       }
-      const res = await fetch(`/api/report/pdf?${params}`);
-      if (!res.ok) {
-        throw new Error(`PDF konnte nicht erstellt werden (${res.status})`);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `stundenzettel-${resolved.slug}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await downloadPdf(
+        `/api/report/pdf?${params}`,
+        `stundenzettel-${resolved.slug}.pdf`,
+      );
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Unbekannter Fehler");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onExportMonth() {
+    setLoadingMonth(true);
+    try {
+      const anchor = monthAnchor(resolved);
+      await downloadPdf(
+        `/api/report/category-pdf?anchor=${anchor}`,
+        `monatsbericht-${anchor.slice(0, 7)}.pdf`,
+      );
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setLoadingMonth(false);
     }
   }
 
@@ -250,10 +280,21 @@ export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
         disabled={loading}
         className="rounded-lg border px-3 py-1.5 text-[13px] font-semibold inline-flex items-center justify-center gap-2 flex-shrink-0 ml-auto sm:ml-0"
         style={loading ? buttonDisabled : buttonAccent}
-        title={`Bericht für „${resolved.label}“ als PDF herunterladen`}
+        title={`Stundenzettel für „${resolved.label}“ als PDF herunterladen`}
       >
         {loading ? <Spinner /> : null}
         <span>{loading ? "Erstelle PDF…" : "Als PDF"}</span>
+      </button>
+      <button
+        type="button"
+        onClick={onExportMonth}
+        disabled={loadingMonth}
+        className="rounded-lg border px-3 py-1.5 text-[13px] font-semibold inline-flex items-center justify-center gap-2 flex-shrink-0"
+        style={loadingMonth ? buttonDisabled : buttonBase}
+        title="Kategorie-Monatsbericht (Buchungsblöcke) als PDF herunterladen"
+      >
+        {loadingMonth ? <Spinner /> : null}
+        <span>{loadingMonth ? "Erstelle PDF…" : "Monatsbericht"}</span>
       </button>
     </div>
   );

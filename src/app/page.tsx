@@ -42,6 +42,7 @@ export default function BuchenPage() {
               description: runningRow.description,
               startedAt: runningRow.startedAt,
               isAllgemeines: runningRow.isAllgemeines,
+              category: runningRow.category,
             }
           : null,
         todayCommittedSeconds,

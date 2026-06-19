@@ -10,6 +10,15 @@ export type JiraAuthMode = (typeof JIRA_AUTH_MODES)[number];
 export const THEME_MODES = ["system", "light", "dark"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 
+/** Categories an "Allgemeines" entry can be assigned to for the monthly report. */
+export const ALLGEMEINES_CATEGORIES = [
+  "Projektorganisation",
+  "Implementierung",
+  "QA",
+  "Release",
+] as const;
+export type AllgemeinesCategory = (typeof ALLGEMEINES_CATEGORIES)[number];
+
 /** A single tracked time span. `endedAt = null` ⇒ the timer is still running. */
 export const timeEntries = sqliteTable(
   "time_entries",
@@ -20,10 +29,16 @@ export const timeEntries = sqliteTable(
     endedAt: text("ended_at"),
     submittedAt: text("submitted_at"),
     jiraIssueKey: text("jira_issue_key"),
-    /** When true, the entry is booked directly on the configured Allgemeines issue. */
+    /**
+     * When true, the entry is NOT booked to Jira; it is only stored and reported
+     * in the monthly category report. Concrete (non-Allgemeines) entries are still
+     * booked to Jira as usual.
+     */
     isAllgemeines: integer("is_allgemeines", { mode: "boolean" })
       .notNull()
       .default(false),
+    /** Report category for Allgemeines entries; null for concrete entries. */
+    category: text("category").$type<AllgemeinesCategory>(),
     createdAt: text("created_at")
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
@@ -76,13 +91,6 @@ export const settings = sqliteTable("settings", {
   jiraToken: text("jira_token"),
   jiraUser: text("jira_user"),
   jiraPassword: text("jira_password"),
-  /** Issue key that collects a sum worklog of every non-Allgemeines booking. */
-  allgemeinesIssueKey: text("allgemeines_issue_key")
-    .notNull()
-    .default("TXPIV-450"),
-  addAllgemeinesSummary: integer("add_allgemeines_summary", { mode: "boolean" })
-    .notNull()
-    .default(true),
   /** Starting overtime balance in minutes (signed) brought in from before the tool was used. */
   overtimeBaselineMinutes: integer("overtime_baseline_minutes")
     .notNull()
