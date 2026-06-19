@@ -50,12 +50,6 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
     initial.jiraToken ?? initial.jiraPassword ?? "",
   );
   const [jUser, setJUser] = useState(initial.jiraUser ?? "");
-  const [allgemeinesKey, setAllgemeinesKey] = useState(
-    initial.allgemeinesIssueKey,
-  );
-  const [addAllgemeinesSummary, setAddAllgemeinesSummary] = useState(
-    initial.addAllgemeinesSummary,
-  );
   const [overtimeBaseline, setOvertimeBaseline] = useState(
     formatSignedHmInput(initial.overtimeBaselineMinutes),
   );
@@ -144,8 +138,6 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         jiraToken: token || null,
         jiraUser: jUser || null,
         jiraPassword: null,
-        allgemeinesIssueKey: allgemeinesKey,
-        addAllgemeinesSummary,
         overtimeBaselineMinutes: baselineMin,
         themeMode,
         sprintAnchorDate,
@@ -493,33 +485,6 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
             {testStatus.msg}
           </div>
         )}
-      </Section>
-
-      <Section title="Allgemeines (Sammelbuchung)">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label={'Issue-Key für „Allgemeines"'}>
-            <TextInput
-              value={allgemeinesKey}
-              onChange={(v) => setAllgemeinesKey(v.toUpperCase())}
-              placeholder="z.B. TXPIV-450"
-            />
-          </Field>
-        </div>
-        <label className="mt-2 flex items-center gap-3">
-          <input
-            type="checkbox"
-            checked={addAllgemeinesSummary}
-            onChange={(e) => setAddAllgemeinesSummary(e.target.checked)}
-          />
-          <span className="text-[13px]">
-            Bei Buchungen auf andere Issues zusätzlich eine Sammelbuchung auf
-            „Allgemeines&rdquo; anlegen
-          </span>
-        </label>
-        <div className="mt-2 text-[12px]" style={{ color: "var(--text-3)" }}>
-          Direkte Buchungen auf den „Allgemeines&rdquo;-Issue werden unverändert
-          übertragen und nicht zusätzlich in die Sammelbuchung aufgenommen.
-        </div>
       </Section>
 
       <Section title="Sprint & KPI">

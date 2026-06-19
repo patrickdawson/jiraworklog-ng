@@ -23,8 +23,6 @@ export default function EinstellungenPage() {
         jiraToken: s.jiraToken,
         jiraUser: s.jiraUser,
         jiraPassword: s.jiraPassword,
-        allgemeinesIssueKey: s.allgemeinesIssueKey,
-        addAllgemeinesSummary: s.addAllgemeinesSummary,
         overtimeBaselineMinutes: s.overtimeBaselineMinutes,
         themeMode: s.themeMode,
         sprintAnchorDate: s.sprintAnchorDate,

@@ -13,14 +13,55 @@ import {
   submitDayToJira,
   updateEntry,
   updateRunningAllgemeines,
+  updateRunningCategory,
   updateRunningDescription,
   updateRunningStartedAt,
   type DayBookingPlan,
   type SubmitResult,
 } from "@/lib/actions";
+import {
+  ALLGEMEINES_CATEGORIES,
+  type AllgemeinesCategory,
+} from "@/db/schema";
 import type { DayGroup, DescGroup, EntryView } from "@/lib/entries";
 import { clockTime, formatHms, formatSignedHm } from "@/lib/format";
 import { effectiveDurationSeconds, type BreakWindow } from "@/lib/work-time";
+
+const DEFAULT_CATEGORY: AllgemeinesCategory = "Projektorganisation";
+
+/** Small labelled dropdown for picking an Allgemeines report category. */
+function CategorySelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: AllgemeinesCategory;
+  onChange: (category: AllgemeinesCategory) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-[13px]">
+      <span style={{ color: "var(--text-2)" }}>Kategorie</span>
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value as AllgemeinesCategory)}
+        className="rounded-md border px-2 py-1 text-[13px] outline-none"
+        style={{
+          background: "var(--surface-2)",
+          borderColor: "var(--border-strong)",
+          color: "var(--text)",
+        }}
+      >
+        {ALLGEMEINES_CATEGORIES.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 export type JiraScope =
   | { kind: "day"; dayKey: string; label: string }
@@ -32,6 +73,7 @@ export type BuchenData = {
     description: string;
     startedAt: string;
     isAllgemeines: boolean;
+    category: AllgemeinesCategory | null;
   } | null;
   todayCommittedSeconds: number;
   overtimeBalanceMinutes: number;
@@ -220,8 +262,8 @@ export function BuchenView({ data }: { data: BuchenData }) {
               day={day}
               jiraConfigured={config.jiraConfigured}
               forceBooking={config.forceBooking}
-              onPlay={async (text, allgemeines) => {
-                const r = await startTimer(text, allgemeines);
+              onPlay={async (text, allgemeines, category) => {
+                const r = await startTimer(text, allgemeines, category);
                 if (r.previousDiscarded) {
                   setToast(
                     "Vorheriger Eintrag verworfen (kürzer als 1 Minute).",
@@ -272,6 +314,9 @@ function TimerCard({
 }) {
   const [draft, setDraft] = useState(running?.description ?? "");
   const [allgemeines, setAllgemeines] = useState(running?.isAllgemeines ?? false);
+  const [category, setCategory] = useState<AllgemeinesCategory>(
+    running?.category ?? DEFAULT_CATEGORY,
+  );
   const [pending, setPending] = useState(false);
   const [editStart, setEditStart] = useState(false);
   const [startDraft, setStartDraft] = useState("");
@@ -282,16 +327,26 @@ function TimerCard({
     if (running?.id !== lastSyncedRef.current) {
       setDraft(running?.description ?? "");
       setAllgemeines(running?.isAllgemeines ?? false);
+      setCategory(running?.category ?? DEFAULT_CATEGORY);
       setEditStart(false);
       lastSyncedRef.current = running?.id ?? null;
     }
-  }, [running?.id, running?.description, running?.isAllgemeines]);
+  }, [
+    running?.id,
+    running?.description,
+    running?.isAllgemeines,
+    running?.category,
+  ]);
 
   async function onStart() {
     if (pending) return;
     setPending(true);
     try {
-      const r = await startTimer(draft, allgemeines);
+      const r = await startTimer(
+        draft,
+        allgemeines,
+        allgemeines ? category : null,
+      );
       if (r.previousDiscarded) {
         onToast("Vorheriger Eintrag verworfen (kürzer als 1 Minute).");
       }
@@ -324,7 +379,14 @@ function TimerCard({
   async function toggleAllgemeines(next: boolean) {
     setAllgemeines(next);
     if (running) {
-      await updateRunningAllgemeines(next);
+      await updateRunningAllgemeines(next, next ? category : null);
+    }
+  }
+
+  async function changeCategory(next: AllgemeinesCategory) {
+    setCategory(next);
+    if (running && allgemeines) {
+      await updateRunningCategory(next);
     }
   }
 
@@ -467,17 +529,21 @@ function TimerCard({
           )}
         </div>
       )}
-      <label className="mt-3 flex items-center gap-2 text-[13px]">
-        <input
-          type="checkbox"
-          checked={allgemeines}
-          onChange={(e) => toggleAllgemeines(e.target.checked)}
-        />
-        <span style={{ color: "var(--text-2)" }}>
-          Auf Allgemeines buchen (gesamte Beschreibung wird als Worklog-Text
-          verwendet)
-        </span>
-      </label>
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <label className="flex items-center gap-2 text-[13px]">
+          <input
+            type="checkbox"
+            checked={allgemeines}
+            onChange={(e) => toggleAllgemeines(e.target.checked)}
+          />
+          <span style={{ color: "var(--text-2)" }}>
+            Als Allgemein speichern (nicht nach Jira buchen)
+          </span>
+        </label>
+        {allgemeines && (
+          <CategorySelect value={category} onChange={changeCategory} />
+        )}
+      </div>
     </Card>
   );
 }
@@ -511,7 +577,11 @@ function DaySection({
   day: DayGroup;
   jiraConfigured: boolean;
   forceBooking: boolean;
-  onPlay: (description: string, isAllgemeines: boolean) => void;
+  onPlay: (
+    description: string,
+    isAllgemeines: boolean,
+    category: AllgemeinesCategory | null,
+  ) => void;
   onEdit: (entry: EntryView) => void;
   onSubmitJira: () => void;
 }) {
@@ -569,7 +639,11 @@ function GroupRow({
   onEdit,
 }: {
   group: DescGroup;
-  onPlay: (description: string, isAllgemeines: boolean) => void;
+  onPlay: (
+    description: string,
+    isAllgemeines: boolean,
+    category: AllgemeinesCategory | null,
+  ) => void;
   onEdit: (entry: EntryView) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -623,20 +697,26 @@ function GroupRow({
             }}
           >
             {group.isAllgemeines
-              ? "Allgemeines"
+              ? `Allgemein · ${group.category ?? "—"}`
               : (group.issueKey ?? "kein Issue-Key")}
           </div>
         </div>
 
-        <Badge tone={group.allSubmitted ? "booked" : "open"}>
-          {group.allSubmitted ? "gebucht" : "offen"}
-        </Badge>
+        {group.isAllgemeines ? (
+          <Badge tone="default">nicht buchen</Badge>
+        ) : (
+          <Badge tone={group.allSubmitted ? "booked" : "open"}>
+            {group.allSubmitted ? "gebucht" : "offen"}
+          </Badge>
+        )}
         <div className="num text-[14px] font-semibold tabular-nums min-w-[78px] text-right">
           {formatHms(group.totalSeconds)}
         </div>
         <IconButton
           title="Mit gleicher Beschreibung neu starten"
-          onClick={() => onPlay(group.description, group.isAllgemeines)}
+          onClick={() =>
+            onPlay(group.description, group.isAllgemeines, group.category)
+          }
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="h-[14px] w-[14px]">
             <path d="M8 5v14l11-7z" />
@@ -882,6 +962,7 @@ function ManualEntryDialog({ onClose }: { onClose: () => void }) {
   const [startedAt, setStartedAt] = useState(defaultStartedAt());
   const [endedAt, setEndedAt] = useState(defaultEndedAt());
   const [isAllgemeines, setIsAllgemeines] = useState(false);
+  const [category, setCategory] = useState<AllgemeinesCategory>(DEFAULT_CATEGORY);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -894,6 +975,7 @@ function ManualEntryDialog({ onClose }: { onClose: () => void }) {
         startedAt: fromLocalInputValue(startedAt),
         endedAt: fromLocalInputValue(endedAt),
         isAllgemeines,
+        category: isAllgemeines ? category : null,
       });
       if (res.ok) onClose();
       else setError(res.message ?? "Speichern fehlgeschlagen.");
@@ -916,16 +998,21 @@ function ManualEntryDialog({ onClose }: { onClose: () => void }) {
             }
           />
         </Field>
-        <label className="flex items-center gap-2 text-[13px]">
-          <input
-            type="checkbox"
-            checked={isAllgemeines}
-            onChange={(e) => setIsAllgemeines(e.target.checked)}
-          />
-          <span style={{ color: "var(--text-2)" }}>
-            Auf Allgemeines buchen
-          </span>
-        </label>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <label className="flex items-center gap-2 text-[13px]">
+            <input
+              type="checkbox"
+              checked={isAllgemeines}
+              onChange={(e) => setIsAllgemeines(e.target.checked)}
+            />
+            <span style={{ color: "var(--text-2)" }}>
+              Als Allgemein speichern (nicht nach Jira buchen)
+            </span>
+          </label>
+          {isAllgemeines && (
+            <CategorySelect value={category} onChange={setCategory} />
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3.5">
           <Field label="Beginn">
             <TextInput type="datetime-local" value={startedAt} onChange={setStartedAt} />
@@ -965,6 +1052,9 @@ function EditEntryDialog({
     entry.endedAt ? toLocalInputValue(entry.endedAt) : defaultEndedAt(),
   );
   const [isAllgemeines, setIsAllgemeines] = useState(entry.isAllgemeines);
+  const [category, setCategory] = useState<AllgemeinesCategory>(
+    entry.category ?? DEFAULT_CATEGORY,
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -977,6 +1067,7 @@ function EditEntryDialog({
         startedAt: fromLocalInputValue(startedAt),
         endedAt: fromLocalInputValue(endedAt),
         isAllgemeines,
+        category: isAllgemeines ? category : null,
       });
       if (res.ok) onClose();
       else setError(res.message ?? "Speichern fehlgeschlagen.");
@@ -1002,16 +1093,21 @@ function EditEntryDialog({
         <Field label="Beschreibung">
           <TextInput value={description} onChange={setDescription} />
         </Field>
-        <label className="flex items-center gap-2 text-[13px]">
-          <input
-            type="checkbox"
-            checked={isAllgemeines}
-            onChange={(e) => setIsAllgemeines(e.target.checked)}
-          />
-          <span style={{ color: "var(--text-2)" }}>
-            Auf Allgemeines buchen
-          </span>
-        </label>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <label className="flex items-center gap-2 text-[13px]">
+            <input
+              type="checkbox"
+              checked={isAllgemeines}
+              onChange={(e) => setIsAllgemeines(e.target.checked)}
+            />
+            <span style={{ color: "var(--text-2)" }}>
+              Als Allgemein speichern (nicht nach Jira buchen)
+            </span>
+          </label>
+          {isAllgemeines && (
+            <CategorySelect value={category} onChange={setCategory} />
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3.5">
           <Field label="Beginn">
             <TextInput type="datetime-local" value={startedAt} onChange={setStartedAt} />
@@ -1157,12 +1253,12 @@ function JiraSubmitDialog({
                           {w.timeSpent}
                         </span>
                       </div>
-                      {(w.comment || w.isSummary) && (
+                      {w.comment && (
                         <div
                           className="text-[12px] mt-0.5"
                           style={{ color: "var(--text-2)" }}
                         >
-                          {w.isSummary ? "(Sammelbuchung)" : w.comment}
+                          {w.comment}
                         </div>
                       )}
                     </div>

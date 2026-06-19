@@ -4,7 +4,12 @@ import { and, eq, isNotNull, isNull, lt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { settings, timeEntries } from "@/db/schema";
+import {
+  ALLGEMEINES_CATEGORIES,
+  settings,
+  timeEntries,
+  type AllgemeinesCategory,
+} from "@/db/schema";
 import { getAllEntries, getRunningEntry, getSettings } from "@/db/queries";
 import { dayKey, formatDurationHoursMinutes } from "@/lib/format";
 import {
@@ -22,6 +27,23 @@ import {
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+/** Default category used when an entry is flagged Allgemeines without an explicit one. */
+const DEFAULT_CATEGORY: AllgemeinesCategory = "Projektorganisation";
+
+/**
+ * Resolves the category to persist for an entry. Concrete entries never carry a
+ * category; Allgemeines entries fall back to the default when none is given.
+ */
+function resolveCategory(
+  isAllgemeines: boolean,
+  category: AllgemeinesCategory | null | undefined,
+): AllgemeinesCategory | null {
+  if (!isAllgemeines) return null;
+  return category && ALLGEMEINES_CATEGORIES.includes(category)
+    ? category
+    : DEFAULT_CATEGORY;
 }
 
 function revalidateAll(): void {
@@ -80,6 +102,7 @@ export type StartTimerResult = {
 export async function startTimer(
   description: string,
   isAllgemeines = false,
+  category: AllgemeinesCategory | null = null,
 ): Promise<StartTimerResult> {
   const previous = closeRunningTimer();
   db.insert(timeEntries)
@@ -87,6 +110,7 @@ export async function startTimer(
       description: description ?? "",
       startedAt: nowIso(),
       isAllgemeines,
+      category: resolveCategory(isAllgemeines, category),
     })
     .run();
   revalidateAll();
@@ -124,12 +148,34 @@ export async function updateRunningDescription(
   revalidateAll();
 }
 
-/** Toggles the Allgemeines flag on the currently running timer. */
+/**
+ * Toggles the Allgemeines flag on the currently running timer. Enabling it also
+ * assigns the default category; disabling it clears the category.
+ */
 export async function updateRunningAllgemeines(
   isAllgemeines: boolean,
+  category: AllgemeinesCategory | null = null,
 ): Promise<void> {
   db.update(timeEntries)
-    .set({ isAllgemeines, updatedAt: nowIso() })
+    .set({
+      isAllgemeines,
+      category: resolveCategory(isAllgemeines, category),
+      updatedAt: nowIso(),
+    })
+    .where(isNull(timeEntries.endedAt))
+    .run();
+  revalidateAll();
+}
+
+/** Updates the report category of the currently running (Allgemeines) timer. */
+export async function updateRunningCategory(
+  category: AllgemeinesCategory,
+): Promise<void> {
+  db.update(timeEntries)
+    .set({
+      category: resolveCategory(true, category),
+      updatedAt: nowIso(),
+    })
     .where(isNull(timeEntries.endedAt))
     .run();
   revalidateAll();
@@ -170,6 +216,7 @@ const manualEntrySchema = z.object({
   startedAt: z.string().min(1),
   endedAt: z.string().min(1),
   isAllgemeines: z.boolean().optional(),
+  category: z.enum(ALLGEMEINES_CATEGORIES).nullable().optional(),
 });
 
 export type ActionResult = { ok: boolean; message?: string };
@@ -180,6 +227,7 @@ export async function createManualEntry(input: {
   startedAt: string;
   endedAt: string;
   isAllgemeines?: boolean;
+  category?: AllgemeinesCategory | null;
 }): Promise<ActionResult> {
   const parsed = manualEntrySchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: "Ungültige Eingabe." };
@@ -193,12 +241,14 @@ export async function createManualEntry(input: {
     return { ok: false, message: "Ende muss nach dem Beginn liegen." };
   }
 
+  const isAllgemeines = parsed.data.isAllgemeines ?? false;
   db.insert(timeEntries)
     .values({
       description: parsed.data.description,
       startedAt: start.toISOString(),
       endedAt: end.toISOString(),
-      isAllgemeines: parsed.data.isAllgemeines ?? false,
+      isAllgemeines,
+      category: resolveCategory(isAllgemeines, parsed.data.category),
     })
     .run();
   revalidateAll();
@@ -213,6 +263,7 @@ export async function updateEntry(
     startedAt?: string;
     endedAt?: string;
     isAllgemeines?: boolean;
+    category?: AllgemeinesCategory | null;
   },
 ): Promise<ActionResult> {
   const patch: Record<string, string | boolean | null> = {
@@ -235,6 +286,9 @@ export async function updateEntry(
 
   if (typeof input.isAllgemeines === "boolean") {
     patch.isAllgemeines = input.isAllgemeines;
+    patch.category = resolveCategory(input.isAllgemeines, input.category);
+  } else if (input.category !== undefined) {
+    patch.category = input.category;
   }
 
   db.update(timeEntries).set(patch).where(eq(timeEntries.id, id)).run();
@@ -267,8 +321,6 @@ const settingsSchema = z.object({
   jiraToken: z.string().nullable(),
   jiraUser: z.string().nullable(),
   jiraPassword: z.string().nullable(),
-  allgemeinesIssueKey: z.string(),
-  addAllgemeinesSummary: z.boolean(),
   overtimeBaselineMinutes: z.number().int(),
   themeMode: z.enum(["system", "light", "dark"]),
   sprintAnchorDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -304,8 +356,6 @@ export async function updateSettings(
       jiraToken: d.jiraToken,
       jiraUser: d.jiraUser,
       jiraPassword: d.jiraPassword,
-      allgemeinesIssueKey: d.allgemeinesIssueKey.trim().toUpperCase(),
-      addAllgemeinesSummary: d.addAllgemeinesSummary,
       overtimeBaselineMinutes: d.overtimeBaselineMinutes,
       themeMode: d.themeMode,
       sprintAnchorDate: d.sprintAnchorDate,
@@ -383,8 +433,6 @@ export type PlannedWorklog = {
   minutes: number;
   comment: string;
   entryCount: number;
-  /** True for the auto-appended "Allgemeines" sum worklog. */
-  isSummary?: boolean;
 };
 
 export type SkippedEntry = { description: string; reason: string };
@@ -416,11 +464,14 @@ function buildPlanInternal(
 ): { worklogs: InternalWorklog[]; skipped: SkippedEntry[] } {
   const projectKeys = parseProjectKeys(s.jiraProjectKeys);
   const breaks = parseBreaks(s.breaks);
-  const allgemeinesKey = s.allgemeinesIssueKey.trim().toUpperCase();
   const skipped: SkippedEntry[] = [];
   const valid: Parsed[] = [];
 
   for (const entry of candidates) {
+    // Allgemeines entries are never booked to Jira — callers filter them out,
+    // but guard here too so a stray one can never reach a worklog.
+    if (entry.isAllgemeines) continue;
+
     const seconds = effectiveDurationSeconds(
       entry.startedAt,
       entry.endedAt,
@@ -428,31 +479,16 @@ function buildPlanInternal(
       s.autoPauseEnabled,
     );
 
-    let issueKey: string | undefined;
-    let comment: string;
-
-    if (entry.isAllgemeines) {
-      if (!allgemeinesKey) {
-        skipped.push({
-          description: entry.description || "(ohne Beschreibung)",
-          reason: "Allgemeines-Issue ist nicht konfiguriert",
-        });
-        continue;
-      }
-      issueKey = allgemeinesKey;
-      comment = entry.description.trim();
-    } else {
-      const parsed = parseDescription(entry.description, projectKeys);
-      if (!parsed.issueKey) {
-        skipped.push({
-          description: entry.description || "(ohne Beschreibung)",
-          reason: "Kein Issue-Key erkannt",
-        });
-        continue;
-      }
-      issueKey = parsed.issueKey;
-      comment = parsed.comment;
+    const parsed = parseDescription(entry.description, projectKeys);
+    if (!parsed.issueKey) {
+      skipped.push({
+        description: entry.description || "(ohne Beschreibung)",
+        reason: "Kein Issue-Key erkannt",
+      });
+      continue;
     }
+    const issueKey = parsed.issueKey;
+    const comment = parsed.comment;
 
     if (Math.round(seconds / 60) < 1) {
       skipped.push({
@@ -515,27 +551,6 @@ function buildPlanInternal(
     }
   }
 
-  if (s.addAllgemeinesSummary && allgemeinesKey) {
-    const contributing = worklogs.filter((w) => w.issueKey !== allgemeinesKey);
-    const summaryMinutes = contributing.reduce((sum, w) => sum + w.minutes, 0);
-    if (summaryMinutes > 0) {
-      const started = contributing.reduce(
-        (min, w) => (w.started < min ? w.started : min),
-        contributing[0].started,
-      );
-      worklogs.push({
-        issueKey: allgemeinesKey,
-        minutes: summaryMinutes,
-        timeSpent: formatDurationHoursMinutes(summaryMinutes),
-        comment: "",
-        entryCount: contributing.reduce((n, w) => n + w.entryCount, 0),
-        started,
-        entryIds: [],
-        isSummary: true,
-      });
-    }
-  }
-
   return { worklogs, skipped };
 }
 
@@ -548,6 +563,7 @@ function buildDayPlan(dayKeyStr: string): {
   const candidates = getAllEntries().filter(
     (e) =>
       e.endedAt !== null &&
+      !e.isAllgemeines &&
       (force || e.submittedAt === null) &&
       dayKey(e.startedAt) === dayKeyStr,
   );
@@ -562,7 +578,10 @@ function buildAllOpenPlan(): {
   const s = getSettings();
   const force = isForceBookingEnabled();
   const candidates = getAllEntries().filter(
-    (e) => e.endedAt !== null && (force || e.submittedAt === null),
+    (e) =>
+      e.endedAt !== null &&
+      !e.isAllgemeines &&
+      (force || e.submittedAt === null),
   );
 
   const byDay = new Map<string, typeof candidates>();
@@ -648,7 +667,6 @@ async function postPlanToJira(
 
   // Bind the narrowed auth so it stays non-null inside the closure below.
   const jiraAuth: JiraAuth = auth;
-  const allgemeinesKey = s.allgemeinesIssueKey.trim().toUpperCase();
 
   async function bookWorklog(wl: InternalWorklog): Promise<boolean> {
     try {
@@ -680,28 +698,8 @@ async function postPlanToJira(
     }
   }
 
-  // The "Allgemeines" summary worklog mirrors the sum of the concrete-issue
-  // worklogs. It must be booked LAST and only for the time that actually made
-  // it into Jira — otherwise a single failed concrete worklog (e.g. missing
-  // permissions) would inflate the summary, and re-booking after fixing the
-  // permission would double-count that time on the summary issue.
-  const summaryWorklog = worklogs.find((w) => w.isSummary);
-  let bookedSummaryMinutes = 0;
-
   for (const wl of worklogs) {
-    if (wl.isSummary) continue;
-    const ok = await bookWorklog(wl);
-    if (ok && wl.issueKey !== allgemeinesKey) {
-      bookedSummaryMinutes += wl.minutes;
-    }
-  }
-
-  if (summaryWorklog && bookedSummaryMinutes > 0) {
-    await bookWorklog({
-      ...summaryWorklog,
-      minutes: bookedSummaryMinutes,
-      timeSpent: formatDurationHoursMinutes(bookedSummaryMinutes),
-    });
+    await bookWorklog(wl);
   }
 
   revalidateAll();

@@ -1,4 +1,8 @@
-import type { SettingsRow, TimeEntry } from "@/db/schema";
+import type {
+  AllgemeinesCategory,
+  SettingsRow,
+  TimeEntry,
+} from "@/db/schema";
 import { toEntryView } from "./entries";
 import type { ResolvedRange } from "./report-range";
 import { parseProjectKeys } from "./settings";
@@ -10,6 +14,7 @@ export type ReportRow = {
   durationSeconds: number;
   issueKey: string | null;
   isAllgemeines: boolean;
+  category: AllgemeinesCategory | null;
   comment: string;
   submitted: boolean;
 };
@@ -19,7 +24,6 @@ export type WorklogReport = {
   rangeLabel: string;
   rows: ReportRow[];
   totalSeconds: number;
-  sammelbuchungIssueKey: string | null;
 };
 
 export function buildReport(
@@ -32,8 +36,6 @@ export function buildReport(
     breaks: parseBreaks(s.breaks),
     autoPauseEnabled: s.autoPauseEnabled,
   };
-  const allgemeinesKey = s.allgemeinesIssueKey.trim().toUpperCase() || null;
-
   const fromMs = range.from.getTime();
   const toMs = range.to.getTime();
 
@@ -44,9 +46,8 @@ export function buildReport(
     if (startedMs < fromMs || startedMs > toMs) continue;
 
     const view = toEntryView(entry, cfg);
-    const issueKey = view.isAllgemeines
-      ? allgemeinesKey
-      : (view.issueKey ?? null);
+    // Allgemeines entries are not booked to Jira and carry no issue key.
+    const issueKey = view.isAllgemeines ? null : (view.issueKey ?? null);
     const comment = view.isAllgemeines
       ? view.description.trim()
       : view.issueKey
@@ -59,6 +60,7 @@ export function buildReport(
       durationSeconds: view.effectiveSeconds,
       issueKey,
       isAllgemeines: view.isAllgemeines,
+      category: view.category,
       comment,
       submitted: view.submittedAt !== null,
     });
@@ -73,8 +75,6 @@ export function buildReport(
     rangeLabel: range.label,
     rows,
     totalSeconds,
-    sammelbuchungIssueKey:
-      s.addAllgemeinesSummary && allgemeinesKey ? allgemeinesKey : null,
   };
 }
 
