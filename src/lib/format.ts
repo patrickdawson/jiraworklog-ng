@@ -62,6 +62,45 @@ export function dayKey(iso: string | Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/**
+ * The UTC instant of local 00:00 on `key`, as an ISO string — i.e. a bound that
+ * can be compared directly against a stored `started_at`.
+ *
+ * `started_at` is always written as `new Date().toISOString()`, so it is
+ * fixed-width zero-padded UTC and a lexicographic compare *is* a chronological
+ * compare. The trap is comparing against the wrong string: `dayKey` yields a
+ * LOCAL day, so concatenating `"2026-08-31" + "T00:00:00.000Z"` describes the
+ * UTC day instead. In Europe/Berlin at UTC+2 that silently drops every entry
+ * started between 00:00 and 02:00 local, and wrongly pulls in the same slice of
+ * the next day.
+ *
+ * Constructing through a local `Date` avoids that exactly, DST included — the
+ * offset shifts with the date because the runtime resolves local wall-clock to
+ * an absolute instant. No widening and no re-filtering in JS is needed.
+ */
+export function dayStartIso(key: string): string {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
+}
+
+/** The exclusive upper bound of local day `key` (= local 00:00 of the next day). */
+export function dayEndExclusiveIso(key: string): string {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d + 1, 0, 0, 0, 0).toISOString();
+}
+
+/**
+ * The UTC instant of local 00:00, `daysBack` days before `now`. Snapping to
+ * midnight matters wherever a cutoff decides whether a whole day is in or out —
+ * a rolling instant would split a day across the boundary.
+ */
+export function daysAgoStartIso(daysBack: number, now: Date = new Date()): string {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - daysBack);
+  return d.toISOString();
+}
+
 const WEEKDAYS = [
   "Sonntag",
   "Montag",

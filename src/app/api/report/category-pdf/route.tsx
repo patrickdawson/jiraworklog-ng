@@ -1,6 +1,6 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { CategoryReportPdf } from "@/components/category-report-pdf";
-import { getAllEntries, getSettings } from "@/db/queries";
+import { getEntriesBetween, getSettings } from "@/db/queries";
 import { buildCategoryReport } from "@/lib/category-report";
 import { resolveRange } from "@/lib/report-range";
 
@@ -17,7 +17,11 @@ export async function GET(req: Request) {
     lengthDays: settings.sprintLengthDays,
   });
 
-  const report = buildCategoryReport(getAllEntries(), settings, range);
+  const entries = getEntriesBetween(
+    range.from.toISOString(),
+    range.to.toISOString(),
+  );
+  const report = buildCategoryReport(entries, settings, range);
   const buffer = await renderToBuffer(<CategoryReportPdf report={report} />);
 
   return new Response(new Uint8Array(buffer), {

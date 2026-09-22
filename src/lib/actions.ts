@@ -10,8 +10,18 @@ import {
   timeEntries,
   type AllgemeinesCategory,
 } from "@/db/schema";
-import { getAllEntries, getRunningEntry, getSettings } from "@/db/queries";
-import { dayKey, formatDurationHoursMinutes } from "@/lib/format";
+import {
+  getBookableEntries,
+  getBookableEntriesBetween,
+  getRunningEntry,
+  getSettings,
+} from "@/db/queries";
+import {
+  dayEndExclusiveIso,
+  dayKey,
+  dayStartIso,
+  formatDurationHoursMinutes,
+} from "@/lib/format";
 import {
   checkCredentials,
   postWorklogToJira,
@@ -560,12 +570,12 @@ function buildDayPlan(dayKeyStr: string): {
 } {
   const s = getSettings();
   const force = isForceBookingEnabled();
-  const candidates = getAllEntries().filter(
-    (e) =>
-      e.endedAt !== null &&
-      !e.isAllgemeines &&
-      (force || e.submittedAt === null) &&
-      dayKey(e.startedAt) === dayKeyStr,
+  // Half-open local-day bounds, which is exactly what `dayKey(e.startedAt) ===
+  // dayKeyStr` meant — without reading every entry ever tracked to find one day.
+  const candidates = getBookableEntriesBetween(
+    dayStartIso(dayKeyStr),
+    dayEndExclusiveIso(dayKeyStr),
+    force,
   );
   return buildPlanInternal(candidates, s);
 }
@@ -577,12 +587,8 @@ function buildAllOpenPlan(): {
 } {
   const s = getSettings();
   const force = isForceBookingEnabled();
-  const candidates = getAllEntries().filter(
-    (e) =>
-      e.endedAt !== null &&
-      !e.isAllgemeines &&
-      (force || e.submittedAt === null),
-  );
+  // Narrowed by predicate, not by date — "every open day" has no range.
+  const candidates = getBookableEntries(force);
 
   const byDay = new Map<string, typeof candidates>();
   for (const entry of candidates) {

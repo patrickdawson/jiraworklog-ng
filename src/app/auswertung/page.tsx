@@ -1,11 +1,7 @@
 import { RangeControls } from "@/components/auswertung-export";
 import { Card, KpiCard, PageHeader } from "@/components/ui";
-import { getAllEntries, getSettings } from "@/db/queries";
-import {
-  concreteSecondsByDay,
-  overtimeBalanceMinutes,
-  workedSecondsByDay,
-} from "@/lib/entries";
+import { getFinishedDurations, getSettings } from "@/db/queries";
+import { overtimeBalanceMinutes, secondsByDay } from "@/lib/entries";
 import { formatHm, formatSignedHm } from "@/lib/format";
 import {
   parseRangeKind,
@@ -58,15 +54,19 @@ export default async function AuswertungPage({
     lengthDays: s.sprintLengthDays,
   });
 
-  const entries = getAllEntries();
   const cfg = {
     projectKeys: parseProjectKeys(s.jiraProjectKeys),
     breaks: parseBreaks(s.breaks),
     autoPauseEnabled: s.autoPauseEnabled,
   };
 
-  const byDay = workedSecondsByDay(entries, cfg);
-  const concreteByDay = concreteSecondsByDay(entries, cfg);
+  // The overtime balance is cumulative over every day ever tracked, so this one
+  // aggregate reads the full history — but only the three columns it needs, and
+  // in a single pass that yields both maps.
+  const { worked: byDay, concrete: concreteByDay } = secondsByDay(
+    getFinishedDurations(),
+    cfg,
+  );
   const totalOvertime = overtimeBalanceMinutes(
     byDay,
     s.regularWorkMinutes,

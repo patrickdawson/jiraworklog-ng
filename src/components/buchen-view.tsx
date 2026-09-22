@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { Badge, Card, EmptyState, KpiCard, PageHeader } from "@/components/ui";
 import {
   createManualEntry,
@@ -23,15 +24,21 @@ import {
   ALLGEMEINES_CATEGORIES,
   type AllgemeinesCategory,
 } from "@/db/schema";
-import type {
-  DayGroup,
-  DescGroup,
-  EntryView,
-  RecentEntry,
+import {
+  descGroupKey,
+  type DayGroup,
+  type DescGroup,
+  type EntryView,
+  type RecentEntry,
 } from "@/lib/entries";
 import { TimerDescriptionInput } from "@/components/timer-description-input";
+import {
+  NowProvider,
+  useNow,
+  useRunningSeconds,
+} from "@/components/now-context";
 import { clockTime, formatHms, formatSignedHm } from "@/lib/format";
-import { effectiveDurationSeconds, type BreakWindow } from "@/lib/work-time";
+import type { BreakWindow } from "@/lib/work-time";
 
 const DEFAULT_CATEGORY: AllgemeinesCategory = "Projektorganisation";
 
@@ -85,6 +92,17 @@ export type BuchenData = {
   overtimeBalanceMinutes: number;
   days: DayGroup[];
   recents: RecentEntry[];
+  /**
+   * Bookable entries across the WHOLE history, not just the rendered window —
+   * the header button submits all of them.
+   */
+  openBookableCount: number;
+  history: {
+    /** How many days of history `days` covers. */
+    windowDays: number | "all";
+    /** Entries older than the window; 0 when everything is shown. */
+    hiddenOlderCount: number;
+  };
   config: {
     dailyTargetMinutes: number;
     autoPauseEnabled: boolean;
@@ -111,32 +129,259 @@ export function BuchenView({ data }: { data: BuchenData }) {
     overtimeBalanceMinutes,
     days,
     recents,
+    openBookableCount,
+    history,
     config,
   } = data;
 
-  // ── Live ticking timer ─────────────────────────────────────────
-  // Initialized to null so SSR and first client render agree, then set on mount.
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    const initial = setTimeout(() => setNow(new Date()), 0);
-    if (!running) return () => clearTimeout(initial);
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => {
-      clearTimeout(initial);
-      clearInterval(id);
-    };
-  }, [running]);
+  // ── Dialog & toast state ──────────────────────────────────────
+  const [manualOpen, setManualOpen] = useState(false);
+  const [editEntry, setEditEntry] = useState<EntryView | null>(null);
+  const [jiraScope, setJiraScope] = useState<JiraScope | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
-  const runningSeconds = useMemo(() => {
-    if (!running || !now) return 0;
-    return effectiveDurationSeconds(
-      running.startedAt,
-      null,
-      config.breaks,
-      config.autoPauseEnabled,
-      now,
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  const hasAnyBookable = openBookableCount > 0;
+
+  return (
+    <NowProvider active={running !== null}>
+      <main className="px-8 py-7">
+        <PageHeader
+          title="Buchen"
+          subtitle={<TodayDate />}
+          actions={
+            <>
+              {hasAnyBookable && config.jiraConfigured && (
+                <Button
+                  variant={config.forceBooking ? "danger" : "primary"}
+                  onClick={() => setJiraScope({ kind: "all" })}
+                >
+                  Nach Jira buchen ({openBookableCount})
+                </Button>
+              )}
+              <Button onClick={() => setManualOpen(true)}>+ Eintrag</Button>
+            </>
+          }
+        />
+
+        {toast && (
+          <div
+            className="mb-4 rounded-lg border px-4 py-2.5 text-[13px]"
+            style={{
+              background: "var(--warn-soft)",
+              borderColor: "var(--warn)",
+              color: "var(--warn)",
+            }}
+            role="status"
+          >
+            {toast}
+          </div>
+        )}
+
+        {config.forceBooking && (
+          <div
+            className="mb-4 rounded-lg border px-4 py-2.5 text-[13px] font-semibold"
+            style={{
+              background: "var(--neg-soft)",
+              borderColor: "var(--neg)",
+              color: "var(--neg)",
+            }}
+            role="alert"
+          >
+            ⚠️ Force-Buchung aktiv — bereits gebuchte Einträge werden beim Buchen
+            erneut nach Jira übertragen. In den Einstellungen deaktivierbar.
+          </div>
+        )}
+
+        <TodayKpis
+          todayCommittedSeconds={todayCommittedSeconds}
+          overtimeBalanceMinutes={overtimeBalanceMinutes}
+          running={running}
+          config={config}
+        />
+
+        <TimerCard
+          running={running}
+          breaks={config.breaks}
+          autoPauseEnabled={config.autoPauseEnabled}
+          recents={recents}
+          onToast={setToast}
+        />
+
+        <div className="mt-7">
+          <div className="flex items-baseline justify-between mb-3">
+            <div className="text-[15px] font-semibold">Einträge</div>
+            <HistoryWindowNote history={history} />
+          </div>
+          {days.length === 0 ? (
+            <Card>
+              <EmptyState
+                title={
+                  history.hiddenOlderCount > 0
+                    ? "Keine Einträge im gewählten Zeitraum"
+                    : "Noch keine Einträge"
+                }
+                description={
+                  history.hiddenOlderCount > 0
+                    ? "Ältere Einträge sind vorhanden — lade unten mehr nach."
+                    : "Starte oben den Timer oder lege einen Eintrag manuell an."
+                }
+              />
+            </Card>
+          ) : (
+            days.map((day) => (
+              <DaySection
+                key={day.dayKey}
+                day={day}
+                jiraConfigured={config.jiraConfigured}
+                forceBooking={config.forceBooking}
+                onPlay={async (text, allgemeines, category) => {
+                  const r = await startTimer(text, allgemeines, category);
+                  if (r.previousDiscarded) {
+                    setToast(
+                      "Vorheriger Eintrag verworfen (kürzer als 1 Minute).",
+                    );
+                  }
+                }}
+                onEdit={(entry) => setEditEntry(entry)}
+                onSubmitJira={() =>
+                  setJiraScope({
+                    kind: "day",
+                    dayKey: day.dayKey,
+                    label: day.label,
+                  })
+                }
+              />
+            ))
+          )}
+          <HistoryWindowControls history={history} />
+        </div>
+
+        {manualOpen && (
+          <ManualEntryDialog onClose={() => setManualOpen(false)} />
+        )}
+        {editEntry && (
+          <EditEntryDialog entry={editEntry} onClose={() => setEditEntry(null)} />
+        )}
+        {jiraScope && (
+          <JiraSubmitDialog
+            scope={jiraScope}
+            bookingMode={config.bookingMode}
+            forceBooking={config.forceBooking}
+            onClose={() => setJiraScope(null)}
+          />
+        )}
+      </main>
+    </NowProvider>
+  );
+}
+
+// ─────────────────────── History window ───────────────────────
+// The window lives in the URL rather than in client state: every mutation runs
+// `revalidatePath("/")`, which would reset or desync an accumulated "I loaded
+// three more pages" counter. A search param survives that for free, matches the
+// `?range=` convention on /auswertung, and keeps the back button working.
+
+/** "Zeigt die letzten 30 Tage · 1.832 ältere Einträge ausgeblendet". */
+function HistoryWindowNote({ history }: { history: BuchenData["history"] }) {
+  if (history.windowDays === "all") {
+    return (
+      <div className="text-[12px]" style={{ color: "var(--text-2)" }}>
+        Zeigt die gesamte Historie
+      </div>
     );
-  }, [running, config.breaks, config.autoPauseEnabled, now]);
+  }
+  return (
+    <div className="text-[12px]" style={{ color: "var(--text-2)" }}>
+      Zeigt die letzten {history.windowDays} Tage
+      {history.hiddenOlderCount > 0 && (
+        <>
+          {" · "}
+          {history.hiddenOlderCount.toLocaleString("de-DE")} ältere
+          {history.hiddenOlderCount === 1 ? " Eintrag" : " Einträge"}{" "}
+          ausgeblendet
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Plain links, so loading more history needs no JavaScript at all. */
+function HistoryWindowControls({
+  history,
+}: {
+  history: BuchenData["history"];
+}) {
+  if (history.windowDays === "all" || history.hiddenOlderCount === 0) {
+    return null;
+  }
+  const nextWindow = history.windowDays + 90;
+  return (
+    <div className="mt-4 flex items-center justify-center gap-4 text-[13px]">
+      <Link
+        href={`/?days=${nextWindow}`}
+        className="rounded-md border px-3 py-1.5 transition-colors"
+        style={{
+          borderColor: "var(--border-strong)",
+          color: "var(--text)",
+        }}
+      >
+        Weitere 90 Tage laden
+      </Link>
+      <Link
+        href="/?days=all"
+        style={{ color: "var(--text-2)" }}
+        className="underline underline-offset-2"
+      >
+        Alles anzeigen
+      </Link>
+    </div>
+  );
+}
+
+// ───────────────────── Clock-driven page bits ─────────────────────
+// These three are the only components that consume the ticking clock, so they
+// are the only ones React re-renders every second. Keeping them separate is
+// what stops the tick from touching the entry history below.
+
+/** Today's date in the page header. */
+function TodayDate() {
+  const now = useNow();
+  return (
+    <>
+      {now?.toLocaleDateString("de-DE", {
+        weekday: "long",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })}
+    </>
+  );
+}
+
+/** The four KPI cards. Only "Heute erfasst" and its two derivatives tick. */
+function TodayKpis({
+  todayCommittedSeconds,
+  overtimeBalanceMinutes,
+  running,
+  config,
+}: {
+  todayCommittedSeconds: number;
+  overtimeBalanceMinutes: number;
+  running: BuchenData["running"];
+  config: BuchenData["config"];
+}) {
+  const now = useNow();
+  const runningSeconds = useRunningSeconds(
+    running,
+    config.breaks,
+    config.autoPauseEnabled,
+  );
 
   const runningIsToday = useMemo(() => {
     if (!running || !now) return false;
@@ -155,163 +400,32 @@ export function BuchenView({ data }: { data: BuchenData }) {
   const reached = remaining <= 0;
   const progress = targetSeconds > 0 ? todayTotalSeconds / targetSeconds : 0;
 
-  // ── Dialog & toast state ──────────────────────────────────────
-  const [manualOpen, setManualOpen] = useState(false);
-  const [editEntry, setEditEntry] = useState<EntryView | null>(null);
-  const [jiraScope, setJiraScope] = useState<JiraScope | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const id = setTimeout(() => setToast(null), 4000);
-    return () => clearTimeout(id);
-  }, [toast]);
-
-  const totalBookable = days.reduce(
-    (s, d) => s + bookableCount(d, config.forceBooking),
-    0,
-  );
-  const hasAnyBookable = totalBookable > 0;
-
   return (
-    <main className="px-8 py-7">
-      <PageHeader
-        title="Buchen"
-        subtitle={now?.toLocaleDateString("de-DE", {
-          weekday: "long",
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })}
-        actions={
-          <>
-            {hasAnyBookable && config.jiraConfigured && (
-              <Button
-                variant={config.forceBooking ? "danger" : "primary"}
-                onClick={() => setJiraScope({ kind: "all" })}
-              >
-                Nach Jira buchen ({totalBookable})
-              </Button>
-            )}
-            <Button onClick={() => setManualOpen(true)}>+ Eintrag</Button>
-          </>
-        }
+    <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <KpiCard
+        label="Heute erfasst"
+        value={formatHms(todayTotalSeconds)}
+        progress={Math.max(0, Math.min(1, progress))}
       />
-
-      {toast && (
-        <div
-          className="mb-4 rounded-lg border px-4 py-2.5 text-[13px]"
-          style={{
-            background: "var(--warn-soft)",
-            borderColor: "var(--warn)",
-            color: "var(--warn)",
-          }}
-          role="status"
-        >
-          {toast}
-        </div>
-      )}
-
-      {config.forceBooking && (
-        <div
-          className="mb-4 rounded-lg border px-4 py-2.5 text-[13px] font-semibold"
-          style={{
-            background: "var(--neg-soft)",
-            borderColor: "var(--neg)",
-            color: "var(--neg)",
-          }}
-          role="alert"
-        >
-          ⚠️ Force-Buchung aktiv — bereits gebuchte Einträge werden beim Buchen
-          erneut nach Jira übertragen. In den Einstellungen deaktivierbar.
-        </div>
-      )}
-
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
-        <KpiCard
-          label="Heute erfasst"
-          value={formatHms(todayTotalSeconds)}
-          progress={Math.max(0, Math.min(1, progress))}
-        />
-        <KpiCard
-          label="Tagesziel"
-          value={formatHms(targetSeconds)}
-          tone="accent"
-          meta="aus den Einstellungen"
-        />
-        <KpiCard
-          label={reached ? "Über Ziel" : "Verbleibend bis Ziel"}
-          value={formatHms(Math.abs(remaining))}
-          tone={reached ? "pos" : "warn"}
-          meta={reached ? "Ziel erreicht 🎉" : "bis das Tagesziel erreicht ist"}
-        />
-        <KpiCard
-          label="Überstundensaldo"
-          value={formatSignedHm(overtimeBalanceMinutes)}
-          tone={overtimeBalanceMinutes >= 0 ? "pos" : "neg"}
-          meta="über alle erfassten Tage"
-        />
-      </div>
-
-      <TimerCard
-        running={running}
-        runningSeconds={runningSeconds}
-        recents={recents}
-        onToast={setToast}
+      <KpiCard
+        label="Tagesziel"
+        value={formatHms(targetSeconds)}
+        tone="accent"
+        meta="aus den Einstellungen"
       />
-
-      <div className="mt-7">
-        <div className="text-[15px] font-semibold mb-3">Einträge</div>
-        {days.length === 0 ? (
-          <Card>
-            <EmptyState
-              title="Noch keine Einträge"
-              description="Starte oben den Timer oder lege einen Eintrag manuell an."
-            />
-          </Card>
-        ) : (
-          days.map((day) => (
-            <DaySection
-              key={day.dayKey}
-              day={day}
-              jiraConfigured={config.jiraConfigured}
-              forceBooking={config.forceBooking}
-              onPlay={async (text, allgemeines, category) => {
-                const r = await startTimer(text, allgemeines, category);
-                if (r.previousDiscarded) {
-                  setToast(
-                    "Vorheriger Eintrag verworfen (kürzer als 1 Minute).",
-                  );
-                }
-              }}
-              onEdit={(entry) => setEditEntry(entry)}
-              onSubmitJira={() =>
-                setJiraScope({
-                  kind: "day",
-                  dayKey: day.dayKey,
-                  label: day.label,
-                })
-              }
-            />
-          ))
-        )}
-      </div>
-
-      {manualOpen && (
-        <ManualEntryDialog onClose={() => setManualOpen(false)} />
-      )}
-      {editEntry && (
-        <EditEntryDialog entry={editEntry} onClose={() => setEditEntry(null)} />
-      )}
-      {jiraScope && (
-        <JiraSubmitDialog
-          scope={jiraScope}
-          bookingMode={config.bookingMode}
-          forceBooking={config.forceBooking}
-          onClose={() => setJiraScope(null)}
-        />
-      )}
-    </main>
+      <KpiCard
+        label={reached ? "Über Ziel" : "Verbleibend bis Ziel"}
+        value={formatHms(Math.abs(remaining))}
+        tone={reached ? "pos" : "warn"}
+        meta={reached ? "Ziel erreicht 🎉" : "bis das Tagesziel erreicht ist"}
+      />
+      <KpiCard
+        label="Überstundensaldo"
+        value={formatSignedHm(overtimeBalanceMinutes)}
+        tone={overtimeBalanceMinutes >= 0 ? "pos" : "neg"}
+        meta="über alle erfassten Tage"
+      />
+    </div>
   );
 }
 
@@ -319,15 +433,18 @@ export function BuchenView({ data }: { data: BuchenData }) {
 
 function TimerCard({
   running,
-  runningSeconds,
+  breaks,
+  autoPauseEnabled,
   recents,
   onToast,
 }: {
   running: BuchenData["running"];
-  runningSeconds: number;
+  breaks: BreakWindow[];
+  autoPauseEnabled: boolean;
   recents: RecentEntry[];
   onToast: (msg: string) => void;
 }) {
+  const runningSeconds = useRunningSeconds(running, breaks, autoPauseEnabled);
   const [draft, setDraft] = useState(running?.description ?? "");
   const [allgemeines, setAllgemeines] = useState(running?.isAllgemeines ?? false);
   const [category, setCategory] = useState<AllgemeinesCategory>(
@@ -620,7 +737,7 @@ function DaySection({
 }) {
   const bookable = bookableCount(day, forceBooking);
   return (
-    <div className="mb-5">
+    <div className="mb-5" data-day-section={day.dayKey}>
       <div className="flex items-center justify-between px-1 pb-2">
         <div className="flex items-center gap-3">
           <span className="text-[13px] font-semibold">{day.label}</span>
@@ -654,7 +771,7 @@ function DaySection({
         <div className="divide-y" style={{ borderColor: "var(--border)" }}>
           {day.groups.map((g) => (
             <GroupRow
-              key={g.description + g.entries[0].id}
+              key={descGroupKey(g)}
               group={g}
               onPlay={onPlay}
               onEdit={onEdit}
@@ -941,6 +1058,9 @@ function Modal({
           borderColor: "var(--border)",
           boxShadow: "var(--shadow-lg)",
         }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         onClick={(e) => e.stopPropagation()}
       >
         <div

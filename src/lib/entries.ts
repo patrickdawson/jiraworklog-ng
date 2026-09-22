@@ -43,6 +43,16 @@ export type EntryAnalysisConfig = {
 
 /** How far back the "recently used" suggestions look. */
 export const RECENT_WINDOW_DAYS = 30;
+
+/**
+ * How many days of history the Buchen page shows before the user asks for more.
+ *
+ * Deliberately the same window as the suggestions: `buildRecentEntries` is fed
+ * from the day groups the page already built, so a shorter display window would
+ * silently truncate the timer dropdown. One cutoff, one query, one class of bug
+ * that cannot happen.
+ */
+export const DEFAULT_HISTORY_DAYS = RECENT_WINDOW_DAYS;
 /** How many suggestions the timer dropdown offers at most. */
 export const RECENT_LIMIT = 8;
 
@@ -259,48 +269,46 @@ export function overtimeBalanceMinutes(
   return Math.round(balance);
 }
 
-/** Effective worked seconds per local day, for finished entries. */
-export function workedSecondsByDay(
-  entries: TimeEntry[],
-  cfg: EntryAnalysisConfig,
-): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const entry of entries) {
-    if (!entry.endedAt) continue;
-    const seconds = effectiveDurationSeconds(
-      entry.startedAt,
-      entry.endedAt,
-      cfg.breaks,
-      cfg.autoPauseEnabled,
-    );
-    const key = dayKey(entry.startedAt);
-    map.set(key, (map.get(key) ?? 0) + seconds);
-  }
-  return map;
-}
+/** The columns the per-day aggregate needs — see `DurationRow` in the queries. */
+export type DurationLike = Pick<
+  TimeEntry,
+  "startedAt" | "endedAt" | "isAllgemeines"
+>;
 
 /**
- * Effective worked seconds per local day for entries that count toward
- * concrete-issue work — i.e. entries NOT flagged as Allgemeines. Entries
- * without a parseable issue key still count as "concrete" here, on the
- * assumption that the user simply forgot to add the key.
+ * Effective worked seconds per local day, for finished entries.
+ *
+ * `concrete` counts only entries NOT flagged as Allgemeines. An entry without a
+ * parseable issue key still counts as concrete, on the assumption that the user
+ * simply forgot the key.
+ *
+ * Both maps come from one pass. They used to be two near-identical loops that
+ * differed by a single `if`, and the Auswertung page walked the whole history
+ * twice to build them.
+ *
+ * The narrow `DurationLike` input is deliberate: the overtime balance is
+ * cumulative over every day ever tracked, so this is the one aggregate that
+ * cannot be windowed. Taking only three columns is what keeps it cheap.
  */
-export function concreteSecondsByDay(
-  entries: TimeEntry[],
-  cfg: EntryAnalysisConfig,
-): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const entry of entries) {
-    if (!entry.endedAt) continue;
-    if (entry.isAllgemeines) continue;
+export function secondsByDay(
+  rows: DurationLike[],
+  cfg: Pick<EntryAnalysisConfig, "breaks" | "autoPauseEnabled">,
+): { worked: Map<string, number>; concrete: Map<string, number> } {
+  const worked = new Map<string, number>();
+  const concrete = new Map<string, number>();
+  for (const row of rows) {
+    if (!row.endedAt) continue;
     const seconds = effectiveDurationSeconds(
-      entry.startedAt,
-      entry.endedAt,
+      row.startedAt,
+      row.endedAt,
       cfg.breaks,
       cfg.autoPauseEnabled,
     );
-    const key = dayKey(entry.startedAt);
-    map.set(key, (map.get(key) ?? 0) + seconds);
+    const key = dayKey(row.startedAt);
+    worked.set(key, (worked.get(key) ?? 0) + seconds);
+    if (!row.isAllgemeines) {
+      concrete.set(key, (concrete.get(key) ?? 0) + seconds);
+    }
   }
-  return map;
+  return { worked, concrete };
 }
