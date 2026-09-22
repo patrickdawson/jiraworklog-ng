@@ -49,6 +49,10 @@ export const timeEntries = sqliteTable(
   (table) => [
     index("time_entries_started_idx").on(table.startedAt),
     index("time_entries_submitted_idx").on(table.submittedAt),
+    // The Electron tray polls `getRunningEntry()` (`ended_at IS NULL`) once a
+    // second; without this the planner falls back to a full table scan that
+    // grows with every entry ever tracked.
+    index("time_entries_ended_idx").on(table.endedAt),
   ],
 );
 

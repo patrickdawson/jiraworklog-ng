@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS `time_entries_ended_idx` ON `time_entries` (`ended_at`);
