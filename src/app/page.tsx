@@ -2,6 +2,7 @@ import { BuchenView } from "@/components/buchen-view";
 import { getAllEntries, getSettings } from "@/db/queries";
 import {
   buildDayGroups,
+  buildRecentEntries,
   overtimeBalanceMinutes,
   workedSecondsByDay,
 } from "@/lib/entries";
@@ -23,6 +24,7 @@ export default function BuchenPage() {
   };
 
   const days = buildDayGroups(entries, cfg);
+  const recents = buildRecentEntries(days);
   const runningRow = entries.find((e) => e.endedAt === null) ?? null;
   const todayKey = dayKey(new Date());
   const todayCommittedSeconds =
@@ -48,6 +50,7 @@ export default function BuchenPage() {
         todayCommittedSeconds,
         overtimeBalanceMinutes: overtime,
         days,
+        recents,
         config: {
           dailyTargetMinutes: s.dailyTargetMinutes,
           autoPauseEnabled: s.autoPauseEnabled,

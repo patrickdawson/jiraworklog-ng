@@ -23,7 +23,13 @@ import {
   ALLGEMEINES_CATEGORIES,
   type AllgemeinesCategory,
 } from "@/db/schema";
-import type { DayGroup, DescGroup, EntryView } from "@/lib/entries";
+import type {
+  DayGroup,
+  DescGroup,
+  EntryView,
+  RecentEntry,
+} from "@/lib/entries";
+import { TimerDescriptionInput } from "@/components/timer-description-input";
 import { clockTime, formatHms, formatSignedHm } from "@/lib/format";
 import { effectiveDurationSeconds, type BreakWindow } from "@/lib/work-time";
 
@@ -78,6 +84,7 @@ export type BuchenData = {
   todayCommittedSeconds: number;
   overtimeBalanceMinutes: number;
   days: DayGroup[];
+  recents: RecentEntry[];
   config: {
     dailyTargetMinutes: number;
     autoPauseEnabled: boolean;
@@ -98,8 +105,14 @@ function bookableCount(day: DayGroup, forceBooking: boolean): number {
 }
 
 export function BuchenView({ data }: { data: BuchenData }) {
-  const { running, todayCommittedSeconds, overtimeBalanceMinutes, days, config } =
-    data;
+  const {
+    running,
+    todayCommittedSeconds,
+    overtimeBalanceMinutes,
+    days,
+    recents,
+    config,
+  } = data;
 
   // ── Live ticking timer ─────────────────────────────────────────
   // Initialized to null so SSR and first client render agree, then set on mount.
@@ -243,6 +256,7 @@ export function BuchenView({ data }: { data: BuchenData }) {
       <TimerCard
         running={running}
         runningSeconds={runningSeconds}
+        recents={recents}
         onToast={setToast}
       />
 
@@ -306,10 +320,12 @@ export function BuchenView({ data }: { data: BuchenData }) {
 function TimerCard({
   running,
   runningSeconds,
+  recents,
   onToast,
 }: {
   running: BuchenData["running"];
   runningSeconds: number;
+  recents: RecentEntry[];
   onToast: (msg: string) => void;
 }) {
   const [draft, setDraft] = useState(running?.description ?? "");
@@ -346,6 +362,30 @@ function TimerCard({
         draft,
         allgemeines,
         allgemeines ? category : null,
+      );
+      if (r.previousDiscarded) {
+        onToast("Vorheriger Eintrag verworfen (kürzer als 1 Minute).");
+      }
+    } finally {
+      setPending(false);
+    }
+  }
+
+  /**
+   * Continue a recent entry. Same semantics as the repeat button in the
+   * history: `startTimer` closes whatever is running and inserts a new row.
+   * The draft, checkbox and category are not set here — the revalidate that
+   * follows changes `running.id`, and the sync effect above resets all three
+   * from the server.
+   */
+  async function pickRecent(entry: RecentEntry) {
+    if (pending) return;
+    setPending(true);
+    try {
+      const r = await startTimer(
+        entry.description,
+        entry.isAllgemeines,
+        entry.category,
       );
       if (r.previousDiscarded) {
         onToast("Vorheriger Eintrag verworfen (kürzer als 1 Minute).");
@@ -445,28 +485,21 @@ function TimerCard({
           )}
         </button>
 
-        <input
+        <TimerDescriptionInput
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={flushDescription}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (running) flushDescription();
-              else onStart();
-            }
+          onChange={setDraft}
+          onCommit={flushDescription}
+          onEnter={() => {
+            if (running) flushDescription();
+            else onStart();
           }}
+          onPick={pickRecent}
+          recents={recents}
           placeholder={
             allgemeines
               ? "Worklogtext für Allgemeines"
               : "Woran arbeitest du?  ·  Format: Merksatz  TXR-1234  Worklogtext"
           }
-          className="flex-1 rounded-lg border px-3.5 py-3 text-[15px] outline-none"
-          style={{
-            background: "var(--surface-2)",
-            borderColor: "var(--border-strong)",
-            color: "var(--text)",
-          }}
         />
 
         <div
