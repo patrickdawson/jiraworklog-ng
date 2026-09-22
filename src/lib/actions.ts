@@ -13,6 +13,7 @@ import {
 import {
   getBookableEntries,
   getBookableEntriesBetween,
+  getFinishedDurationsBefore,
   getRunningEntry,
   getSettings,
 } from "@/db/queries";
@@ -20,8 +21,10 @@ import {
   dayEndExclusiveIso,
   dayKey,
   dayStartIso,
+  daysAgoStartIso,
   formatDurationHoursMinutes,
 } from "@/lib/format";
+import { overtimeBalanceMinutes, secondsByDay } from "@/lib/entries";
 import {
   checkCredentials,
   postWorklogToJira,
@@ -414,25 +417,71 @@ export async function testJiraConnection(input: {
 
 // ──────────────────────────── Cleanup ─────────────────────────────
 
-export async function cleanupOldEntries(
-  days: number,
-): Promise<{ ok: boolean; deleted: number; message?: string }> {
+/**
+ * Deletes finished entries older than `days`, rolling the overtime they
+ * contributed into `settings.overtimeBaselineMinutes` first.
+ *
+ * Without that roll-forward the balance silently changes: `overtimeBalanceMinutes`
+ * sums over whatever rows remain, so deleting history deletes its contribution
+ * too. The baseline exists precisely to represent overtime from before the
+ * tracked period, which is what these days become once they are gone.
+ */
+export async function cleanupOldEntries(days: number): Promise<{
+  ok: boolean;
+  deleted: number;
+  overtimeRolledMinutes: number;
+  message?: string;
+}> {
   if (!Number.isFinite(days) || days < 1) {
-    return { ok: false, deleted: 0, message: "Ungültige Tagesangabe." };
+    return {
+      ok: false,
+      deleted: 0,
+      overtimeRolledMinutes: 0,
+      message: "Ungültige Tagesangabe.",
+    };
   }
-  const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
-  // Only delete finished entries older than the cutoff — never a running timer.
-  const stale = db
-    .select({ id: timeEntries.id })
-    .from(timeEntries)
-    .where(and(lt(timeEntries.startedAt, cutoff), isNotNull(timeEntries.endedAt)))
-    .all();
 
-  for (const row of stale) {
-    db.delete(timeEntries).where(eq(timeEntries.id, row.id)).run();
-  }
+  const s = getSettings();
+  // Snap to local midnight. A rolling instant would cut a day in half: part of
+  // its overtime would roll into the baseline and part would stay in the live
+  // sum, leaving the balance wrong by a fraction of a day.
+  const cutoff = daysAgoStartIso(days);
+
+  // Only finished entries are eligible — never a running timer.
+  const doomed = getFinishedDurationsBefore(cutoff);
+  const cfg = {
+    breaks: parseBreaks(s.breaks),
+    autoPauseEnabled: s.autoPauseEnabled,
+  };
+  // Baseline 0 on purpose: the result is exactly the contribution about to
+  // vanish. Reusing the same function reproduces the weekend rule by
+  // construction, which a hand-rolled sum would not.
+  const rolled = overtimeBalanceMinutes(
+    secondsByDay(doomed, cfg).worked,
+    s.regularWorkMinutes,
+    0,
+  );
+
+  // Atomic: a crash between the two statements would leave the balance
+  // permanently wrong.
+  const deleted = db.transaction((tx) => {
+    tx.update(settings)
+      .set({
+        overtimeBaselineMinutes: s.overtimeBaselineMinutes + rolled,
+        updatedAt: nowIso(),
+      })
+      .where(eq(settings.id, 1))
+      .run();
+    return tx
+      .delete(timeEntries)
+      .where(
+        and(lt(timeEntries.startedAt, cutoff), isNotNull(timeEntries.endedAt)),
+      )
+      .run().changes;
+  });
+
   revalidateAll();
-  return { ok: true, deleted: stale.length };
+  return { ok: true, deleted, overtimeRolledMinutes: rolled };
 }
 
 // ────────────────────────── Jira booking ──────────────────────────

@@ -9,7 +9,11 @@ import {
   updateSettings,
   type SettingsInput,
 } from "@/lib/actions";
-import { formatSignedHmInput, parseSignedHm } from "@/lib/format";
+import {
+  formatSignedHm,
+  formatSignedHmInput,
+  parseSignedHm,
+} from "@/lib/format";
 import type { BreakWindow } from "@/lib/work-time";
 
 type Initial = SettingsInput & {
@@ -208,7 +212,8 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
       const res = await cleanupOldEntries(days);
       setCleanupStatus(
         res.ok
-          ? `${res.deleted} Eintrag/Einträge gelöscht.`
+          ? `${res.deleted} Eintrag/Einträge gelöscht. ` +
+              `${formatSignedHm(res.overtimeRolledMinutes)} in den Startsaldo übernommen.`
           : res.message ?? "Fehler beim Löschen.",
       );
     } finally {
@@ -580,6 +585,8 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         </div>
         <div className="mt-2 text-[12px]" style={{ color: "var(--text-3)" }}>
           Entfernt nur lokale Einträge aus der Datenbank. Jira-Worklogs bleiben unberührt.
+          Der Überstundensaldo bleibt erhalten — die gelöschten Tage werden in den
+          Startsaldo eingerechnet.
         </div>
         {cleanupStatus && (
           <div className="mt-2 text-[12.5px]" style={{ color: "var(--text-2)" }}>
