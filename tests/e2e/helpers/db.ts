@@ -101,10 +101,14 @@ export async function seedSettings(patch: SettingsBaseline): Promise<void> {
 
 export async function seedEntries(rows: NewTimeEntry[]): Promise<void> {
   if (rows.length === 0) return;
+  // One transaction: a scaling spec seeds hundreds of rows, and against a WAL
+  // database that is the difference between milliseconds and minutes.
   await withDb((db) => {
-    for (const row of rows) {
-      db.insert(timeEntries).values(row).run();
-    }
+    db.transaction((tx) => {
+      for (const row of rows) {
+        tx.insert(timeEntries).values(row).run();
+      }
+    });
   });
 }
 
