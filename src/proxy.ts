@@ -32,6 +32,11 @@ const RATE_WINDOW_MS = 10_000; // ... per 10s per IP.
 const SCAN_STRIKES = 3;
 const BAN_MS = 10 * 60_000;
 
+// The E2E suite drives the app far faster than any human and would otherwise
+// trip the flood guard part-way through a run. Only playwright.config.ts sets
+// this flag. Scanner detection stays active either way.
+const RATE_LIMIT_DISABLED = process.env.JWL_E2E === "1";
+
 // --- In-memory state (single process only) -------------------------------
 const hits = new Map<string, number[]>();
 const strikes = new Map<string, number>();
@@ -87,7 +92,7 @@ export function proxy(req: NextRequest): NextResponse {
     return new NextResponse(null, { status: 404 });
   }
 
-  if (isRateLimited(ip, now)) {
+  if (!RATE_LIMIT_DISABLED && isRateLimited(ip, now)) {
     return new NextResponse("Too Many Requests", {
       status: 429,
       headers: { "Retry-After": String(Math.ceil(RATE_WINDOW_MS / 1000)) },
