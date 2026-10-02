@@ -203,6 +203,8 @@ async function downloadPdf(href: string, filename: string): Promise<void> {
 export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
   const [loading, setLoading] = useState(false);
   const [loadingMonth, setLoadingMonth] = useState(false);
+  // Shown inline: a native alert() breaks keyboard input in Electron on Windows.
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const prev = shiftRange(resolved, -1);
   const next = shiftRange(resolved, 1);
@@ -213,6 +215,7 @@ export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
 
   async function onExport() {
     setLoading(true);
+    setExportError(null);
     try {
       const params = new URLSearchParams({ range: resolved.kind });
       if (resolved.kind !== "all" && resolved.anchor) {
@@ -224,7 +227,7 @@ export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
       );
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : "Unbekannter Fehler");
+      setExportError(err instanceof Error ? err.message : "Unbekannter Fehler");
     } finally {
       setLoading(false);
     }
@@ -232,6 +235,7 @@ export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
 
   async function onExportMonth() {
     setLoadingMonth(true);
+    setExportError(null);
     try {
       const anchor = monthAnchor(resolved);
       await downloadPdf(
@@ -240,7 +244,7 @@ export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
       );
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : "Unbekannter Fehler");
+      setExportError(err instanceof Error ? err.message : "Unbekannter Fehler");
     } finally {
       setLoadingMonth(false);
     }
@@ -296,6 +300,15 @@ export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
         {loadingMonth ? <Spinner /> : null}
         <span>{loadingMonth ? "Erstelle PDF…" : "Monatsbericht"}</span>
       </button>
+      {exportError !== null ? (
+        <span
+          role="alert"
+          className="w-full text-[12.5px]"
+          style={{ color: "var(--neg)" }}
+        >
+          {exportError}
+        </span>
+      ) : null}
     </div>
   );
 }
