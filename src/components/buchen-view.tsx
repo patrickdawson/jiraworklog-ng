@@ -32,6 +32,7 @@ import {
   type RecentEntry,
 } from "@/lib/entries";
 import { TimerDescriptionInput } from "@/components/timer-description-input";
+import { useConfirm } from "@/components/confirm-dialog";
 import {
   NowProvider,
   useNow,
@@ -800,10 +801,11 @@ function GroupRow({
   const isSingle = group.entries.length === 1;
   const singleEntry = isSingle ? group.entries[0] : null;
   const [pendingDelete, setPendingDelete] = useState(false);
+  const confirm = useConfirm();
 
   async function onDeleteSingle() {
     if (!singleEntry || pendingDelete) return;
-    if (!confirm("Diesen Eintrag wirklich löschen?")) return;
+    if (!(await confirm("Diesen Eintrag wirklich löschen?"))) return;
     setPendingDelete(true);
     try {
       await deleteEntry(singleEntry.id);
@@ -920,9 +922,10 @@ function EntryRow({
   onEdit: (entry: EntryView) => void;
 }) {
   const [pending, setPending] = useState(false);
+  const confirm = useConfirm();
   async function onDelete() {
     if (pending) return;
-    if (!confirm("Diesen Eintrag wirklich löschen?")) return;
+    if (!(await confirm("Diesen Eintrag wirklich löschen?"))) return;
     setPending(true);
     try {
       await deleteEntry(entry.id);
@@ -1210,6 +1213,7 @@ function EditEntryDialog({
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const confirm = useConfirm();
 
   async function onSave() {
     setPending(true);
@@ -1230,7 +1234,7 @@ function EditEntryDialog({
   }
 
   async function onDelete() {
-    if (!confirm("Diesen Eintrag wirklich löschen?")) return;
+    if (!(await confirm("Diesen Eintrag wirklich löschen?"))) return;
     setPending(true);
     try {
       await deleteEntry(entry.id);

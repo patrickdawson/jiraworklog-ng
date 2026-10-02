@@ -34,12 +34,15 @@ const overtimeValue = (page: Page) =>
   page.getByText(/^[+−]\d+:\d{2}$/).first();
 
 async function runCleanup(page: Page, days: number) {
-  page.once("dialog", (d) => d.accept());
   await page.goto("/einstellungen");
   await page
     .getByLabel("Einträge löschen, älter als (Tage)")
     .fill(String(days));
   await page.getByRole("button", { name: /löschen/i }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Löschen" })
+    .click();
   await expect(page.getByText(/gelöscht\./)).toBeVisible();
 }
 

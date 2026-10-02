@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { Card, PageHeader } from "@/components/ui";
+import { useConfirm } from "@/components/confirm-dialog";
 import {
   cleanupOldEntries,
   setForceBooking,
@@ -104,6 +105,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
   } | null>(null);
   const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const confirm = useConfirm();
 
   async function onSave() {
     const regularMin = hmToMinutes(regular);
@@ -202,9 +204,9 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
       return;
     }
     if (
-      !confirm(
+      !(await confirm(
         `Wirklich alle erfassten Einträge älter als ${days} Tage lokal löschen? Jira bleibt unberührt.`,
-      )
+      ))
     )
       return;
     setPending(true);

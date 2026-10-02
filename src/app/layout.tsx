@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 import { ElectronBridge } from "@/components/electron-bridge";
+import { ConfirmProvider } from "@/components/confirm-dialog";
 import { getSettings } from "@/db/queries";
 
 export const metadata: Metadata = {
@@ -21,10 +22,12 @@ export default function RootLayout({
     <html lang="de" className="h-full antialiased" data-theme={themeMode}>
       <body className="min-h-full" suppressHydrationWarning>
         <ElectronBridge />
-        <div className="grid min-h-screen grid-cols-[232px_1fr]">
-          <Sidebar />
-          <div className="overflow-x-hidden">{children}</div>
-        </div>
+        <ConfirmProvider>
+          <div className="grid min-h-screen grid-cols-[232px_1fr]">
+            <Sidebar />
+            <div className="overflow-x-hidden">{children}</div>
+          </div>
+        </ConfirmProvider>
       </body>
     </html>
   );
