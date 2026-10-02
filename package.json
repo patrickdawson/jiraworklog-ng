@@ -13,7 +13,7 @@
     "electron:compile": "tsc -p tsconfig.electron.json",
     "electron:dev:launch": "npm run electron:compile && electron dist-electron/main.js",
     "electron:dev": "cross-env JWL_IPC_SECRET=dev-secret concurrently -k -n next,electron \"next dev -p 3877\" \"npm run electron:dev:launch\"",
-    "electron:build": "next build --webpack && node scripts/prepare-standalone.mjs && npm run electron:compile && node scripts/rebuild-electron.mjs && electron-builder --win portable",
+    "electron:build": "next build --webpack && node scripts/prepare-standalone.mjs && npm run electron:compile && node scripts/rebuild-electron.mjs && electron-builder --win nsis",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
@@ -77,11 +77,13 @@
       }
     ],
     "win": {
-      "target": "portable",
+      "target": "nsis",
       "icon": "assets/icon.png"
     },
-    "portable": {
-      "artifactName": "JiraWorklog-${version}-portable.exe"
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "JiraWorklog-${version}-setup.exe"
     }
   }
 }

@@ -64,9 +64,9 @@ function trayIcon(running: boolean) {
   return img;
 }
 
-/** The real on-disk executable, even for the portable (temp-extracted) build. */
+/** The installed executable; the autostart entry points here. */
 function executablePath(): string {
-  return process.env.PORTABLE_EXECUTABLE_FILE ?? process.execPath;
+  return process.execPath;
 }
 
 // ── Networking helpers ───────────────────────────────────────────────────────
