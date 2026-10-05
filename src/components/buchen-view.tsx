@@ -90,7 +90,13 @@ export type BuchenData = {
     category: AllgemeinesCategory | null;
   } | null;
   todayCommittedSeconds: number;
+  /** Overtime balance from finished entries only. */
   overtimeBalanceMinutes: number;
+  /**
+   * Target the running entry's start day adds once the timer stops; 0 when that
+   * day already has finished time, is a weekend, or nothing runs.
+   */
+  runningDayTargetMinutes: number;
   days: DayGroup[];
   recents: RecentEntry[];
   /**
@@ -128,6 +134,7 @@ export function BuchenView({ data }: { data: BuchenData }) {
     running,
     todayCommittedSeconds,
     overtimeBalanceMinutes,
+    runningDayTargetMinutes,
     days,
     recents,
     openBookableCount,
@@ -202,6 +209,7 @@ export function BuchenView({ data }: { data: BuchenData }) {
         <TodayKpis
           todayCommittedSeconds={todayCommittedSeconds}
           overtimeBalanceMinutes={overtimeBalanceMinutes}
+          runningDayTargetMinutes={runningDayTargetMinutes}
           running={running}
           config={config}
         />
@@ -365,15 +373,20 @@ function TodayDate() {
   );
 }
 
-/** The four KPI cards. Only "Heute erfasst" and its two derivatives tick. */
+/**
+ * The four KPI cards. "Heute erfasst", its two derivatives and the
+ * Überstundensaldo tick; the Tagesziel is static.
+ */
 function TodayKpis({
   todayCommittedSeconds,
   overtimeBalanceMinutes,
+  runningDayTargetMinutes,
   running,
   config,
 }: {
   todayCommittedSeconds: number;
   overtimeBalanceMinutes: number;
+  runningDayTargetMinutes: number;
   running: BuchenData["running"];
   config: BuchenData["config"];
 }) {
@@ -401,6 +414,15 @@ function TodayKpis({
   const reached = remaining <= 0;
   const progress = targetSeconds > 0 ? todayTotalSeconds / targetSeconds : 0;
 
+  // The value the saldo will have once the timer stops. The running seconds
+  // count in full regardless of `runningIsToday`: a stopped entry is booked to
+  // its start day, and `runningDayTargetMinutes` already refers to that day.
+  const liveOvertime = running
+    ? Math.round(
+        overtimeBalanceMinutes - runningDayTargetMinutes + runningSeconds / 60,
+      )
+    : overtimeBalanceMinutes;
+
   return (
     <div className="grid grid-cols-4 gap-3.5 mb-5">
       <KpiCard
@@ -422,9 +444,13 @@ function TodayKpis({
       />
       <KpiCard
         label="Überstundensaldo"
-        value={formatSignedHm(overtimeBalanceMinutes)}
-        tone={overtimeBalanceMinutes >= 0 ? "pos" : "neg"}
-        meta="über alle erfassten Tage"
+        value={formatSignedHm(liveOvertime)}
+        tone={liveOvertime >= 0 ? "pos" : "neg"}
+        meta={
+          running
+            ? "über alle erfassten Tage · inkl. laufendem Timer"
+            : "über alle erfassten Tage"
+        }
       />
     </div>
   );

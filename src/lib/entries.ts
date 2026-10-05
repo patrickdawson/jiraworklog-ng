@@ -248,6 +248,13 @@ export function buildRecentEntries(
     .slice(0, limit);
 }
 
+/** Whether a `YYYY-MM-DD` day key falls on a Saturday or Sunday. */
+export function isWeekendKey(key: string): boolean {
+  const [y, m, d] = key.split("-").map(Number);
+  const weekday = new Date(y, m - 1, d).getDay();
+  return weekday === 0 || weekday === 6;
+}
+
 /**
  * Overtime balance in minutes: for every day that has tracked time, the worked
  * minutes minus the regular target (weekdays only — weekend work is all overtime).
@@ -261,10 +268,7 @@ export function overtimeBalanceMinutes(
 ): number {
   let balance = baselineMinutes;
   for (const [key, seconds] of workedByDay) {
-    const [y, m, d] = key.split("-").map(Number);
-    const weekday = new Date(y, m - 1, d).getDay();
-    const isWeekend = weekday === 0 || weekday === 6;
-    balance += seconds / 60 - (isWeekend ? 0 : regularWorkMinutes);
+    balance += seconds / 60 - (isWeekendKey(key) ? 0 : regularWorkMinutes);
   }
   return Math.round(balance);
 }

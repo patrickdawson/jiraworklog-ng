@@ -12,6 +12,7 @@ import {
   buildDayGroups,
   buildRecentEntries,
   DEFAULT_HISTORY_DAYS,
+  isWeekendKey,
   overtimeBalanceMinutes,
   secondsByDay,
 } from "@/lib/entries";
@@ -67,11 +68,23 @@ export default async function BuchenPage({
 
   // The overtime balance is cumulative over every day ever tracked, so it reads
   // the full history — but only three columns of it.
+  const workedByDay = secondsByDay(getFinishedDurations(), cfg).worked;
   const overtime = overtimeBalanceMinutes(
-    secondsByDay(getFinishedDurations(), cfg).worked,
+    workedByDay,
     s.regularWorkMinutes,
     s.overtimeBaselineMinutes,
   );
+
+  // Once stopped, the running entry counts toward its start day. If that day
+  // has no finished time yet, its target is not in `overtime` — the client
+  // subtracts it while the timer runs so the live saldo does not jump on stop.
+  const runningDayKey = runningRow ? dayKey(runningRow.startedAt) : null;
+  const runningDayTargetMinutes =
+    runningDayKey === null ||
+    workedByDay.has(runningDayKey) ||
+    isWeekendKey(runningDayKey)
+      ? 0
+      : s.regularWorkMinutes;
 
   // The header button books across ALL days, so its count must too. A windowed
   // count would hide old unbooked entries that the button would still submit.
@@ -95,6 +108,7 @@ export default async function BuchenPage({
           : null,
         todayCommittedSeconds,
         overtimeBalanceMinutes: overtime,
+        runningDayTargetMinutes,
         days,
         recents,
         openBookableCount,
