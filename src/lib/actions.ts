@@ -62,6 +62,7 @@ function resolveCategory(
 function revalidateAll(): void {
   revalidatePath("/");
   revalidatePath("/auswertung");
+  revalidatePath("/kalender");
   revalidatePath("/einstellungen");
 }
 
