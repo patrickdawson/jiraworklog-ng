@@ -20,6 +20,9 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Verlauf im Zeitfenster** — Die Liste zeigt standardmäßig die letzten 30 Tage. „Weitere 90 Tage laden“ (`?days=120`) oder „Alles anzeigen“ (`?days=all`) erweitern das Fenster. Saldo und Buchungszähler gelten trotzdem immer für alle Tage.
 
 ### Kalender (Wochenansicht)
+
+![Kalender-Wochenansicht](docs/readme-calendar.png)
+
 - **Zeitstrahl pro Woche** — Eine Spalte pro Tag, Stunden auf der senkrechten Achse
 - **Überschneidungen** — Überlappende Einträge stehen nebeneinander, die gemeinsame Zeit ist rot schraffiert
 - **Lücken** — Nicht erfasste Zeit zwischen erstem und letztem Eintrag eines Tages erscheint gestrichelt
