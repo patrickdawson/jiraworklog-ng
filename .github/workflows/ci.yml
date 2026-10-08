@@ -7,16 +7,16 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  # The Electron binary is not needed for lint, type checks or the web E2E tests.
-  ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+  # Never cancel a run on main: it may be halfway through a release.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   quality:
     name: Lint and type check
     runs-on: ubuntu-latest
+    env:
+      # The Electron binary is not needed for lint or type checks.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -31,6 +31,9 @@ jobs:
   e2e:
     name: E2E tests
     runs-on: ubuntu-latest
+    env:
+      # The web E2E tests do not start Electron.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -46,3 +49,63 @@ jobs:
           name: playwright-results
           path: test-results/
           retention-days: 7
+
+  # A release is due when the version in package.json has no matching v<version> tag yet.
+  detect-release:
+    name: Detect release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      release: ${{ steps.check.outputs.release }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: check
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" > /dev/null; then
+            echo "v$version is already released."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "v$version is new. A release will be built."
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    name: Build and publish release
+    needs: [quality, e2e, detect-release]
+    if: needs.detect-release.outputs.release == 'true'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.detect-release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      # --publish never: the release is created by the gh step below, not by electron-builder.
+      - run: npm run electron:build -- --publish never
+      - name: Extract release notes from CHANGELOG.md
+        shell: bash
+        run: |
+          awk -v v="$VERSION" '
+            /^## \[/ { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No CHANGELOG.md entry for $VERSION." > release-notes.md
+          fi
+      - name: Create GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$VERSION" "release/JiraWorklog-$VERSION-setup.exe" \
+            --target "$GITHUB_SHA" \
+            --title "v$VERSION" \
+            --notes-file release-notes.md
