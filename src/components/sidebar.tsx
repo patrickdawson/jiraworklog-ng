@@ -100,7 +100,9 @@ export function Sidebar() {
           JW
         </div>
         <div>
-          <div className="font-semibold text-[14px]">JiraWorklog (alpha)</div>
+          <div className="font-semibold text-[14px]">
+            JiraWorklog v{process.env.NEXT_PUBLIC_APP_VERSION}
+          </div>
           <div className="text-[11px]" style={{ color: "var(--text-2)" }}>
             Tracker
           </div>

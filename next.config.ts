@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
+import pkg from "./package.json";
 
 const nextConfig: NextConfig = {
+  // Inlined at build time so the sidebar can show the app version.
+  env: {
+    NEXT_PUBLIC_APP_VERSION: pkg.version,
+  },
   // Self-contained server bundle (.next/standalone) so Electron can run it as a
   // forked Node process without the full project/node_modules tree.
   output: "standalone",
