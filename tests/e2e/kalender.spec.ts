@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { resetDb, seedEntries, seedSettings } from "./helpers/db";
+import { getEntries, resetDb, seedEntries, seedSettings } from "./helpers/db";
 
 /**
  * The Kalender week view must mark time booked twice (overlap) and untracked
@@ -60,4 +60,42 @@ test("kalender — back-to-back entries are neither overlap nor gap", async ({
   const summary = page.getByTestId("kalender-summary");
   await expect(summary).toContainText("0 Überlappungen");
   await expect(summary).toContainText("0 Lücken");
+});
+
+test("kalender — clicking an entry opens the edit dialog and closes a gap", async ({
+  page,
+}) => {
+  await seedEntries([
+    { description: "A", startedAt: at(9), endedAt: at(10) },
+    { description: "B", startedAt: at(10, 30), endedAt: at(11) },
+  ]);
+
+  await page.goto("/kalender?anchor=2026-09-15");
+  const summary = page.getByTestId("kalender-summary");
+  await expect(summary).toContainText("1 Lücke · 00:30");
+
+  await page.getByRole("button", { name: /^A 09:00–10:00/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Eintrag bearbeiten" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Ende").fill("2026-09-15T10:30");
+  await dialog.getByRole("button", { name: "Speichern" }).click();
+
+  await expect(dialog).toBeHidden();
+  await expect(summary).toContainText("0 Lücken");
+  const a = (await getEntries()).find((e) => e.description === "A");
+  expect(a?.endedAt).toBe(at(10, 30));
+});
+
+test("kalender — the running entry is not editable here", async ({ page }) => {
+  const started = new Date(Date.now() - 30 * 60_000);
+  await seedEntries([
+    { description: "Läuft", startedAt: started.toISOString(), endedAt: null },
+  ]);
+
+  await page.goto("/kalender");
+  const block = page.getByTestId("kalender-entry");
+  await expect(block).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /Läuft/ })).toHaveCount(0);
+  await block.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
