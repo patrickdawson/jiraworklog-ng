@@ -1,24 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import type { AllgemeinesCategory } from "@/db/schema";
+import { useMemo, useState } from "react";
+import { EditEntryDialog } from "@/components/entry-dialogs";
 import { Card, PageHeader } from "@/components/ui";
 import { NowProvider, useNow } from "@/components/now-context";
+import type { EntryView } from "@/lib/entries";
 import { dayKey, formatHm } from "@/lib/format";
 import { buildTimeline, type DayTimeline, type Interval } from "@/lib/timeline";
 import type { BreakWindow } from "@/lib/work-time";
-
-export type KalenderEntry = {
-  id: number;
-  startedAt: string;
-  endedAt: string | null;
-  description: string;
-  issueKey: string | null;
-  comment: string;
-  isAllgemeines: boolean;
-  category: AllgemeinesCategory | null;
-};
 
 export type KalenderData = {
   weekLabel: string;
@@ -27,7 +17,7 @@ export type KalenderData = {
   nextAnchor: string;
   isCurrentWeek: boolean;
   hasRunning: boolean;
-  entries: KalenderEntry[];
+  entries: EntryView[];
   breaks: BreakWindow[];
 };
 
@@ -64,6 +54,7 @@ export function KalenderView({ data }: { data: KalenderData }) {
 
 function KalenderInner({ data }: { data: KalenderData }) {
   const now = useNow();
+  const [editEntry, setEditEntry] = useState<EntryView | null>(null);
 
   // Before the first client tick `now` is null; the running entry is then left
   // out, so server and client render the same markup.
@@ -193,11 +184,16 @@ function KalenderInner({ data }: { data: KalenderData }) {
                 nowMin={d.dayKey === todayKey ? nowMin : null}
                 firstMin={firstHour * 60}
                 lastMin={lastHour * 60}
+                onEdit={setEditEntry}
               />
             ))}
           </div>
         </div>
       </Card>
+
+      {editEntry && (
+        <EditEntryDialog entry={editEntry} onClose={() => setEditEntry(null)} />
+      )}
     </main>
   );
 }
@@ -325,15 +321,17 @@ function DayColumn({
   nowMin,
   firstMin,
   lastMin,
+  onEdit,
 }: {
   day: DayTimeline;
   hours: number[];
   height: number;
   toY: (min: number) => number;
-  entryById: Map<number, KalenderEntry>;
+  entryById: Map<number, EntryView>;
   nowMin: number | null;
   firstMin: number;
   lastMin: number;
+  onEdit: (entry: EntryView) => void;
 }) {
   const visible = (i: Interval) => i.endMin > firstMin && i.startMin < lastMin;
   const box = (i: Interval) => {
@@ -376,7 +374,7 @@ function DayColumn({
             border: "1px dashed var(--warn)",
             color: "var(--warn)",
           }}
-          title={`Lücke ${clockOfMinutes(g.startMin)}–${clockOfMinutes(g.endMin)} · ${formatHm(g.endMin - g.startMin)}`}
+          title={`Lücke ${clockOfMinutes(g.startMin)}–${clockOfMinutes(g.endMin)} · ${formatHm(g.endMin - g.startMin)}\nKlicke einen Eintrag, um die Zeit anzupassen`}
         >
           {g.endMin - g.startMin >= 15 && `Lücke ${formatHm(g.endMin - g.startMin)}`}
         </div>
@@ -394,11 +392,24 @@ function DayColumn({
         const accent = e.isAllgemeines ? "var(--teal)" : "var(--accent)";
         const soft = e.isAllgemeines ? "var(--teal-soft)" : "var(--accent-soft)";
         const { top, height: h } = box(s);
+        const time = `${clockOfMinutes(s.startMin)}–${s.running ? "läuft" : clockOfMinutes(s.endMin)} · ${formatHm(s.endMin - s.startMin)}`;
+        // Saving the dialog sets an end time, which would stop a running
+        // timer — so the running entry is not editable here.
+        const Tag = s.running ? "div" : "button";
         return (
-          <div
+          <Tag
             key={`${s.entryId}-${s.startMin}`}
             data-testid="kalender-entry"
-            className="absolute overflow-hidden rounded px-1.5 py-0.5 text-[11px] leading-tight"
+            {...(s.running
+              ? {}
+              : {
+                  type: "button" as const,
+                  onClick: () => onEdit(e),
+                  "aria-label": `${title} ${time} bearbeiten`,
+                })}
+            className={`absolute overflow-hidden rounded px-1.5 py-0.5 text-left text-[11px] leading-tight ${
+              s.running ? "" : "cursor-pointer hover:brightness-95 focus-visible:ring-2"
+            }`}
             style={{
               top,
               height: h,
@@ -409,13 +420,15 @@ function DayColumn({
               outline: s.overlapping ? "1px solid var(--neg)" : undefined,
               color: "var(--text)",
             }}
-            title={`${clockOfMinutes(s.startMin)}–${s.running ? "läuft" : clockOfMinutes(s.endMin)} · ${formatHm(s.endMin - s.startMin)}\n${e.description}`}
+            title={`${time}\n${e.description}${
+              s.running ? "\nLäuft – auf Buchen bearbeiten" : ""
+            }`}
           >
             <div className="truncate font-semibold" style={{ color: accent }}>
               {title}
             </div>
             {h >= 30 && sub && <div className="truncate">{sub}</div>}
-          </div>
+          </Tag>
         );
       })}
 

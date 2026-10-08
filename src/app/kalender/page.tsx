@@ -1,4 +1,4 @@
-import { KalenderView, type KalenderEntry } from "@/components/kalender-view";
+import { KalenderView } from "@/components/kalender-view";
 import { getEntriesBetween, getRunningEntry, getSettings } from "@/db/queries";
 import { toEntryView } from "@/lib/entries";
 import { dayKey } from "@/lib/format";
@@ -34,19 +34,7 @@ export default async function KalenderPage({
   const running = getRunningEntry();
   if (running && !rows.some((r) => r.id === running.id)) rows.push(running);
 
-  const entries: KalenderEntry[] = rows.map((r) => {
-    const v = toEntryView(r, cfg);
-    return {
-      id: v.id,
-      startedAt: v.startedAt,
-      endedAt: v.endedAt,
-      description: v.description,
-      issueKey: v.issueKey ?? null,
-      comment: v.comment,
-      isAllgemeines: v.isAllgemeines,
-      category: v.category,
-    };
-  });
+  const entries = rows.map((r) => toEntryView(r, cfg));
 
   return (
     <KalenderView
