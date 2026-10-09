@@ -240,7 +240,7 @@ export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
       const anchor = monthAnchor(resolved);
       await downloadPdf(
         `/api/report/category-pdf?anchor=${anchor}`,
-        `monatsbericht-${anchor.slice(0, 7)}.pdf`,
+        `axapta-bericht-${anchor.slice(0, 7)}.pdf`,
       );
     } catch (err) {
       console.error(err);

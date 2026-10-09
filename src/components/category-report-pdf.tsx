@@ -118,13 +118,13 @@ export function CategoryReportPdf({ report }: { report: CategoryReport }) {
 
   return (
     <Document
-      title={`Monatsbericht · ${report.rangeLabel}`}
+      title={`Axapta-Bericht · ${report.rangeLabel}`}
       author={report.displayName}
       subject={`Buchungsbericht ${report.rangeLabel}`}
     >
       <Page size="A4" style={styles.page}>
         <View style={styles.headerBlock}>
-          <Text style={styles.title}>Monatsbericht · {report.rangeLabel}</Text>
+          <Text style={styles.title}>Axapta-Bericht · {report.rangeLabel}</Text>
           <Text style={styles.subtitle}>{report.displayName}</Text>
           <Text style={styles.intro}>
             Zeiten je Kategorie, aufgeteilt in Buchungsblöcke von maximal 24:00

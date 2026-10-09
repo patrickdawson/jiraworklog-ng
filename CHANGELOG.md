@@ -12,6 +12,7 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Geändert
 - Auswertung: Der Knopf „Monatsbericht“ heißt jetzt „Axapta-Bericht“.
+- Das PDF heißt jetzt auch „Axapta-Bericht“, in der Überschrift und im Dateinamen (`axapta-bericht-<Monat>.pdf`).
 
 ## [0.2.0] - 2026-10-08
 

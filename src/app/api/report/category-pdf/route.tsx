@@ -27,7 +27,7 @@ export async function GET(req: Request) {
   return new Response(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="monatsbericht-${range.slug}.pdf"`,
+      "Content-Disposition": `attachment; filename="axapta-bericht-${range.slug}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

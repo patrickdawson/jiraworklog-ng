@@ -49,7 +49,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Vier Kategorien** — `Projektorganisation`, `Implementierung`, `QA`, `Release`. Die Kategorie wird beim Eintrag gewählt und in der Liste als Badge gezeigt.
 - **Flag wird beim Neustarten übernommen** — Der Play-Button eines Eintrags startet einen neuen Timer mit demselben Allgemeines-Status
 - **Zählt nicht als offen** — Allgemeines-Einträge erscheinen nicht als ungebuchte Einträge
-- **Monatsbericht als PDF** — Siehe [Auswertung](#auswertung). Damit wird die Zeit von Hand in einem externen Tool gebucht.
+- **Axapta-Bericht als PDF** — Siehe [Auswertung](#auswertung). Damit wird die Zeit von Hand in einem externen Tool gebucht.
 
 ### Auswertung
 - **Tagesbalkendiagramm** — Gearbeitete Zeit pro Tag der letzten 14 Tage als SVG-Balkendiagramm
@@ -59,7 +59,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Quote konkrete Issues** — Anteil der Zeit auf echten Jira-Issues (statt Allgemeines), mit Zielwert in % und Diagramm pro Tag
 - **Wochenstatus** — Verbleibende Zeit bis das Wochensoll erreicht ist
 - **Stundenzettel als PDF** — Alle Einträge des gewählten Zeitraums als PDF herunterladen
-- **Monatsbericht als PDF** — Zeit pro Allgemeines-Kategorie für einen Monat, aufgeteilt in Blöcke von max. 24 h, mit Prüftabelle pro Tag. Zeit auf konkreten Issues zählt als `Implementierung`.
+- **Axapta-Bericht als PDF** — Zeit pro Allgemeines-Kategorie für einen Monat, aufgeteilt in Blöcke von max. 24 h, mit Prüftabelle pro Tag. Zeit auf konkreten Issues zählt als `Implementierung`.
 
 ### Pausen & Automatik
 - **Automatische Pausenabzüge** — Konfigurierbare Pausenfenster (z. B. 12:00–13:00) werden automatisch von der Zeitberechnung abgezogen
@@ -170,4 +170,4 @@ Wenn die Checkbox **„Als Allgemein speichern“** am Eintrag (Timer, manuelle 
 - wird eine der vier Kategorien gewählt,
 - bleibt der Eintrag **lokal** und wird nie nach Jira gebucht.
 
-In der Eintragsliste erscheint statt „kein Issue-Key" die Kategorie als Badge. Die Zeit landet im Monatsbericht unter „Auswertung“.
+In der Eintragsliste erscheint statt „kein Issue-Key" die Kategorie als Badge. Die Zeit landet im Axapta-Bericht unter „Auswertung“.
