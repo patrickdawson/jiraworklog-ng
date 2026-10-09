@@ -7,6 +7,9 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Kalender: Klick auf eine Lücke öffnet den Dialog „Eintrag anlegen“. Beginn und Ende sind schon mit der Lücke gefüllt.
+
 ## [0.2.0] - 2026-10-08
 
 ### Hinzugefügt

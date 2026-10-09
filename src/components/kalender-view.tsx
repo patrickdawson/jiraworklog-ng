@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { EditEntryDialog } from "@/components/entry-dialogs";
+import { EditEntryDialog, type EntryDraft } from "@/components/entry-dialogs";
 import { Card, PageHeader } from "@/components/ui";
 import { NowProvider, useNow } from "@/components/now-context";
 import type { EntryView } from "@/lib/entries";
@@ -40,6 +40,19 @@ function dayHeading(key: string): string {
   return `${WEEKDAY_SHORT[date.getDay()]} ${String(d).padStart(2, "0")}.${String(m).padStart(2, "0")}.`;
 }
 
+/**
+ * A gap as a draft for a new entry. Seconds are rounded inward, so the new
+ * entry does not overlap its neighbours.
+ */
+function gapDraft(key: string, gap: Interval): EntryDraft {
+  const [y, m, d] = key.split("-").map(Number);
+  const at = (min: number) => new Date(y, m - 1, d, 0, min).toISOString();
+  return {
+    startedAt: at(Math.ceil(gap.startMin)),
+    endedAt: at(Math.floor(gap.endMin)),
+  };
+}
+
 function totalMinutes(intervals: Interval[]): number {
   return intervals.reduce((sum, i) => sum + (i.endMin - i.startMin), 0);
 }
@@ -55,6 +68,7 @@ export function KalenderView({ data }: { data: KalenderData }) {
 function KalenderInner({ data }: { data: KalenderData }) {
   const now = useNow();
   const [editEntry, setEditEntry] = useState<EntryView | null>(null);
+  const [newDraft, setNewDraft] = useState<EntryDraft | null>(null);
 
   // Before the first client tick `now` is null; the running entry is then left
   // out, so server and client render the same markup.
@@ -185,6 +199,7 @@ function KalenderInner({ data }: { data: KalenderData }) {
                 firstMin={firstHour * 60}
                 lastMin={lastHour * 60}
                 onEdit={setEditEntry}
+                onFillGap={(g) => setNewDraft(gapDraft(d.dayKey, g))}
               />
             ))}
           </div>
@@ -193,6 +208,9 @@ function KalenderInner({ data }: { data: KalenderData }) {
 
       {editEntry && (
         <EditEntryDialog entry={editEntry} onClose={() => setEditEntry(null)} />
+      )}
+      {newDraft && (
+        <EditEntryDialog draft={newDraft} onClose={() => setNewDraft(null)} />
       )}
     </main>
   );
@@ -322,6 +340,7 @@ function DayColumn({
   firstMin,
   lastMin,
   onEdit,
+  onFillGap,
 }: {
   day: DayTimeline;
   hours: number[];
@@ -332,6 +351,7 @@ function DayColumn({
   firstMin: number;
   lastMin: number;
   onEdit: (entry: EntryView) => void;
+  onFillGap: (gap: Interval) => void;
 }) {
   const visible = (i: Interval) => i.endMin > firstMin && i.startMin < lastMin;
   const box = (i: Interval) => {
@@ -364,20 +384,23 @@ function DayColumn({
       ))}
 
       {day.gaps.filter(visible).map((g) => (
-        <div
+        <button
           key={`g${g.startMin}`}
+          type="button"
           data-testid="kalender-gap"
-          className="absolute inset-x-1 flex items-center justify-center overflow-hidden rounded text-[10.5px] font-semibold"
+          onClick={() => onFillGap(g)}
+          aria-label={`Lücke ${clockOfMinutes(g.startMin)}–${clockOfMinutes(g.endMin)} als Eintrag anlegen`}
+          className="absolute inset-x-1 flex cursor-pointer items-center justify-center overflow-hidden rounded text-[10.5px] font-semibold hover:brightness-95 focus-visible:ring-2"
           style={{
             ...box(g),
             background: "var(--warn-soft)",
             border: "1px dashed var(--warn)",
             color: "var(--warn)",
           }}
-          title={`Lücke ${clockOfMinutes(g.startMin)}–${clockOfMinutes(g.endMin)} · ${formatHm(g.endMin - g.startMin)}\nKlicke einen Eintrag, um die Zeit anzupassen`}
+          title={`Lücke ${clockOfMinutes(g.startMin)}–${clockOfMinutes(g.endMin)} · ${formatHm(g.endMin - g.startMin)}\nKlicken, um die Lücke als Eintrag anzulegen`}
         >
           {g.endMin - g.startMin >= 15 && `Lücke ${formatHm(g.endMin - g.startMin)}`}
-        </div>
+        </button>
       ))}
 
       {day.segments.filter(visible).map((s) => {

@@ -10,7 +10,7 @@ import {
   ALLGEMEINES_CATEGORIES,
   type AllgemeinesCategory,
 } from "@/db/schema";
-import { deleteEntry, updateEntry } from "@/lib/actions";
+import { createManualEntry, deleteEntry, updateEntry } from "@/lib/actions";
 import type { EntryView } from "@/lib/entries";
 
 export const DEFAULT_CATEGORY: AllgemeinesCategory = "Projektorganisation";
@@ -163,21 +163,30 @@ export function defaultEndedAt(): string {
 
 // ───────────────────────── Edit entry dialog ───────────────────────
 
+/** Time range for a new entry, e.g. a Kalender gap. ISO strings. */
+export type EntryDraft = { startedAt: string; endedAt: string };
+
+/**
+ * Edits an existing `entry`, or creates a new one from a `draft` time range.
+ * Create mode has no delete button.
+ */
 export function EditEntryDialog({
-  entry,
   onClose,
-}: {
-  entry: EntryView;
-  onClose: () => void;
-}) {
-  const [description, setDescription] = useState(entry.description);
-  const [startedAt, setStartedAt] = useState(toLocalInputValue(entry.startedAt));
-  const [endedAt, setEndedAt] = useState(
-    entry.endedAt ? toLocalInputValue(entry.endedAt) : defaultEndedAt(),
+  ...target
+}: ({ entry: EntryView } | { draft: EntryDraft }) & { onClose: () => void }) {
+  const entry = "entry" in target ? target.entry : null;
+  const draft = "draft" in target ? target.draft : null;
+  const [description, setDescription] = useState(entry?.description ?? "");
+  const [startedAt, setStartedAt] = useState(
+    toLocalInputValue(entry?.startedAt ?? draft!.startedAt),
   );
-  const [isAllgemeines, setIsAllgemeines] = useState(entry.isAllgemeines);
+  const [endedAt, setEndedAt] = useState(() => {
+    const end = entry ? entry.endedAt : draft!.endedAt;
+    return end ? toLocalInputValue(end) : defaultEndedAt();
+  });
+  const [isAllgemeines, setIsAllgemeines] = useState(entry?.isAllgemeines ?? false);
   const [category, setCategory] = useState<AllgemeinesCategory>(
-    entry.category ?? DEFAULT_CATEGORY,
+    entry?.category ?? DEFAULT_CATEGORY,
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -187,13 +196,16 @@ export function EditEntryDialog({
     setPending(true);
     setError(null);
     try {
-      const res = await updateEntry(entry.id, {
+      const input = {
         description,
         startedAt: fromLocalInputValue(startedAt),
         endedAt: fromLocalInputValue(endedAt),
         isAllgemeines,
         category: isAllgemeines ? category : null,
-      });
+      };
+      const res = entry
+        ? await updateEntry(entry.id, input)
+        : await createManualEntry(input);
       if (res.ok) onClose();
       else setError(res.message ?? "Speichern fehlgeschlagen.");
     } finally {
@@ -202,6 +214,7 @@ export function EditEntryDialog({
   }
 
   async function onDelete() {
+    if (!entry) return;
     if (!(await confirm("Diesen Eintrag wirklich löschen?"))) return;
     setPending(true);
     try {
@@ -213,10 +226,18 @@ export function EditEntryDialog({
   }
 
   return (
-    <Modal title="Eintrag bearbeiten" onClose={onClose}>
+    <Modal title={entry ? "Eintrag bearbeiten" : "Eintrag anlegen"} onClose={onClose}>
       <div className="space-y-3.5">
         <Field label="Beschreibung">
-          <TextInput value={description} onChange={setDescription} />
+          <TextInput
+            value={description}
+            onChange={setDescription}
+            placeholder={
+              isAllgemeines
+                ? "Worklogtext für Allgemeines"
+                : "Merksatz  TXR-1234  Worklogtext"
+            }
+          />
         </Field>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <label className="flex items-center gap-2 text-[13px]">
@@ -241,7 +262,7 @@ export function EditEntryDialog({
             <TextInput type="datetime-local" value={endedAt} onChange={setEndedAt} />
           </Field>
         </div>
-        {entry.submittedAt && (
+        {entry?.submittedAt && (
           <div className="text-[12px]" style={{ color: "var(--text-3)" }}>
             Bereits nach Jira übertragen ({entry.jiraIssueKey}). Änderungen wirken nur lokal.
           </div>
@@ -252,9 +273,13 @@ export function EditEntryDialog({
           </div>
         )}
         <div className="flex justify-between gap-2.5 pt-2">
-          <Button variant="danger" onClick={onDelete} disabled={pending}>
-            Löschen
-          </Button>
+          {entry ? (
+            <Button variant="danger" onClick={onDelete} disabled={pending}>
+              Löschen
+            </Button>
+          ) : (
+            <span />
+          )}
           <div className="flex gap-2.5">
             <Button onClick={onClose}>Abbrechen</Button>
             <Button variant="primary" onClick={onSave} disabled={pending}>

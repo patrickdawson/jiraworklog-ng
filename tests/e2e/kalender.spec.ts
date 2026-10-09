@@ -99,3 +99,32 @@ test("kalender — the running entry is not editable here", async ({ page }) => 
   await block.click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
+
+test("kalender — clicking a gap opens the dialog prefilled with the gap", async ({
+  page,
+}) => {
+  await seedEntries([
+    { description: "A", startedAt: at(9), endedAt: at(10) },
+    { description: "B", startedAt: at(10, 30), endedAt: at(11) },
+  ]);
+
+  await page.goto("/kalender?anchor=2026-09-15");
+  const summary = page.getByTestId("kalender-summary");
+  await expect(summary).toContainText("1 Lücke · 00:30");
+
+  await page.getByTestId("kalender-gap").click();
+  const dialog = page.getByRole("dialog", { name: "Eintrag anlegen" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Beginn")).toHaveValue("2026-09-15T10:00");
+  await expect(dialog.getByLabel("Ende")).toHaveValue("2026-09-15T10:30");
+  await expect(dialog.getByRole("button", { name: "Löschen" })).toHaveCount(0);
+
+  await dialog.getByLabel("Beschreibung").fill("Lücke gefüllt");
+  await dialog.getByRole("button", { name: "Speichern" }).click();
+
+  await expect(dialog).toBeHidden();
+  await expect(summary).toContainText("0 Lücken");
+  const created = (await getEntries()).find((e) => e.description === "Lücke gefüllt");
+  expect(created?.startedAt).toBe(at(10));
+  expect(created?.endedAt).toBe(at(10, 30));
+});
