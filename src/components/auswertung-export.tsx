@@ -295,10 +295,10 @@ export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
         disabled={loadingMonth}
         className="rounded-lg border px-3 py-1.5 text-[13px] font-semibold inline-flex items-center justify-center gap-2 flex-shrink-0"
         style={loadingMonth ? buttonDisabled : buttonBase}
-        title="Kategorie-Monatsbericht (Buchungsblöcke) als PDF herunterladen"
+        title="Axapta-Bericht (Buchungsblöcke pro Kategorie) als PDF herunterladen"
       >
         {loadingMonth ? <Spinner /> : null}
-        <span>{loadingMonth ? "Erstelle PDF…" : "Monatsbericht"}</span>
+        <span>{loadingMonth ? "Erstelle PDF…" : "Axapta-Bericht"}</span>
       </button>
       {exportError !== null ? (
         <span

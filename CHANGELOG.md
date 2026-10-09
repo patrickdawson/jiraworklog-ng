@@ -10,6 +10,9 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 ### Hinzugefügt
 - Kalender: Klick auf eine Lücke öffnet den Dialog „Eintrag anlegen“. Beginn und Ende sind schon mit der Lücke gefüllt.
 
+### Geändert
+- Auswertung: Der Knopf „Monatsbericht“ heißt jetzt „Axapta-Bericht“.
+
 ## [0.2.0] - 2026-10-08
 
 ### Hinzugefügt
