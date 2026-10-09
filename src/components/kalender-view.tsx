@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EditEntryDialog, type EntryDraft } from "@/components/entry-dialogs";
 import { Card, PageHeader } from "@/components/ui";
-import { NowProvider, useNow } from "@/components/now-context";
+import { NowProvider, useNow, useRunningSeconds } from "@/components/now-context";
 import type { EntryView } from "@/lib/entries";
-import { dayKey, formatHm } from "@/lib/format";
+import { dayKey, formatHm, formatSignedHm } from "@/lib/format";
 import { buildTimeline, type DayTimeline, type Interval } from "@/lib/timeline";
 import type { BreakWindow } from "@/lib/work-time";
 
@@ -19,6 +19,13 @@ export type KalenderData = {
   hasRunning: boolean;
   entries: EntryView[];
   breaks: BreakWindow[];
+  autoPauseEnabled: boolean;
+  /** Overtime of this week's days, from finished entries only. */
+  weekOvertimeMinutes: number;
+  /** Whether the running timer started on a day of this week. */
+  runningInWeek: boolean;
+  /** Target of the running entry's day if it is not yet in the overtime. */
+  runningDayTargetMinutes: number;
 };
 
 /** Vertical scale of the grid. */
@@ -99,6 +106,25 @@ function KalenderInner({ data }: { data: KalenderData }) {
     return [Math.max(0, Math.floor(lo / 60)), Math.min(24, Math.ceil(hi / 60))];
   }, [days]);
 
+  const running = data.runningInWeek
+    ? (data.entries.find((e) => e.endedAt === null) ?? null)
+    : null;
+  const runningSeconds = useRunningSeconds(
+    running,
+    data.breaks,
+    data.autoPauseEnabled,
+  );
+  // Before the first tick the running entry is not counted at all, so the
+  // server and client markup agree.
+  const weekOvertime =
+    running && now
+      ? Math.round(
+          data.weekOvertimeMinutes -
+            data.runningDayTargetMinutes +
+            runningSeconds / 60,
+        )
+      : data.weekOvertimeMinutes;
+
   const overlapList = days.flatMap((d) => d.overlaps);
   const gapList = days.flatMap((d) => d.gaps);
   const hours = Array.from(
@@ -135,6 +161,20 @@ function KalenderInner({ data }: { data: KalenderData }) {
         className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mb-4 text-[13px]"
         style={{ color: "var(--text-2)" }}
       >
+        <span
+          data-testid="kalender-overtime"
+          title={`${
+            weekOvertime >= 0 ? "Überstunden" : "Minusstunden"
+          } dieser Woche${running && now ? " · inkl. laufendem Timer" : ""}`}
+        >
+          Wochensaldo{" "}
+          <span
+            className="tabular-nums font-semibold"
+            style={{ color: weekOvertime >= 0 ? "var(--pos)" : "var(--neg)" }}
+          >
+            {formatSignedHm(weekOvertime)}
+          </span>
+        </span>
         <SummaryItem
           swatch={<OverlapSwatch />}
           text={`${overlapList.length} Überlappung${overlapList.length === 1 ? "" : "en"}`}

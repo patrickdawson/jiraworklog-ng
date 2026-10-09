@@ -128,3 +128,37 @@ test("kalender — clicking a gap opens the dialog prefilled with the gap", asyn
   expect(created?.startedAt).toBe(at(10));
   expect(created?.endedAt).toBe(at(10, 30));
 });
+
+test("kalender — week saldo counts weekday targets and weekend time", async ({
+  page,
+}) => {
+  await seedSettings({ regularWorkMinutes: 420, autoPauseEnabled: true });
+  await seedEntries([
+    // Monday: 4h worked, target 7h → −3h.
+    {
+      description: "Mo",
+      startedAt: new Date(2026, 8, 14, 8).toISOString(),
+      endedAt: new Date(2026, 8, 14, 12).toISOString(),
+    },
+    // Tuesday: 8h minus 30 min break = 7:30, target 7h → +0:30.
+    { description: "Di", startedAt: at(8), endedAt: at(16) },
+    // Saturday: no target → +1h.
+    {
+      description: "Sa",
+      startedAt: new Date(2026, 8, 19, 10).toISOString(),
+      endedAt: new Date(2026, 8, 19, 11).toISOString(),
+    },
+    // Previous week: must not count.
+    {
+      description: "Alt",
+      startedAt: new Date(2026, 8, 11, 8).toISOString(),
+      endedAt: new Date(2026, 8, 11, 18).toISOString(),
+    },
+  ]);
+
+  await page.goto("/kalender?anchor=2026-09-15");
+
+  await expect(page.getByTestId("kalender-overtime")).toContainText(
+    "Wochensaldo −01:30",
+  );
+});
