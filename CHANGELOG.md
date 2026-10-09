@@ -7,7 +7,10 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-09
+
 ### Hinzugefügt
+- Kalender: Der „Wochensaldo“ zeigt die Über- oder Minusstunden der gewählten Woche. Ein laufender Timer zählt live mit.
 - Kalender: Klick auf eine Lücke öffnet den Dialog „Eintrag anlegen“. Beginn und Ende sind schon mit der Lücke gefüllt.
 
 ### Geändert
