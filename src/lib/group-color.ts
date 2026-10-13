@@ -47,6 +47,16 @@ export function groupColorKey(e: {
   return e.issueKey ? `issue:${e.issueKey.toUpperCase()}` : null;
 }
 
+/** Looks up an entry's group: its key, stored color and CSS colors. */
+export function resolveGroupColor(
+  colors: GroupColorMap,
+  e: Parameters<typeof groupColorKey>[0],
+): { key: string | null; color: GroupColor | undefined; accent: string; soft: string } {
+  const key = groupColorKey(e);
+  const color = key ? colors[key] : undefined;
+  return { key, color, ...groupColorVars(color, e.isAllgemeines) };
+}
+
 /** Strong and soft CSS colors for a group, falling back to teal/accent. */
 export function groupColorVars(
   color: GroupColor | undefined,
