@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import {
   ALLGEMEINES_CATEGORIES,
+  groupColors,
   settings,
   timeEntries,
   type AllgemeinesCategory,
@@ -25,6 +26,7 @@ import {
   formatDurationHoursMinutes,
 } from "@/lib/format";
 import { overtimeBalanceMinutes, secondsByDay } from "@/lib/entries";
+import { groupColorSchema, type GroupColor } from "@/lib/group-color";
 import {
   checkCredentials,
   postWorklogToJira,
@@ -312,6 +314,35 @@ export async function updateEntry(
 
 export async function deleteEntry(id: number): Promise<void> {
   db.delete(timeEntries).where(eq(timeEntries.id, id)).run();
+  revalidateAll();
+}
+
+// ─────────────────────────── Group colors ─────────────────────────
+
+const groupColorKeySchema = z
+  .string()
+  .regex(/^(issue|cat):\S+$/)
+  .max(100);
+
+/** Stores the color of a group; `null` resets it to the default. */
+export async function setGroupColor(
+  groupKey: string,
+  color: GroupColor | null,
+): Promise<void> {
+  const key = groupColorKeySchema.parse(groupKey);
+  if (color === null) {
+    db.delete(groupColors).where(eq(groupColors.groupKey, key)).run();
+  } else {
+    const value = groupColorSchema.parse(color);
+    const now = nowIso();
+    db.insert(groupColors)
+      .values({ groupKey: key, color: value, updatedAt: now })
+      .onConflictDoUpdate({
+        target: groupColors.groupKey,
+        set: { color: value, updatedAt: now },
+      })
+      .run();
+  }
   revalidateAll();
 }
 

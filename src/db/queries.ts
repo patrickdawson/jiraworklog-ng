@@ -1,6 +1,26 @@
 import { and, count, desc, eq, gte, isNotNull, isNull, lt, lte, type SQL } from "drizzle-orm";
 import { db } from "./index";
-import { settings, timeEntries, type SettingsRow, type TimeEntry } from "./schema";
+import {
+  groupColors,
+  settings,
+  timeEntries,
+  type SettingsRow,
+  type TimeEntry,
+} from "./schema";
+import {
+  groupColorSchema,
+  type GroupColorMap,
+} from "@/lib/group-color";
+
+/** Every stored group color. Rows with an unknown palette name are skipped. */
+export function getGroupColors(): GroupColorMap {
+  const map: GroupColorMap = {};
+  for (const row of db.select().from(groupColors).all()) {
+    const parsed = groupColorSchema.safeParse(row.color);
+    if (parsed.success) map[row.groupKey] = parsed.data;
+  }
+  return map;
+}
 
 /** Returns the single settings row, creating it with defaults on first use. */
 export function getSettings(): SettingsRow {
