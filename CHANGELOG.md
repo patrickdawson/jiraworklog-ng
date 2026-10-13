@@ -7,6 +7,14 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-13
+
+### Hinzugefügt
+- Farbe pro Ticket: Ein Punkt neben dem Ticket in „Buchen“ und im Bearbeiten-Dialog öffnet eine Palette mit 8 Farben. Alle Einträge mit demselben Issue-Key bekommen die Farbe. Allgemeines-Einträge bekommen eine Farbe pro Kategorie. „Standard“ setzt die Farbe zurück.
+- Kalender: Die Blöcke zeigen die Farbe des Tickets.
+- Buchen: Eine Zeile mit Farbe bekommt einen farbigen Hintergrund und einen farbigen linken Rand.
+- Auswertung: Die neue Karte „Zeit pro Ticket“ zeigt die Zeit pro Ticket und Kategorie als Balken in der Ticket-Farbe, mit Anteil in Prozent.
+
 ## [0.3.0] - 2026-10-09
 
 ### Hinzugefügt
