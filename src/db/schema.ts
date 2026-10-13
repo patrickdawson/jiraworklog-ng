@@ -119,6 +119,19 @@ export const settings = sqliteTable("settings", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+/**
+ * User-picked color per entry group. `groupKey` is `issue:<KEY>` for concrete
+ * entries or `cat:<category>` for Allgemeines; `color` is a palette name from
+ * `GROUP_COLORS`, so the theme decides the actual shade.
+ */
+export const groupColors = sqliteTable("group_colors", {
+  groupKey: text("group_key").primaryKey(),
+  color: text("color").notNull(),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type TimeEntry = typeof timeEntries.$inferSelect;
 export type NewTimeEntry = typeof timeEntries.$inferInsert;
 export type SettingsRow = typeof settings.$inferSelect;
