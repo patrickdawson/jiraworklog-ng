@@ -43,6 +43,20 @@ export type DayTimeline = {
 /** Gaps shorter than this are rounding noise, not missing time. */
 const MIN_GAP_MINUTES = 1;
 
+/**
+ * Overlaps shorter than this are noise too: stopping one timer and starting
+ * the next often shares a few seconds of the same minute.
+ */
+const MIN_OVERLAP_MINUTES = 1;
+
+/** Whether two spans share at least `MIN_OVERLAP_MINUTES`. */
+function overlapsEnough(a: Interval, b: Interval): boolean {
+  return (
+    Math.min(a.endMin, b.endMin) - Math.max(a.startMin, b.startMin) >=
+    MIN_OVERLAP_MINUTES
+  );
+}
+
 function minutesOfDay(d: Date): number {
   return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
 }
@@ -141,7 +155,9 @@ export function findOverlaps(segments: Segment[]): Interval[] {
       out.push({ startMin: openedAt, endMin: ev.at });
     }
   }
-  return union(out);
+  return union(out).filter(
+    (o) => o.endMin - o.startMin >= MIN_OVERLAP_MINUTES,
+  );
 }
 
 /** Configured break windows of one day, as minutes. */
@@ -177,6 +193,8 @@ export function findGaps(segments: Segment[], breaks: Interval[]): Interval[] {
 /**
  * Calendar lane packing: segments that overlap sit side by side. A cluster is
  * a run of transitively overlapping segments; all of them share its lane count.
+ * An overlap under `MIN_OVERLAP_MINUTES` does not count, so such neighbours
+ * stay full width and unmarked.
  */
 export function layoutLanes(segments: Segment[]): PlacedSegment[] {
   const sorted = [...segments].sort(
@@ -194,8 +212,10 @@ export function layoutLanes(segments: Segment[]): PlacedSegment[] {
   };
 
   for (const s of sorted) {
-    if (s.startMin >= clusterEnd) closeCluster();
-    let lane = laneEnds.findIndex((end) => end <= s.startMin);
+    if (clusterEnd - s.startMin < MIN_OVERLAP_MINUTES) closeCluster();
+    let lane = laneEnds.findIndex(
+      (end) => end - s.startMin < MIN_OVERLAP_MINUTES,
+    );
     if (lane === -1) {
       lane = laneEnds.length;
       laneEnds.push(s.endMin);
@@ -210,9 +230,7 @@ export function layoutLanes(segments: Segment[]): PlacedSegment[] {
   closeCluster();
 
   for (const p of placed) {
-    p.overlapping = placed.some(
-      (o) => o !== p && o.startMin < p.endMin && p.startMin < o.endMin,
-    );
+    p.overlapping = placed.some((o) => o !== p && overlapsEnough(o, p));
   }
   return placed;
 }
