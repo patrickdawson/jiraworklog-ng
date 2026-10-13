@@ -62,6 +62,39 @@ test("kalender — back-to-back entries are neither overlap nor gap", async ({
   await expect(summary).toContainText("0 Lücken");
 });
 
+test("kalender — an overlap under one minute is not marked", async ({
+  page,
+}) => {
+  const atSec = (h: number, m: number, s: number) =>
+    new Date(2026, 8, 15, h, m, s).toISOString();
+  await seedEntries([
+    // A ends 40 s after B starts: both touch 10:00.
+    { description: "A", startedAt: at(9), endedAt: atSec(10, 0, 50) },
+    { description: "B", startedAt: atSec(10, 0, 10), endedAt: at(11) },
+    // C and D share exactly one minute: that still counts.
+    { description: "C", startedAt: at(13), endedAt: at(14, 1) },
+    { description: "D", startedAt: at(14), endedAt: at(15) },
+  ]);
+
+  await page.goto("/kalender?anchor=2026-09-15");
+
+  const summary = page.getByTestId("kalender-summary");
+  await expect(summary).toContainText("1 Überlappung · 00:01");
+
+  // A and B keep the full column width instead of sitting side by side.
+  const blocks = page.getByTestId("kalender-entry");
+  for (const name of ["A", "B"]) {
+    await expect(blocks.filter({ hasText: name })).toHaveAttribute(
+      "style",
+      /width: ?calc\(100% - 4px\)/,
+    );
+  }
+  await expect(blocks.filter({ hasText: "C" })).toHaveAttribute(
+    "style",
+    /width: ?calc\(50% - 4px\)/,
+  );
+});
+
 test("kalender — clicking an entry opens the edit dialog and closes a gap", async ({
   page,
 }) => {
