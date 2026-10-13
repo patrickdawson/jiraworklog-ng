@@ -16,6 +16,9 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 - Auswertung: Die neue Karte „Zeit pro Ticket“ zeigt die Zeit pro Ticket und Kategorie als Balken in der Ticket-Farbe, mit Anteil in Prozent.
 - Desktop-App: Nach Bildschirmsperre oder Standby ab 5 Minuten fragt die App, was mit der Abwesenheitszeit des laufenden Timers passiert. Die Zeit bleibt, oder sie wird abgezogen und der Timer stoppt, oder sie wird abgezogen und der Timer läuft als neuer Eintrag weiter. Ein- und ausschalten unter Einstellungen → Pausen.
 
+### Geändert
+- Kalender: Eine Überlappung unter 1 Minute gilt nicht mehr als Überlappung. Die Einträge stehen dann nicht nebeneinander und sind nicht rot markiert.
+
 ## [0.3.0] - 2026-10-09
 
 ### Hinzugefügt
