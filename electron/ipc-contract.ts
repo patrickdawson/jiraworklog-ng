@@ -11,6 +11,13 @@
 export const IPC_SECRET_HEADER = "x-jwl-secret";
 
 /**
+ * Payload of the `away-ended` push event: the span (ISO timestamps) in which
+ * the screen was locked or the PC slept. The renderer decides whether it
+ * matters (setting on, timer running, long enough).
+ */
+export type AwayPeriod = { from: string; to: string };
+
+/**
  * Wire shape of `GET /api/timer/status`. `category` is the `AllgemeinesCategory`
  * union at the source (see `src/db/schema.ts`) but is widened to `string` here
  * to keep this contract free of server-side imports.

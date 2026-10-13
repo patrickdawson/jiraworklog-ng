@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+import type { AwayPeriod } from "./ipc-contract";
 
 /**
  * Bridge exposed to the Next.js renderer. Kept intentionally small and typed to
@@ -14,6 +15,18 @@ const bridge = {
     return () => {
       ipcRenderer.removeListener("timer-stopped", listener);
     };
+  },
+
+  onAwayEnded(callback: (period: AwayPeriod) => void): () => void {
+    const listener = (_e: unknown, period: AwayPeriod) => callback(period);
+    ipcRenderer.on("away-ended", listener);
+    return () => {
+      ipcRenderer.removeListener("away-ended", listener);
+    };
+  },
+
+  showWindow(): Promise<void> {
+    return ipcRenderer.invoke("window:show");
   },
 
   getAutoLaunch(): Promise<boolean> {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
 import { ElectronBridge } from "@/components/electron-bridge";
+import { AwayDialog } from "@/components/away-dialog";
 import { ConfirmProvider } from "@/components/confirm-dialog";
 import { getSettings } from "@/db/queries";
 
@@ -22,6 +23,7 @@ export default function RootLayout({
     <html lang="de" className="h-full antialiased" data-theme={themeMode}>
       <body className="min-h-full" suppressHydrationWarning>
         <ElectronBridge />
+        <AwayDialog />
         <ConfirmProvider>
           <div className="grid min-h-screen grid-cols-[232px_1fr]">
             <Sidebar />
