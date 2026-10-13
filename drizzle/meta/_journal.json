@@ -47,8 +47,8 @@
     {
       "idx": 6,
       "version": "6",
-      "when": 1779340767571,
-      "tag": "0006_add_group_colors",
+      "when": 1779340767572,
+      "tag": "0007_add_group_colors",
       "breakpoints": true
     }
   ]
