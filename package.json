@@ -1,6 +1,6 @@
 {
   "name": "jiraworklog-ng",
-  "version": "0.4.0-groupcolors.1",
+  "version": "0.4.0",
   "private": true,
   "author": "JiraWorklog",
   "main": "dist-electron/main.js",
