@@ -1,7 +1,19 @@
 import { RangeControls } from "@/components/auswertung-export";
 import { Card, KpiCard, PageHeader } from "@/components/ui";
-import { getFinishedDurations, getSettings } from "@/db/queries";
-import { overtimeBalanceMinutes, secondsByDay } from "@/lib/entries";
+import {
+  getEntriesBetween,
+  getFinishedDurations,
+  getGroupColors,
+  getSettings,
+} from "@/db/queries";
+import {
+  overtimeBalanceMinutes,
+  secondsByDay,
+  secondsByGroup,
+  toEntryView,
+  type GroupTotal,
+} from "@/lib/entries";
+import { groupColorVars, type GroupColorMap } from "@/lib/group-color";
 import { formatHm, formatSignedHm } from "@/lib/format";
 import {
   parseRangeKind,
@@ -118,6 +130,13 @@ export default async function AuswertungPage({
   const avgPerWeekMin = rangeSeconds / 60 / weeksInRange;
   const avgPerWorkedDayMin = daysWorked > 0 ? rangeSeconds / 60 / daysWorked : 0;
 
+  const groupTotals = secondsByGroup(
+    getEntriesBetween(
+      resolved.from.toISOString(),
+      resolved.to.toISOString(),
+    ).map((r) => toEntryView(r, cfg)),
+  );
+
   const chartDays = dayKeys.slice(-14);
   const chartData = chartDays.map((k) => ({
     key: k,
@@ -223,6 +242,13 @@ export default async function AuswertungPage({
             Quote konkrete Issues pro Tag
           </div>
           <QuoteBars data={quoteChartData} targetPercent={targetPct} />
+        </Card>
+      </div>
+
+      <div className="mt-3.5">
+        <Card>
+          <div className="text-[15px] font-semibold mb-3">Zeit pro Ticket</div>
+          <GroupBars data={groupTotals} colors={getGroupColors()} />
         </Card>
       </div>
     </main>
@@ -407,5 +433,84 @@ function DailyBars({
         );
       })}
     </svg>
+  );
+}
+
+/** Groups shown as their own bar; the rest is summed into one "Rest" bar. */
+const GROUP_BARS_MAX = 12;
+
+function GroupBars({
+  data,
+  colors,
+}: {
+  data: GroupTotal[];
+  colors: GroupColorMap;
+}) {
+  if (data.length === 0) {
+    return (
+      <div
+        className="text-center py-10 text-[13px]"
+        style={{ color: "var(--text-2)" }}
+      >
+        Noch keine Daten im gewählten Zeitraum.
+      </div>
+    );
+  }
+
+  const shown = data.slice(0, GROUP_BARS_MAX);
+  const restSeconds = data
+    .slice(GROUP_BARS_MAX)
+    .reduce((sum, g) => sum + g.seconds, 0);
+  const rows = shown.map((g) => {
+    const color = g.key ? colors[g.key] : undefined;
+    return {
+      id: g.key ?? "none",
+      label: g.label,
+      seconds: g.seconds,
+      fill: g.key ? groupColorVars(color, g.isAllgemeines).accent : "var(--text-3)",
+      color,
+    };
+  });
+  if (restSeconds > 0) {
+    rows.push({
+      id: "rest",
+      label: `Rest (${data.length - GROUP_BARS_MAX})`,
+      seconds: restSeconds,
+      fill: "var(--border-strong)",
+      color: undefined,
+    });
+  }
+  const max = Math.max(...rows.map((r) => r.seconds));
+
+  return (
+    <div className="space-y-2">
+      {rows.map((r) => (
+        <div
+          key={r.id}
+          data-testid="group-bar"
+          data-group-color={r.color ?? "default"}
+          className="grid grid-cols-[minmax(0,160px)_1fr_64px] items-center gap-3 text-[13px]"
+        >
+          <div className="truncate font-semibold" title={r.label}>
+            {r.label}
+          </div>
+          <div
+            className="h-3 rounded"
+            style={{ background: "var(--surface-2)" }}
+          >
+            <div
+              className="h-3 rounded"
+              style={{
+                width: `${(r.seconds * 100) / max}%`,
+                background: r.fill,
+              }}
+            />
+          </div>
+          <div className="num text-right tabular-nums" style={{ color: "var(--text-2)" }}>
+            {formatHm(Math.round(r.seconds / 60))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

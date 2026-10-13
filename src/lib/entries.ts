@@ -1,5 +1,6 @@
 import type { AllgemeinesCategory, TimeEntry } from "@/db/schema";
 import { dayKey, dayLabel } from "./format";
+import { groupColorKey } from "./group-color";
 import { parseDescription } from "./parse-description";
 import { effectiveDurationSeconds, type BreakWindow } from "./work-time";
 
@@ -118,6 +119,38 @@ export function toEntryView(
     isAllgemeines: entry.isAllgemeines,
     category: entry.category,
   };
+}
+
+export type GroupTotal = {
+  /** `groupColorKey` of the group; null for concrete entries without a key. */
+  key: string | null;
+  label: string;
+  isAllgemeines: boolean;
+  seconds: number;
+};
+
+/**
+ * Worked time per ticket (concrete entries) or category (Allgemeines),
+ * largest first. Concrete entries without an issue key share one bucket.
+ */
+export function secondsByGroup(entries: EntryView[]): GroupTotal[] {
+  const totals = new Map<string, GroupTotal>();
+  for (const e of entries) {
+    if (e.effectiveSeconds <= 0) continue;
+    const key = groupColorKey(e);
+    const id = key ?? "none";
+    const total = totals.get(id) ?? {
+      key,
+      label: e.isAllgemeines
+        ? `Allgemein · ${e.category ?? "—"}`
+        : (e.issueKey ?? "kein Issue-Key"),
+      isAllgemeines: e.isAllgemeines,
+      seconds: 0,
+    };
+    total.seconds += e.effectiveSeconds;
+    totals.set(id, total);
+  }
+  return [...totals.values()].sort((a, b) => b.seconds - a.seconds);
 }
 
 /** Groups finished entries by day, then by identical description. */
