@@ -9,11 +9,16 @@ import {
   BrowserWindow,
   Menu,
   nativeImage,
+  powerMonitor,
   Tray,
   ipcMain,
   type MenuItemConstructorOptions,
 } from "electron";
-import { IPC_SECRET_HEADER, type TimerStatus } from "./ipc-contract";
+import {
+  IPC_SECRET_HEADER,
+  type AwayPeriod,
+  type TimerStatus,
+} from "./ipc-contract";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const DEV = !app.isPackaged;
@@ -49,6 +54,10 @@ let isQuitting = false;
 
 let lastStatus: TimerStatus = { running: false };
 let lastTrayKey: string | null = null;
+
+// Start of the current lock or sleep (epoch ms); null while the user is here.
+let awaySince: number | null = null;
+let screenLocked = false;
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 function assetsDir(): string {
@@ -357,6 +366,39 @@ async function stopTimerFromTray(): Promise<void> {
   }
 }
 
+// ── Away detection (screen lock / sleep) ─────────────────────────────────────
+// A lock and a sleep often overlap (sleep locks the screen), so the earliest
+// one starts the away span and the user is only back once the screen is
+// unlocked again.
+function markAway(): void {
+  awaySince ??= Date.now();
+}
+
+function markBack(): void {
+  if (awaySince === null) return;
+  const period: AwayPeriod = {
+    from: new Date(awaySince).toISOString(),
+    to: new Date().toISOString(),
+  };
+  awaySince = null;
+  mainWindow?.webContents.send("away-ended", period);
+}
+
+function watchAway(): void {
+  powerMonitor.on("lock-screen", () => {
+    screenLocked = true;
+    markAway();
+  });
+  powerMonitor.on("unlock-screen", () => {
+    screenLocked = false;
+    markBack();
+  });
+  powerMonitor.on("suspend", () => markAway());
+  powerMonitor.on("resume", () => {
+    if (!screenLocked) markBack();
+  });
+}
+
 // ── Auto-launch (Windows login item) ─────────────────────────────────────────
 function getAutoLaunch(): boolean {
   return app.getLoginItemSettings({ path: executablePath() }).openAtLogin;
@@ -386,6 +428,7 @@ if (!app.requestSingleInstanceLock()) {
       ipcMain.handle("auto-launch:set", (_e, enabled: boolean) =>
         setAutoLaunch(Boolean(enabled)),
       );
+      ipcMain.handle("window:show", () => showWindow());
 
       appPort = DEV ? DEV_PORT : await findFreePort();
       log(`Using port ${appPort}`);
@@ -397,6 +440,7 @@ if (!app.requestSingleInstanceLock()) {
 
       createWindow();
       createTray();
+      watchAway();
 
       pollTimer = setInterval(() => void refreshStatus(), STATUS_POLL_MS);
       void refreshStatus();

@@ -70,6 +70,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
   const [concreteTarget, setConcreteTarget] = useState(
     String(initial.concreteIssueTargetPercent),
   );
+  const [awayCheck, setAwayCheck] = useState(initial.awayCheckEnabled);
   const [forceBooking, setForceBookingState] = useState(initial.forceBooking);
 
   useEffect(() => {
@@ -168,6 +169,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         sprintAnchorDate,
         sprintLengthDays: sprintLen,
         concreteIssueTargetPercent: targetPct,
+        awayCheckEnabled: awayCheck,
       });
       setSaveStatus(
         res.ok
@@ -363,6 +365,22 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
             Pausenzeiten automatisch von der Arbeitszeit abziehen
           </span>
         </label>
+
+        <label className="mt-3 flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={awayCheck}
+            onChange={(e) => setAwayCheck(e.target.checked)}
+          />
+          <span className="text-[13px]">
+            Nach Abwesenheit fragen, ob die Zeit abgezogen werden soll
+          </span>
+        </label>
+        <div className="mt-1 text-[12px]" style={{ color: "var(--text-3)" }}>
+          Nur in der Desktop-App. Wenn der Bildschirm gesperrt war oder der PC im
+          Standby war, fragt die App ab 5 Minuten Abwesenheit, was mit der Zeit
+          des laufenden Timers passieren soll.
+        </div>
       </Section>
 
       <Section title="Buchung">

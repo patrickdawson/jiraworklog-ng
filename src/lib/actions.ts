@@ -74,13 +74,14 @@ function revalidateAll(): void {
 const MIN_TRACKED_SECONDS = 60;
 
 /**
- * Closes the running timer (if any). When the effective duration is below
- * `MIN_TRACKED_SECONDS` the row is deleted instead of getting an `endedAt`,
- * matching Jira's "no worklog under one minute" constraint.
+ * Closes the running timer (if any) at `ended` (default: now). When the
+ * effective duration is below `MIN_TRACKED_SECONDS` the row is deleted instead
+ * of getting an `endedAt`, matching Jira's "no worklog under one minute"
+ * constraint.
  *
  * Returns metadata so the UI can show a toast for discarded entries.
  */
-function closeRunningTimer(): {
+function closeRunningTimer(ended: string = nowIso()): {
   hadRunning: boolean;
   discarded: boolean;
   secondsTracked: number;
@@ -91,7 +92,7 @@ function closeRunningTimer(): {
   const s = getSettings();
   const seconds = effectiveDurationSeconds(
     running.startedAt,
-    null,
+    ended,
     parseBreaks(s.breaks),
     s.autoPauseEnabled,
   );
@@ -101,9 +102,8 @@ function closeRunningTimer(): {
     return { hadRunning: true, discarded: true, secondsTracked: seconds };
   }
 
-  const ended = nowIso();
   db.update(timeEntries)
-    .set({ endedAt: ended, updatedAt: ended })
+    .set({ endedAt: ended, updatedAt: nowIso() })
     .where(eq(timeEntries.id, running.id))
     .run();
   return { hadRunning: true, discarded: false, secondsTracked: seconds };
@@ -221,6 +221,93 @@ export async function updateRunningStartedAt(
     .set({ startedAt: iso, updatedAt: nowIso() })
     .where(eq(timeEntries.id, running.id))
     .run();
+  revalidateAll();
+  return { ok: true };
+}
+
+// ───────────────────────────── Away ───────────────────────────────
+
+/** Shorter locks (a quick coffee) are not worth a question. */
+const MIN_AWAY_SECONDS = 5 * 60;
+
+/** An away span that overlaps the running timer and is worth asking about. */
+export type AwayCheck = {
+  entryId: number;
+  description: string;
+  awayFrom: string;
+  awayTo: string;
+};
+
+/**
+ * Decides whether the user should be asked about an away span reported by the
+ * desktop app. Returns null when the setting is off, no timer runs, or the part
+ * of the span inside the running entry is shorter than `MIN_AWAY_SECONDS`.
+ */
+export async function checkAwayTime(
+  awayFromIso: string,
+  awayToIso: string,
+): Promise<AwayCheck | null> {
+  if (!getSettings().awayCheckEnabled) return null;
+  const running = getRunningEntry();
+  if (!running) return null;
+
+  const from = Math.max(
+    new Date(awayFromIso).getTime(),
+    new Date(running.startedAt).getTime(),
+  );
+  const to = Math.min(new Date(awayToIso).getTime(), Date.now());
+  if (isNaN(from) || isNaN(to) || (to - from) / 1000 < MIN_AWAY_SECONDS) {
+    return null;
+  }
+  return {
+    entryId: running.id,
+    description: running.description,
+    awayFrom: new Date(from).toISOString(),
+    awayTo: new Date(to).toISOString(),
+  };
+}
+
+const resolveAwaySchema = z.object({
+  entryId: z.number().int(),
+  awayFrom: z.iso.datetime(),
+  awayTo: z.iso.datetime(),
+  mode: z.enum(["continue", "stop"]),
+});
+
+/**
+ * Removes an away span from the running timer: the entry ends where the user
+ * left. With `continue` a new entry with the same text starts where the user
+ * came back; with `stop` the timer stays stopped.
+ */
+export async function resolveAwayTime(
+  input: z.infer<typeof resolveAwaySchema>,
+): Promise<ActionResult> {
+  const parsed = resolveAwaySchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: "Ungültige Abwesenheit." };
+  }
+  const { entryId, awayFrom, awayTo, mode } = parsed.data;
+  const running = getRunningEntry();
+  if (!running || running.id !== entryId) {
+    return { ok: false, message: "Der Timer hat sich inzwischen geändert." };
+  }
+  if (new Date(awayFrom).getTime() < new Date(running.startedAt).getTime()) {
+    return { ok: false, message: "Abwesenheit beginnt vor dem Timer." };
+  }
+
+  db.transaction(() => {
+    closeRunningTimer(new Date(awayFrom).toISOString());
+    if (mode === "continue") {
+      db.insert(timeEntries)
+        .values({
+          description: running.description,
+          startedAt: new Date(awayTo).toISOString(),
+          isAllgemeines: running.isAllgemeines,
+          category: running.category,
+        })
+        .run();
+    }
+  });
   revalidateAll();
   return { ok: true };
 }
@@ -371,6 +458,7 @@ const settingsSchema = z.object({
   sprintAnchorDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   sprintLengthDays: z.number().int().min(1).max(365),
   concreteIssueTargetPercent: z.number().int().min(0).max(100),
+  awayCheckEnabled: z.boolean(),
 });
 
 export type SettingsInput = z.infer<typeof settingsSchema>;
@@ -406,6 +494,7 @@ export async function updateSettings(
       sprintAnchorDate: d.sprintAnchorDate,
       sprintLengthDays: d.sprintLengthDays,
       concreteIssueTargetPercent: d.concreteIssueTargetPercent,
+      awayCheckEnabled: d.awayCheckEnabled,
       updatedAt: nowIso(),
     })
     .where(eq(settings.id, 1))

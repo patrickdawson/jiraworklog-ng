@@ -40,6 +40,7 @@ const BASELINE: SettingsBaseline = {
   sprintAnchorDate: "2026-01-07",
   sprintLengthDays: 14,
   concreteIssueTargetPercent: 60,
+  awayCheckEnabled: true,
 };
 
 function openDb() {

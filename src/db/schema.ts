@@ -114,6 +114,13 @@ export const settings = sqliteTable("settings", {
   concreteIssueTargetPercent: integer("concrete_issue_target_percent")
     .notNull()
     .default(60),
+  /**
+   * Desktop app only: after the screen was locked or the PC slept while a timer
+   * ran, ask whether the away time should be removed from the entry.
+   */
+  awayCheckEnabled: integer("away_check_enabled", { mode: "boolean" })
+    .notNull()
+    .default(true),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
