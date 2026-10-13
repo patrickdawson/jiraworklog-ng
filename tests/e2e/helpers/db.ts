@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import {
+  groupColors,
   settings,
   timeEntries,
   type NewTimeEntry,
@@ -51,7 +52,7 @@ function openDb() {
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
   sqlite.pragma("busy_timeout = 10000");
-  return { sqlite, db: drizzle(sqlite, { schema: { settings, timeEntries }, casing: "snake_case" }) };
+  return { sqlite, db: drizzle(sqlite, { schema: { settings, timeEntries, groupColors }, casing: "snake_case" }) };
 }
 
 async function withDb<T>(fn: (db: ReturnType<typeof openDb>["db"]) => T): Promise<T> {
@@ -76,6 +77,7 @@ async function withDb<T>(fn: (db: ReturnType<typeof openDb>["db"]) => T): Promis
 export async function resetDb(): Promise<void> {
   await withDb((db) => {
     db.delete(timeEntries).run();
+    db.delete(groupColors).run();
     const existing = db.select().from(settings).where(eq(settings.id, 1)).get();
     if (existing) {
       db.update(settings).set(BASELINE).where(eq(settings.id, 1)).run();
@@ -110,6 +112,10 @@ export async function seedEntries(rows: NewTimeEntry[]): Promise<void> {
       }
     });
   });
+}
+
+export async function getGroupColorRows() {
+  return withDb((db) => db.select().from(groupColors).all());
 }
 
 export async function getEntries() {
