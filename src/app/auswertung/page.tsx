@@ -436,6 +436,12 @@ function DailyBars({
   );
 }
 
+/** Share of the total as a whole percent; tiny but non-zero shares show as "<1 %". */
+function formatShare(seconds: number, total: number): string {
+  const pct = (seconds * 100) / total;
+  return pct > 0 && pct < 1 ? "<1 %" : `${Math.round(pct)} %`;
+}
+
 /** Groups shown as their own bar; the rest is summed into one "Rest" bar. */
 const GROUP_BARS_MAX = 12;
 
@@ -481,6 +487,7 @@ function GroupBars({
     });
   }
   const max = Math.max(...rows.map((r) => r.seconds));
+  const total = data.reduce((sum, g) => sum + g.seconds, 0);
 
   return (
     <div className="space-y-2">
@@ -489,7 +496,7 @@ function GroupBars({
           key={r.id}
           data-testid="group-bar"
           data-group-color={r.color ?? "default"}
-          className="grid grid-cols-[minmax(0,160px)_1fr_64px] items-center gap-3 text-[13px]"
+          className="grid grid-cols-[minmax(0,160px)_1fr_64px_44px] items-center gap-3 text-[13px]"
         >
           <div className="truncate font-semibold" title={r.label}>
             {r.label}
@@ -508,6 +515,13 @@ function GroupBars({
           </div>
           <div className="num text-right tabular-nums" style={{ color: "var(--text-2)" }}>
             {formatHm(Math.round(r.seconds / 60))}
+          </div>
+          <div
+            data-testid="group-bar-percent"
+            className="num text-right tabular-nums"
+            style={{ color: "var(--text-3)" }}
+          >
+            {formatShare(r.seconds, total)}
           </div>
         </div>
       ))}
