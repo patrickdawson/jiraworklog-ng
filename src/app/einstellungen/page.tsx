@@ -28,6 +28,7 @@ export default function EinstellungenPage() {
         sprintAnchorDate: s.sprintAnchorDate,
         sprintLengthDays: s.sprintLengthDays,
         concreteIssueTargetPercent: s.concreteIssueTargetPercent,
+        awayCheckEnabled: s.awayCheckEnabled,
         forceBooking: isForceBookingEnabled(),
       }}
     />
