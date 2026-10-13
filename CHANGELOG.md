@@ -14,6 +14,7 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 - Kalender: Die Blöcke zeigen die Farbe des Tickets.
 - Buchen: Eine Zeile mit Farbe bekommt einen farbigen Hintergrund und einen farbigen linken Rand.
 - Auswertung: Die neue Karte „Zeit pro Ticket“ zeigt die Zeit pro Ticket und Kategorie als Balken in der Ticket-Farbe, mit Anteil in Prozent.
+- Desktop-App: Nach Bildschirmsperre oder Standby ab 5 Minuten fragt die App, was mit der Abwesenheitszeit des laufenden Timers passiert. Die Zeit bleibt, oder sie wird abgezogen und der Timer stoppt, oder sie wird abgezogen und der Timer läuft als neuer Eintrag weiter. Ein- und ausschalten unter Einstellungen → Pausen.
 
 ## [0.3.0] - 2026-10-09
 
