@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EditEntryDialog, type EntryDraft } from "@/components/entry-dialogs";
+import { GroupColorsProvider, useGroupColors } from "@/components/group-colors-context";
 import { Card, PageHeader } from "@/components/ui";
 import { NowProvider, useNow, useRunningSeconds } from "@/components/now-context";
 import type { EntryView } from "@/lib/entries";
 import { dayKey, formatHm, formatSignedHm } from "@/lib/format";
+import { resolveGroupColor, type GroupColorMap } from "@/lib/group-color";
 import { buildTimeline, type DayTimeline, type Interval } from "@/lib/timeline";
 import type { BreakWindow } from "@/lib/work-time";
 
@@ -18,6 +20,7 @@ export type KalenderData = {
   isCurrentWeek: boolean;
   hasRunning: boolean;
   entries: EntryView[];
+  groupColors: GroupColorMap;
   breaks: BreakWindow[];
   autoPauseEnabled: boolean;
   /** Overtime of this week's days, from finished entries only. */
@@ -67,7 +70,9 @@ function totalMinutes(intervals: Interval[]): number {
 export function KalenderView({ data }: { data: KalenderData }) {
   return (
     <NowProvider active={data.hasRunning}>
-      <KalenderInner data={data} />
+      <GroupColorsProvider colors={data.groupColors}>
+        <KalenderInner data={data} />
+      </GroupColorsProvider>
     </NowProvider>
   );
 }
@@ -393,6 +398,7 @@ function DayColumn({
   onEdit: (entry: EntryView) => void;
   onFillGap: (gap: Interval) => void;
 }) {
+  const groupColors = useGroupColors();
   const visible = (i: Interval) => i.endMin > firstMin && i.startMin < lastMin;
   const box = (i: Interval) => {
     const top = toY(Math.max(i.startMin, firstMin));
@@ -452,8 +458,7 @@ function DayColumn({
         const subRaw = e.isAllgemeines ? e.description : e.comment;
         const sub = subRaw === title ? "" : subRaw;
         const width = 100 / s.lanes;
-        const accent = e.isAllgemeines ? "var(--teal)" : "var(--accent)";
-        const soft = e.isAllgemeines ? "var(--teal-soft)" : "var(--accent-soft)";
+        const { color, accent, soft } = resolveGroupColor(groupColors, e);
         const { top, height: h } = box(s);
         const time = `${clockOfMinutes(s.startMin)}–${s.running ? "läuft" : clockOfMinutes(s.endMin)} · ${formatHm(s.endMin - s.startMin)}`;
         // Saving the dialog sets an end time, which would stop a running
@@ -463,6 +468,7 @@ function DayColumn({
           <Tag
             key={`${s.entryId}-${s.startMin}`}
             data-testid="kalender-entry"
+            data-group-color={color ?? "default"}
             {...(s.running
               ? {}
               : {

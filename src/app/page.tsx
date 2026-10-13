@@ -5,6 +5,7 @@ import {
   getAllEntries,
   getEntriesFrom,
   getFinishedDurations,
+  getGroupColors,
   getRunningEntry,
   getSettings,
 } from "@/db/queries";
@@ -110,6 +111,7 @@ export default async function BuchenPage({
         overtimeBalanceMinutes: overtime,
         runningDayTargetMinutes,
         days,
+        groupColors: getGroupColors(),
         recents,
         openBookableCount,
         history: {

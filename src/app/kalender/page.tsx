@@ -1,5 +1,10 @@
 import { KalenderView } from "@/components/kalender-view";
-import { getEntriesBetween, getRunningEntry, getSettings } from "@/db/queries";
+import {
+  getEntriesBetween,
+  getGroupColors,
+  getRunningEntry,
+  getSettings,
+} from "@/db/queries";
 import {
   isWeekendKey,
   overtimeBalanceMinutes,
@@ -70,6 +75,7 @@ export default async function KalenderPage({
         isCurrentWeek: week.anchor === resolveRange("week", dayKey(new Date())).anchor,
         hasRunning: running !== undefined,
         entries,
+        groupColors: getGroupColors(),
         breaks: cfg.breaks,
         autoPauseEnabled: cfg.autoPauseEnabled,
         weekOvertimeMinutes,

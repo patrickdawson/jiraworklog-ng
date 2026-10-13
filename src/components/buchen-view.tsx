@@ -41,6 +41,12 @@ import {
   type RecentEntry,
 } from "@/lib/entries";
 import { TimerDescriptionInput } from "@/components/timer-description-input";
+import { GroupColorPicker } from "@/components/group-color-picker";
+import {
+  GroupColorsProvider,
+  useGroupColors,
+} from "@/components/group-colors-context";
+import { resolveGroupColor, type GroupColorMap } from "@/lib/group-color";
 import { useConfirm } from "@/components/confirm-dialog";
 import {
   NowProvider,
@@ -71,6 +77,7 @@ export type BuchenData = {
    */
   runningDayTargetMinutes: number;
   days: DayGroup[];
+  groupColors: GroupColorMap;
   recents: RecentEntry[];
   /**
    * Bookable entries across the WHOLE history, not just the rendered window —
@@ -131,6 +138,7 @@ export function BuchenView({ data }: { data: BuchenData }) {
 
   return (
     <NowProvider active={running !== null}>
+      <GroupColorsProvider colors={data.groupColors}>
       <main className="px-8 py-7">
         <PageHeader
           title="Buchen"
@@ -259,6 +267,7 @@ export function BuchenView({ data }: { data: BuchenData }) {
           />
         )}
       </main>
+      </GroupColorsProvider>
     </NowProvider>
   );
 }
@@ -801,6 +810,10 @@ function GroupRow({
   const singleEntry = isSingle ? group.entries[0] : null;
   const [pendingDelete, setPendingDelete] = useState(false);
   const confirm = useConfirm();
+  const { key: colorKey, accent } = resolveGroupColor(useGroupColors(), group);
+  const groupLabel = group.isAllgemeines
+    ? `Allgemein · ${group.category ?? "—"}`
+    : (group.issueKey ?? "kein Issue-Key");
 
   async function onDeleteSingle() {
     if (!singleEntry || pendingDelete) return;
@@ -837,19 +850,23 @@ function GroupRow({
           <div className="text-[14px] truncate">
             {group.description || "(ohne Beschreibung)"}
           </div>
-          <div
-            className="text-[12px] font-semibold"
-            style={{
-              color: group.isAllgemeines
-                ? "var(--teal)"
-                : group.issueKey
-                  ? "var(--accent)"
-                  : "var(--text-3)",
-            }}
-          >
-            {group.isAllgemeines
-              ? `Allgemein · ${group.category ?? "—"}`
-              : (group.issueKey ?? "kein Issue-Key")}
+          <div className="flex items-center gap-2">
+            {colorKey && (
+              <GroupColorPicker
+                groupKey={colorKey}
+                isAllgemeines={group.isAllgemeines}
+                label={groupLabel}
+              />
+            )}
+            <div
+              className="text-[12px] font-semibold"
+              style={{
+                color:
+                  colorKey || group.isAllgemeines ? accent : "var(--text-3)",
+              }}
+            >
+              {groupLabel}
+            </div>
           </div>
         </div>
 

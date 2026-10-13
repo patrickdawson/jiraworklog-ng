@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useGroupColors } from "@/components/group-colors-context";
 import { setGroupColor } from "@/lib/actions";
 import {
   GROUP_COLOR_LABELS,
@@ -16,16 +17,15 @@ import {
  */
 export function GroupColorPicker({
   groupKey,
-  color,
   isAllgemeines,
   label,
 }: {
   groupKey: string;
-  color: GroupColor | undefined;
   isAllgemeines: boolean;
   /** Group name for the accessible label, e.g. the issue key. */
   label: string;
 }) {
+  const color = useGroupColors()[groupKey];
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const rootRef = useRef<HTMLDivElement>(null);

@@ -12,6 +12,8 @@ import {
 } from "@/db/schema";
 import { createManualEntry, deleteEntry, updateEntry } from "@/lib/actions";
 import type { EntryView } from "@/lib/entries";
+import { GroupColorPicker } from "@/components/group-color-picker";
+import { groupColorKey } from "@/lib/group-color";
 
 export const DEFAULT_CATEGORY: AllgemeinesCategory = "Projektorganisation";
 
@@ -191,6 +193,14 @@ export function EditEntryDialog({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const confirm = useConfirm();
+  // The issue key comes from the saved entry: parsing the live description
+  // needs the project keys, which the dialog does not have.
+  const colorKey = groupColorKey({
+    isAllgemeines,
+    category: isAllgemeines ? category : null,
+    issueKey: entry?.issueKey,
+  });
+  const colorLabel = isAllgemeines ? category : (entry?.issueKey ?? "");
 
   async function onSave() {
     setPending(true);
@@ -252,6 +262,16 @@ export function EditEntryDialog({
           </label>
           {isAllgemeines && (
             <CategorySelect value={category} onChange={setCategory} />
+          )}
+          {colorKey && (
+            <div className="flex items-center gap-2 text-[13px]">
+              <GroupColorPicker
+                groupKey={colorKey}
+                isAllgemeines={isAllgemeines}
+                label={colorLabel}
+              />
+              <span style={{ color: "var(--text-2)" }}>Farbe für {colorLabel}</span>
+            </div>
           )}
         </div>
         <div className="grid grid-cols-2 gap-3.5">
