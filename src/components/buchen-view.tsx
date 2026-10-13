@@ -810,7 +810,12 @@ function GroupRow({
   const singleEntry = isSingle ? group.entries[0] : null;
   const [pendingDelete, setPendingDelete] = useState(false);
   const confirm = useConfirm();
-  const { key: colorKey, accent } = resolveGroupColor(useGroupColors(), group);
+  const {
+    key: colorKey,
+    color,
+    accent,
+    soft,
+  } = resolveGroupColor(useGroupColors(), group);
   const groupLabel = group.isAllgemeines
     ? `Allgemein · ${group.category ?? "—"}`
     : (group.issueKey ?? "kein Issue-Key");
@@ -829,8 +834,19 @@ function GroupRow({
   return (
     <div>
       <div
+        data-testid="group-row"
+        data-group-color={color ?? "default"}
         className="flex items-center gap-3 px-4 py-3"
-        style={{ borderColor: "var(--border)" }}
+        style={{
+          borderColor: "var(--border)",
+          // Like a Kalender block, but only for a picked color: uncolored
+          // rows stay neutral so the colored ones stand out. An inset shadow
+          // instead of a border keeps the row content aligned.
+          ...(color && {
+            background: soft,
+            boxShadow: `inset 3px 0 0 ${accent}`,
+          }),
+        }}
       >
         <button
           type="button"
