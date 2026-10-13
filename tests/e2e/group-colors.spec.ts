@@ -29,6 +29,18 @@ test("group colors — pick, show everywhere, reset", async ({ page }) => {
   await page.getByRole("menuitemradio", { name: "Rot" }).click();
   await expect(swatches.last()).toHaveAttribute("data-color", "rose");
 
+  // The whole row is tinted, not only the label; uncolored rows stay neutral.
+  const rows = page.getByTestId("group-row");
+  await expect(rows.filter({ hasText: "TEST-1" })).toHaveCount(2);
+  for (const row of await rows.filter({ hasText: "TEST-1" }).all()) {
+    await expect(row).toHaveAttribute("data-group-color", "rose");
+    await expect(row).toHaveCSS("background-color", /rgba\(225, 29, 72/);
+  }
+  await expect(rows.filter({ hasText: "DEMO-2" })).toHaveAttribute(
+    "data-group-color",
+    "default",
+  );
+
   await expect(
     page.getByRole("button", { name: "Farbe für TEST-1 wählen" }).first(),
   ).toHaveAttribute("data-color", "rose");
@@ -52,6 +64,14 @@ test("group colors — pick, show everywhere, reset", async ({ page }) => {
   const bar = page.getByTestId("group-bar").filter({ hasText: "TEST-1" });
   await expect(bar).toHaveAttribute("data-group-color", "rose");
   await expect(bar).toContainText("2:00");
+  // 2 of 3 hours.
+  await expect(bar.getByTestId("group-bar-percent")).toHaveText("67 %");
+  await expect(
+    page
+      .getByTestId("group-bar")
+      .filter({ hasText: "DEMO-2" })
+      .getByTestId("group-bar-percent"),
+  ).toHaveText("33 %");
 
   await page.goto("/?days=all");
   await page
