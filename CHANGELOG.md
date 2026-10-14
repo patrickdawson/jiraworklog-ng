@@ -7,6 +7,9 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Geändert
+- Einstellungen: „Speichern“ steht nicht mehr oben auf der Seite. Nach einer Änderung bleibt unten eine Leiste mit „Verwerfen“ und „Speichern“ sichtbar, auch beim Scrollen. Wer die Seite mit ungespeicherten Änderungen verlässt, wird vorher gefragt.
+
 ## [0.4.0] - 2026-10-13
 
 ### Hinzugefügt
