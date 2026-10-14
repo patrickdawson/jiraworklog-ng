@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { appendFileSync, createWriteStream } from "node:fs";
+import { appendFileSync, createWriteStream, readFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { createServer } from "node:net";
 import { join } from "node:path";
@@ -272,9 +272,25 @@ function openRoute(path: string): void {
   mainWindow?.webContents.send("navigate", path);
 }
 
+/**
+ * The app version from package.json. `app.getVersion()` is not enough: in dev
+ * Electron starts dist-electron/main.js without a package.json next to it and
+ * then reports its own version.
+ */
+function appVersion(): string {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(join(__dirname, "..", "package.json"), "utf8"),
+    ) as { version?: string };
+    return pkg.version ?? app.getVersion();
+  } catch {
+    return app.getVersion();
+  }
+}
+
 function showAbout(): void {
   const detail = [
-    `Version ${app.getVersion()}`,
+    `Version ${appVersion()}`,
     "",
     `Electron ${process.versions.electron}`,
     `Chromium ${process.versions.chrome}`,
