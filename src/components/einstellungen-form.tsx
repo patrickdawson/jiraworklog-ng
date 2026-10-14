@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { Card, PageHeader } from "@/components/ui";
 import { useConfirm } from "@/components/confirm-dialog";
 import {
@@ -37,41 +38,113 @@ function hmToMinutes(value: string): number | null {
   return h * 60 + m;
 }
 
+/** The fields that only persist through "Speichern", as the inputs hold them. */
+type FormValues = {
+  regular: string;
+  target: string;
+  breaks: BreakWindow[];
+  autoPause: boolean;
+  bookingMode: "grouped" | "individual";
+  retention: string;
+  jiraUrl: string;
+  projectKeys: string[];
+  token: string;
+  jUser: string;
+  overtimeBaseline: string;
+  themeMode: "system" | "light" | "dark";
+  sprintAnchorDate: string;
+  sprintLengthDays: string;
+  concreteTarget: string;
+  awayCheck: boolean;
+};
+
+function toFormValues(initial: Initial): FormValues {
+  return {
+    regular: minutesToHm(initial.regularWorkMinutes),
+    target: minutesToHm(initial.dailyTargetMinutes),
+    breaks: initial.breaks,
+    autoPause: initial.autoPauseEnabled,
+    bookingMode: initial.bookingMode,
+    retention: String(initial.dataRetentionDays),
+    jiraUrl: initial.jiraUrl,
+    projectKeys: initial.jiraProjectKeys,
+    token: initial.jiraToken ?? initial.jiraPassword ?? "",
+    jUser: initial.jiraUser ?? "",
+    overtimeBaseline: formatSignedHmInput(initial.overtimeBaselineMinutes),
+    themeMode: initial.themeMode,
+    sprintAnchorDate: initial.sprintAnchorDate,
+    sprintLengthDays: String(initial.sprintLengthDays),
+    concreteTarget: String(initial.concreteIssueTargetPercent),
+    awayCheck: initial.awayCheckEnabled,
+  };
+}
+
 export function EinstellungenForm({ initial }: { initial: Initial }) {
-  const [regular, setRegular] = useState(minutesToHm(initial.regularWorkMinutes));
-  const [target, setTarget] = useState(minutesToHm(initial.dailyTargetMinutes));
-  const [breaks, setBreaks] = useState<BreakWindow[]>(initial.breaks);
-  const [autoPause, setAutoPause] = useState(initial.autoPauseEnabled);
-  const [bookingMode, setBookingMode] = useState<"grouped" | "individual">(
-    initial.bookingMode,
-  );
-  const [retention, setRetention] = useState(String(initial.dataRetentionDays));
-  const [jiraUrl, setJiraUrl] = useState(initial.jiraUrl);
-  const [projectKeys, setProjectKeys] = useState<string[]>(
-    initial.jiraProjectKeys,
-  );
+  const [saved, setSaved] = useState(() => toFormValues(initial));
+  const [regular, setRegular] = useState(saved.regular);
+  const [target, setTarget] = useState(saved.target);
+  const [breaks, setBreaks] = useState<BreakWindow[]>(saved.breaks);
+  const [autoPause, setAutoPause] = useState(saved.autoPause);
+  const [bookingMode, setBookingMode] = useState(saved.bookingMode);
+  const [retention, setRetention] = useState(saved.retention);
+  const [jiraUrl, setJiraUrl] = useState(saved.jiraUrl);
+  const [projectKeys, setProjectKeys] = useState<string[]>(saved.projectKeys);
   const [newKey, setNewKey] = useState("");
-  const [token, setToken] = useState(
-    initial.jiraToken ?? initial.jiraPassword ?? "",
-  );
-  const [jUser, setJUser] = useState(initial.jiraUser ?? "");
+  const [token, setToken] = useState(saved.token);
+  const [jUser, setJUser] = useState(saved.jUser);
   const [overtimeBaseline, setOvertimeBaseline] = useState(
-    formatSignedHmInput(initial.overtimeBaselineMinutes),
+    saved.overtimeBaseline,
   );
-  const [themeMode, setThemeMode] = useState<"system" | "light" | "dark">(
-    initial.themeMode,
-  );
+  const [themeMode, setThemeMode] = useState(saved.themeMode);
   const [sprintAnchorDate, setSprintAnchorDate] = useState(
-    initial.sprintAnchorDate,
+    saved.sprintAnchorDate,
   );
   const [sprintLengthDays, setSprintLengthDays] = useState(
-    String(initial.sprintLengthDays),
+    saved.sprintLengthDays,
   );
-  const [concreteTarget, setConcreteTarget] = useState(
-    String(initial.concreteIssueTargetPercent),
-  );
-  const [awayCheck, setAwayCheck] = useState(initial.awayCheckEnabled);
+  const [concreteTarget, setConcreteTarget] = useState(saved.concreteTarget);
+  const [awayCheck, setAwayCheck] = useState(saved.awayCheck);
   const [forceBooking, setForceBookingState] = useState(initial.forceBooking);
+
+  const values: FormValues = {
+    regular,
+    target,
+    breaks,
+    autoPause,
+    bookingMode,
+    retention,
+    jiraUrl,
+    projectKeys,
+    token,
+    jUser,
+    overtimeBaseline,
+    themeMode,
+    sprintAnchorDate,
+    sprintLengthDays,
+    concreteTarget,
+    awayCheck,
+  };
+  const dirty = JSON.stringify(values) !== JSON.stringify(saved);
+
+  function discard() {
+    setRegular(saved.regular);
+    setTarget(saved.target);
+    setBreaks(saved.breaks);
+    setAutoPause(saved.autoPause);
+    setBookingMode(saved.bookingMode);
+    setRetention(saved.retention);
+    setJiraUrl(saved.jiraUrl);
+    setProjectKeys(saved.projectKeys);
+    setToken(saved.token);
+    setJUser(saved.jUser);
+    setOvertimeBaseline(saved.overtimeBaseline);
+    setThemeMode(saved.themeMode);
+    setSprintAnchorDate(saved.sprintAnchorDate);
+    setSprintLengthDays(saved.sprintLengthDays);
+    setConcreteTarget(saved.concreteTarget);
+    setAwayCheck(saved.awayCheck);
+    setSaveStatus(null);
+  }
 
   useEffect(() => {
     document.documentElement.dataset.theme = themeMode;
@@ -107,6 +180,56 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
   const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const confirm = useConfirm();
+  const router = useRouter();
+
+  // The success note only confirms the click; it leaves the save bar on its own.
+  useEffect(() => {
+    if (saveStatus?.tone !== "ok") return;
+    const id = window.setTimeout(() => setSaveStatus(null), 4000);
+    return () => window.clearTimeout(id);
+  }, [saveStatus]);
+
+  // Unsaved changes: ask before an in-app link leaves the page, and let the
+  // browser ask before a reload or tab close.
+  const savedTheme = saved.themeMode;
+  useEffect(() => {
+    if (!dirty) return;
+
+    function onClick(e: MouseEvent) {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const link = (e.target as Element | null)?.closest("a[href]");
+      if (!(link instanceof HTMLAnchorElement) || link.target === "_blank") return;
+      const url = new URL(link.href);
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname === window.location.pathname) return;
+      // Capture phase on document runs before Next's <Link> handler on the root.
+      e.preventDefault();
+      e.stopPropagation();
+      void confirm(
+        "Es gibt ungespeicherte Änderungen in den Einstellungen. Seite trotzdem verlassen?",
+        "Verwerfen",
+      ).then((leave) => {
+        if (!leave) return;
+        // Drop the unsaved theme preview before the next page shows.
+        document.documentElement.dataset.theme = savedTheme;
+        router.push(url.pathname + url.search + url.hash);
+      });
+    }
+
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+    }
+
+    document.addEventListener("click", onClick, true);
+    // Electron cancels the unload silently instead of asking, which would block
+    // "Beenden" from the tray. The app keeps its in-page guard only.
+    const inElectron = Boolean(window.electron);
+    if (!inElectron) window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      if (!inElectron) window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [dirty, confirm, router, savedTheme]);
 
   async function onSave() {
     const regularMin = hmToMinutes(regular);
@@ -171,6 +294,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         concreteIssueTargetPercent: targetPct,
         awayCheckEnabled: awayCheck,
       });
+      if (res.ok) setSaved(values);
       setSaveStatus(
         res.ok
           ? { tone: "ok", msg: "Einstellungen gespeichert." }
@@ -255,36 +379,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
       <PageHeader
         title="Einstellungen"
         subtitle="Arbeitszeit, Pausen, Jira-Anbindung"
-        actions={
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={pending}
-            className="rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition-opacity disabled:opacity-60"
-            style={{
-              background: "var(--accent)",
-              borderColor: "var(--accent)",
-              color: "#fff",
-            }}
-          >
-            Speichern
-          </button>
-        }
       />
-
-      {saveStatus && (
-        <div
-          className="mb-4 rounded-lg border px-4 py-2.5 text-[13px]"
-          style={{
-            background:
-              saveStatus.tone === "ok" ? "var(--pos-soft)" : "var(--neg-soft)",
-            borderColor: saveStatus.tone === "ok" ? "var(--pos)" : "var(--neg)",
-            color: saveStatus.tone === "ok" ? "var(--pos)" : "var(--neg)",
-          }}
-        >
-          {saveStatus.msg}
-        </div>
-      )}
 
       <Section title="Arbeitszeit">
         <div className="grid grid-cols-2 gap-4">
@@ -634,7 +729,89 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
           deaktiviert.
         </div>
       </DangerSection>
+
+      {(dirty || saveStatus) && (
+        <SaveBar
+          dirty={dirty}
+          status={saveStatus}
+          pending={pending}
+          onSave={onSave}
+          onDiscard={discard}
+        />
+      )}
     </main>
+  );
+}
+
+/**
+ * Stays at the bottom of the window while there is something to save, so the
+ * button is in reach wherever the change was made.
+ */
+function SaveBar({
+  dirty,
+  status,
+  pending,
+  onSave,
+  onDiscard,
+}: {
+  dirty: boolean;
+  status: { tone: "ok" | "err"; msg: string } | null;
+  pending: boolean;
+  onSave: () => void;
+  onDiscard: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      className="sticky bottom-4 z-10 flex items-center gap-3 rounded-xl border px-4 py-3"
+      style={{
+        background: "var(--surface)",
+        borderColor: dirty ? "var(--accent)" : "var(--pos)",
+        boxShadow: "var(--shadow-lg)",
+      }}
+    >
+      <div className="flex-1 text-[13px]">
+        {status ? (
+          <span
+            style={{ color: status.tone === "ok" ? "var(--pos)" : "var(--neg)" }}
+          >
+            {status.msg}
+          </span>
+        ) : (
+          <span className="font-semibold">Ungespeicherte Änderungen</span>
+        )}
+      </div>
+      {dirty && (
+        <>
+          <button
+            type="button"
+            onClick={onDiscard}
+            disabled={pending}
+            className="rounded-lg border px-3.5 py-2 text-[13px] font-semibold disabled:opacity-60"
+            style={{
+              background: "var(--surface)",
+              borderColor: "var(--border-strong)",
+              color: "var(--text)",
+            }}
+          >
+            Verwerfen
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={pending}
+            className="rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition-opacity disabled:opacity-60"
+            style={{
+              background: "var(--accent)",
+              borderColor: "var(--accent)",
+              color: "#fff",
+            }}
+          >
+            Speichern
+          </button>
+        </>
+      )}
+    </div>
   );
 }
 

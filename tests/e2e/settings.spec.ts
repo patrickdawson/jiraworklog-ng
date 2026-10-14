@@ -45,3 +45,34 @@ test("settings — save round-trips to DB and survives reload", async ({
     page.getByRole("button", { name: "PW entfernen" }),
   ).toBeVisible();
 });
+
+test("settings — save bar shows only with unsaved changes", async ({ page }) => {
+  await page.goto("/einstellungen");
+  const save = page.getByRole("button", { name: "Speichern" });
+  await expect(save).toBeHidden();
+
+  const url = page.getByLabel("Jira-URL");
+  const before = await url.inputValue();
+  await url.fill("https://discard-me.atlassian.net");
+  await expect(page.getByText("Ungespeicherte Änderungen")).toBeVisible();
+  await expect(save).toBeInViewport();
+
+  await page.getByRole("button", { name: "Verwerfen" }).click();
+  await expect(url).toHaveValue(before);
+  await expect(save).toBeHidden();
+});
+
+test("settings — leaving with unsaved changes asks first", async ({ page }) => {
+  await page.goto("/einstellungen");
+  await page.getByLabel("Jira-URL").fill("https://unsaved.atlassian.net");
+
+  await page.getByRole("link", { name: "Kalender" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Abbrechen" }).click();
+  await expect(page).toHaveURL(/\/einstellungen$/);
+
+  await page.getByRole("link", { name: "Kalender" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Verwerfen" }).click();
+  await expect(page).toHaveURL(/\/kalender$/);
+});
