@@ -16,6 +16,11 @@ export interface ElectronBridge {
    * an unsubscribe fn.
    */
   onAwayEnded(callback: (period: AwayPeriod) => void): () => void;
+  /**
+   * Subscribes to "open this route" requests from the app menu. Returns an
+   * unsubscribe fn.
+   */
+  onNavigate(callback: (path: string) => void): () => void;
   /** Brings the app window to the front (also out of the tray). */
   showWindow(): Promise<void>;
   /** Current "launch at Windows login" state. */

@@ -25,6 +25,14 @@ const bridge = {
     };
   },
 
+  onNavigate(callback: (path: string) => void): () => void {
+    const listener = (_e: unknown, path: string) => callback(path);
+    ipcRenderer.on("navigate", listener);
+    return () => {
+      ipcRenderer.removeListener("navigate", listener);
+    };
+  },
+
   showWindow(): Promise<void> {
     return ipcRenderer.invoke("window:show");
   },

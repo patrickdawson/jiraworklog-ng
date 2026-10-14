@@ -32,6 +32,7 @@ async function installFakeBridge(page: Page): Promise<void> {
           listener = null;
         };
       },
+      onNavigate: () => () => {},
       showWindow: async () => {},
       getAutoLaunch: async () => false,
       setAutoLaunch: async (enabled) => enabled,

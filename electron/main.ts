@@ -7,9 +7,11 @@ import { join } from "node:path";
 import {
   app,
   BrowserWindow,
+  dialog,
   Menu,
   nativeImage,
   powerMonitor,
+  shell,
   Tray,
   ipcMain,
   type MenuItemConstructorOptions,
@@ -211,6 +213,15 @@ function createWindow(): void {
   });
 
   mainWindow.once("ready-to-show", () => mainWindow?.show());
+
+  // External links (target="_blank") open in the default browser, not in a
+  // second app window.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("https://") || url.startsWith("http://")) {
+      void shell.openExternal(url);
+    }
+    return { action: "deny" };
+  });
   mainWindow.loadURL(`http://${HOST}:${appPort}/`);
 
   mainWindow.webContents.on(
@@ -252,6 +263,102 @@ function showWindow(): void {
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
   mainWindow.focus();
+}
+
+// ── App menu ─────────────────────────────────────────────────────────────────
+/** Shows the window and asks the renderer to open an in-app route. */
+function openRoute(path: string): void {
+  showWindow();
+  mainWindow?.webContents.send("navigate", path);
+}
+
+function showAbout(): void {
+  const detail = [
+    `Version ${app.getVersion()}`,
+    "",
+    `Electron ${process.versions.electron}`,
+    `Chromium ${process.versions.chrome}`,
+    `Node ${process.versions.node}`,
+  ].join("\n");
+  const options = {
+    type: "info" as const,
+    title: "Über JiraWorklog",
+    message: "JiraWorklog Tracker",
+    detail,
+    buttons: ["OK"],
+  };
+  void (mainWindow
+    ? dialog.showMessageBox(mainWindow, options)
+    : dialog.showMessageBox(options));
+}
+
+function buildAppMenu(): Menu {
+  const template: MenuItemConstructorOptions[] = [
+    {
+      label: "Datei",
+      submenu: [
+        {
+          label: "Fenster schließen",
+          accelerator: "CmdOrCtrl+W",
+          click: () => mainWindow?.hide(),
+        },
+        {
+          label: "Beenden",
+          accelerator: "CmdOrCtrl+Q",
+          click: () => {
+            isQuitting = true;
+            app.quit();
+          },
+        },
+      ],
+    },
+    {
+      label: "Bearbeiten",
+      submenu: [
+        { role: "undo", label: "Rückgängig" },
+        { role: "redo", label: "Wiederholen" },
+        { type: "separator" },
+        { role: "cut", label: "Ausschneiden" },
+        { role: "copy", label: "Kopieren" },
+        { role: "paste", label: "Einfügen" },
+        { role: "selectAll", label: "Alles auswählen" },
+      ],
+    },
+    {
+      label: "Ansicht",
+      submenu: [
+        { role: "reload", label: "Neu laden" },
+        ...(DEV
+          ? [{ role: "toggleDevTools", label: "Entwicklertools" } as const]
+          : []),
+        { type: "separator" },
+        { role: "resetZoom", label: "Originalgröße" },
+        { role: "zoomIn", label: "Vergrößern" },
+        { role: "zoomOut", label: "Verkleinern" },
+        { type: "separator" },
+        { role: "togglefullscreen", label: "Vollbild" },
+      ],
+    },
+    {
+      label: "Hilfe",
+      submenu: [
+        {
+          label: "Anleitung",
+          accelerator: "F1",
+          click: () => openRoute("/hilfe"),
+        },
+        { label: "Was ist neu", click: () => openRoute("/hilfe/neu") },
+        { type: "separator" },
+        {
+          label: "Datenordner öffnen",
+          click: () => void shell.openPath(app.getPath("userData")),
+        },
+        { type: "separator" },
+        { label: "Über JiraWorklog", click: () => showAbout() },
+      ],
+    },
+  ];
+  return Menu.buildFromTemplate(template);
 }
 
 // ── Tray ─────────────────────────────────────────────────────────────────────
@@ -438,6 +545,7 @@ if (!app.requestSingleInstanceLock()) {
       await waitForServer();
       log("Server ready.");
 
+      Menu.setApplicationMenu(buildAppMenu());
       createWindow();
       createTray();
       watchAway();
