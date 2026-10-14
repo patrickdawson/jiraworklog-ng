@@ -7,6 +7,11 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Hilfe: Die neue Seite „Hilfe“ in der Seitenleiste erklärt die wichtigsten Funktionen Schritt für Schritt. „Was ist neu“ zeigt die Änderungen pro Version.
+- Desktop-App: Das Menü ist jetzt deutsch und schlank (Datei, Bearbeiten, Ansicht, Hilfe). Unter „Hilfe“ stehen Anleitung (F1), Was ist neu, Datenordner öffnen und Über JiraWorklog.
+- Desktop-App: Externe Links öffnen im Standard-Browser.
+
 ### Geändert
 - Einstellungen: „Speichern“ steht nicht mehr oben auf der Seite. Nach einer Änderung bleibt unten eine Leiste mit „Verwerfen“ und „Speichern“ sichtbar, auch beim Scrollen. Wer die Seite mit ungespeicherten Änderungen verlässt, wird vorher gefragt.
 

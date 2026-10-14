@@ -72,6 +72,11 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Schließen = Minimieren** — Das Fenster geht in den Tray, der Timer läuft weiter
 - **Autostart** — Optional beim Windows-Anmelden minimiert im Tray starten
 - **Nur eine Instanz** — Ein zweiter Start holt das vorhandene Fenster nach vorne
+- **Deutsches Menü** — Datei, Bearbeiten, Ansicht, Hilfe. Unter „Hilfe“: Anleitung (F1), Was ist neu, Datenordner öffnen, Über JiraWorklog
+
+### Hilfe in der App
+- **Anleitung** — Seite „Hilfe“ in der Seitenleiste mit Schritt-für-Schritt-Erklärungen
+- **Was ist neu** — Zeigt dieses [CHANGELOG](CHANGELOG.md) in der App
 
 ### Einstellungen
 - Regelarbeitszeit (für Überstundensaldo und Wochenstatus) und Überstunden-Startwert
