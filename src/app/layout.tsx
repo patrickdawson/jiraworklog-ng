@@ -27,7 +27,9 @@ export default function RootLayout({
         <ConfirmProvider>
           <div className="grid min-h-screen grid-cols-[232px_1fr]">
             <Sidebar />
-            <div className="overflow-x-hidden">{children}</div>
+            {/* clip, not hidden: hidden makes this a scroll container and breaks
+                position: sticky in the pages (the settings save bar). */}
+            <div className="overflow-x-clip">{children}</div>
           </div>
         </ConfirmProvider>
       </body>
