@@ -15,10 +15,10 @@ import {
  * The native dialog breaks keyboard input in Electron on Windows: after it
  * closes, inputs still take clicks but no longer receive keystrokes until the
  * window loses and regains focus (Alt+Tab). Every confirmation goes through
- * this provider instead. Every current caller confirms a delete, hence the
+ * this provider instead. Most callers confirm a delete, hence the default
  * "Löschen" label.
  */
-type Confirm = (message: string) => Promise<boolean>;
+type Confirm = (message: string, confirmLabel?: string) => Promise<boolean>;
 
 const ConfirmContext = createContext<Confirm | null>(null);
 
@@ -30,12 +30,14 @@ export function useConfirm(): Confirm {
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmLabel, setConfirmLabel] = useState("Löschen");
   const resolveRef = useRef<((ok: boolean) => void) | null>(null);
 
-  const confirm = useCallback<Confirm>((next) => {
+  const confirm = useCallback<Confirm>((next, label = "Löschen") => {
     // A second request while one is open answers the first with "no".
     resolveRef.current?.(false);
     setMessage(next);
+    setConfirmLabel(label);
     return new Promise<boolean>((resolve) => {
       resolveRef.current = resolve;
     });
@@ -101,7 +103,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                   borderColor: "var(--neg)",
                 }}
               >
-                Löschen
+                {confirmLabel}
               </button>
             </div>
           </div>
