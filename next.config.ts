@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   // forked Node process without the full project/node_modules tree.
   output: "standalone",
   serverExternalPackages: ["better-sqlite3"],
+  // The "Was ist neu" page reads CHANGELOG.md at run time; copy it into the
+  // standalone bundle.
+  outputFileTracingIncludes: {
+    "/hilfe/neu": ["./CHANGELOG.md"],
+  },
   // Electron loads the app from http://127.0.0.1, which Next treats as a
   // cross-origin host in dev (default is localhost only). Without 127.0.0.1
   // here the HMR WebSocket upgrade is rejected and the client never hydrates.
