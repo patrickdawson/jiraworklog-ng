@@ -7,6 +7,8 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-14
+
 ### Hinzugefügt
 - Hilfe: Die neue Seite „Hilfe“ in der Seitenleiste erklärt die wichtigsten Funktionen Schritt für Schritt. „Was ist neu“ zeigt die Änderungen pro Version.
 - Desktop-App: Das Menü ist jetzt deutsch und schlank (Datei, Bearbeiten, Ansicht, Hilfe). Unter „Hilfe“ stehen Anleitung (F1), Was ist neu, Datenordner öffnen und Über JiraWorklog.
