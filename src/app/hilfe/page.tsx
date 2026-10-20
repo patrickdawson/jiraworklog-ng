@@ -252,13 +252,14 @@ export default function HilfePage() {
           <List>
             <li>
               <b>Überschneidungen</b> — Einträge, die sich überlappen, stehen
-              nebeneinander. Die gemeinsame Zeit ist rot schraffiert. Unter 1
-              Minute zählt nicht.
+              nebeneinander. Die gemeinsame Zeit ist schraffiert. Unter 1
+              Minute zählt nicht. Der Tageskopf zeigt die Anzahl rot.
             </li>
             <li>
               <b>Lücken</b> — Zeit ohne Eintrag zwischen dem ersten und letzten
-              Eintrag eines Tages ist gestrichelt. Ein Klick auf eine Lücke legt
-              einen Eintrag an. Beginn und Ende sind schon gefüllt.
+              Eintrag eines Tages ist grau gestrichelt umrandet. Ein Klick auf
+              eine Lücke legt einen Eintrag an. Beginn und Ende sind schon
+              gefüllt. Der Tageskopf zeigt die Anzahl gelb.
             </li>
             <li>
               <b>Pausen</b> — Deine Pausenfenster sind grau. Sie zählen nicht als

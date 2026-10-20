@@ -9,8 +9,8 @@ import type { AllgemeinesCategory } from "@/db/schema";
 export const GROUP_COLORS = [
   "indigo",
   "teal",
-  "rose",
-  "amber",
+  "pink",
+  "orange",
   "green",
   "sky",
   "purple",
@@ -23,8 +23,8 @@ export const groupColorSchema = z.enum(GROUP_COLORS);
 export const GROUP_COLOR_LABELS: Record<GroupColor, string> = {
   indigo: "Indigo",
   teal: "Türkis",
-  rose: "Rot",
-  amber: "Orange",
+  pink: "Pink",
+  orange: "Orange",
   green: "Grün",
   sky: "Blau",
   purple: "Lila",

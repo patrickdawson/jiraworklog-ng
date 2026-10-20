@@ -7,6 +7,10 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Geändert
+- Farbe pro Ticket: „Rot“ heißt jetzt „Pink“. „Orange“ ist jetzt ein kräftiges Orange statt Gelb-Orange. Schon gewählte Farben wechseln automatisch mit.
+- Kalender: Lücken haben keine gelbe Fläche mehr, nur einen grauen gestrichelten Rand. Überlappungen sind grau statt rot schraffiert. So sieht kein Ticket mehr wie eine Lücke oder Überlappung aus. Die Zahlen im Tageskopf bleiben rot und gelb.
+
 ## [0.5.0] - 2026-10-14
 
 ### Hinzugefügt

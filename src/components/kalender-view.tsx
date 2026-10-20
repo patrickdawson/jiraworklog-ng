@@ -311,14 +311,16 @@ function SummaryItem({
   );
 }
 
+// Gaps and overlaps use neutral tones, not a hue, so no group color can be
+// mistaken for them. The day header counts keep red and yellow.
 const OVERLAP_HATCH =
-  "repeating-linear-gradient(45deg, var(--neg) 0 2px, transparent 2px 6px)";
+  "repeating-linear-gradient(45deg, var(--text) 0 2px, transparent 2px 6px)";
 
 function OverlapSwatch() {
   return (
     <span
       className="inline-block h-3 w-3 rounded-sm"
-      style={{ background: OVERLAP_HATCH, border: "1px solid var(--neg)" }}
+      style={{ background: OVERLAP_HATCH, border: "1px solid var(--text-2)" }}
     />
   );
 }
@@ -327,7 +329,7 @@ function GapSwatch() {
   return (
     <span
       className="inline-block h-3 w-3 rounded-sm"
-      style={{ background: "var(--warn-soft)", border: "1px dashed var(--warn)" }}
+      style={{ border: "1px dashed var(--text-3)" }}
     />
   );
 }
@@ -436,12 +438,11 @@ function DayColumn({
           data-testid="kalender-gap"
           onClick={() => onFillGap(g)}
           aria-label={`Lücke ${clockOfMinutes(g.startMin)}–${clockOfMinutes(g.endMin)} als Eintrag anlegen`}
-          className="absolute inset-x-1 flex cursor-pointer items-center justify-center overflow-hidden rounded text-[10.5px] font-semibold hover:brightness-95 focus-visible:ring-2"
+          className="absolute inset-x-1 flex cursor-pointer items-center justify-center overflow-hidden rounded text-[10.5px] font-semibold hover:bg-[var(--surface-2)] focus-visible:ring-2"
           style={{
             ...box(g),
-            background: "var(--warn-soft)",
-            border: "1px dashed var(--warn)",
-            color: "var(--warn)",
+            border: "1px dashed var(--text-3)",
+            color: "var(--text-2)",
           }}
           title={`Lücke ${clockOfMinutes(g.startMin)}–${clockOfMinutes(g.endMin)} · ${formatHm(g.endMin - g.startMin)}\nKlicken, um die Lücke als Eintrag anzulegen`}
         >
@@ -485,8 +486,8 @@ function DayColumn({
               left: `calc(${s.lane * width}% + 2px)`,
               width: `calc(${width}% - 4px)`,
               background: soft,
-              borderLeft: `3px ${s.running ? "dashed" : "solid"} ${s.overlapping ? "var(--neg)" : accent}`,
-              outline: s.overlapping ? "1px solid var(--neg)" : undefined,
+              borderLeft: `3px ${s.running ? "dashed" : "solid"} ${accent}`,
+              outline: s.overlapping ? "1px solid var(--text-2)" : undefined,
               color: "var(--text)",
             }}
             title={`${time}\n${e.description}${

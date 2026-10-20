@@ -24,8 +24,8 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 ![Kalender-Wochenansicht](docs/readme-calendar.png)
 
 - **Zeitstrahl pro Woche** — Eine Spalte pro Tag, Stunden auf der senkrechten Achse
-- **Überschneidungen** — Überlappende Einträge stehen nebeneinander, die gemeinsame Zeit ist rot schraffiert
-- **Lücken** — Nicht erfasste Zeit zwischen erstem und letztem Eintrag eines Tages erscheint gestrichelt
+- **Überschneidungen** — Überlappende Einträge stehen nebeneinander, die gemeinsame Zeit ist schraffiert
+- **Lücken** — Nicht erfasste Zeit zwischen erstem und letztem Eintrag eines Tages erscheint grau gestrichelt umrandet
 - **Pausen** — Konfigurierte Pausenfenster sind grau und zählen nicht als Lücke
 - **Direkt korrigieren** — Klick auf einen Eintrag öffnet denselben Bearbeiten-Dialog wie in „Buchen“. Der laufende Timer wächst live mit, ist hier aber nicht bearbeitbar.
 
