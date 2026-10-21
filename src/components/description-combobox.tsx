@@ -1,21 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { RecentEntry } from "@/lib/entries";
 import { formatHms } from "@/lib/format";
 
-const LISTBOX_ID = "timer-recents-listbox";
-const optionId = (index: number) => `timer-recents-option-${index}`;
+const SIZE_CLASSES = {
+  lg: "py-3 pl-3.5 pr-10 text-[15px]",
+  md: "py-2 pl-3 pr-10 text-[13px]",
+} as const;
 
 /**
- * The timer description field plus a dropdown of recently used entries.
+ * A description field plus a dropdown of recently used entries. The timer and
+ * the entry dialogs share it.
  *
- * Input and listbox live in one component on purpose: the field commits its
- * text to the running timer on blur, so picking a suggestion must be able to
- * tell "focus left the widget" from "focus moved onto a suggestion". That
+ * Input and listbox live in one component on purpose: the timer field commits
+ * its text to the running timer on blur, so picking a suggestion must be able
+ * to tell "focus left the widget" from "focus moved onto a suggestion". That
  * needs a single wrapper ref, which only works if both halves are here.
  */
-export function TimerDescriptionInput({
+export function DescriptionCombobox({
+  id,
   value,
   onChange,
   onCommit,
@@ -24,18 +28,27 @@ export function TimerDescriptionInput({
   recents,
   placeholder,
   disabled,
+  size = "lg",
+  optionTitle,
 }: {
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   /** Focus really left the widget — persist the draft, as before. */
-  onCommit: () => void;
+  onCommit?: () => void;
   /** Enter with no suggestion highlighted — the pre-existing behaviour. */
-  onEnter: () => void;
+  onEnter?: () => void;
   onPick: (entry: RecentEntry) => void;
   recents: RecentEntry[];
   placeholder: string;
   disabled?: boolean;
+  size?: keyof typeof SIZE_CLASSES;
+  /** Tooltip on every suggestion, saying what picking it does. */
+  optionTitle?: string;
 }) {
+  // Unique per instance: the timer and an open dialog can both be on the page.
+  const listboxId = useId();
+  const optionId = (index: number) => `${listboxId}-option-${index}`;
   const [open, setOpen] = useState(false);
   // -1 means "nothing highlighted". Load-bearing: if a row were highlighted by
   // default, typing a brand new description and pressing Enter would start the
@@ -122,7 +135,7 @@ export function TimerDescriptionInput({
         return;
       }
       if (open) close();
-      onEnter();
+      onEnter?.();
       return;
     }
     if (event.key === "Escape") {
@@ -144,10 +157,11 @@ export function TimerDescriptionInput({
       onBlur={(event) => {
         if (containerRef.current?.contains(event.relatedTarget as Node)) return;
         close();
-        onCommit();
+        onCommit?.();
       }}
     >
       <input
+        id={id}
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
@@ -164,13 +178,13 @@ export function TimerDescriptionInput({
         disabled={disabled}
         role="combobox"
         aria-expanded={open}
-        aria-controls={LISTBOX_ID}
+        aria-controls={listboxId}
         aria-autocomplete="list"
         aria-activedescendant={
           open && highlight >= 0 ? optionId(highlight) : undefined
         }
         autoComplete="off"
-        className="w-full rounded-lg border py-3 pl-3.5 pr-10 text-[15px] outline-none"
+        className={`w-full rounded-lg border outline-none ${SIZE_CLASSES[size]}`}
         style={{
           background: "var(--surface-2)",
           borderColor: "var(--border-strong)",
@@ -188,7 +202,7 @@ export function TimerDescriptionInput({
           title="Zuletzt verwendete Einträge"
           aria-label="Zuletzt verwendete Einträge anzeigen"
           aria-expanded={open}
-          aria-controls={LISTBOX_ID}
+          aria-controls={listboxId}
           className="absolute right-2 top-1/2 flex h-[26px] w-[26px] -translate-y-1/2 items-center justify-center rounded-md"
           style={{ color: "var(--text-3)" }}
         >
@@ -206,10 +220,12 @@ export function TimerDescriptionInput({
 
       {open && (
         <ul
-          id={LISTBOX_ID}
+          id={listboxId}
           role="listbox"
           aria-label="Zuletzt verwendete Einträge"
-          // z-40 stays below Modal's z-50, so an open dialog always wins.
+          // z-40 stays below Modal's z-50, so an open dialog always wins. Inside
+          // a dialog it still floats over the fields: the modal is its own
+          // stacking context.
           className="absolute left-0 right-0 top-[calc(100%+6px)] z-40 max-h-[320px] overflow-auto rounded-lg border py-1"
           style={{
             background: "var(--surface)",
@@ -243,7 +259,7 @@ export function TimerDescriptionInput({
                 role="option"
                 id={optionId(index)}
                 aria-selected={index === highlight}
-                title="Mit gleicher Beschreibung neu starten"
+                title={optionTitle}
                 onMouseDown={(e) => e.preventDefault()}
                 onMouseEnter={() => setHighlight(index)}
                 onClick={() => pick(entry)}

@@ -40,7 +40,7 @@ import {
   type EntryView,
   type RecentEntry,
 } from "@/lib/entries";
-import { TimerDescriptionInput } from "@/components/timer-description-input";
+import { DescriptionCombobox } from "@/components/description-combobox";
 import { GroupColorPicker } from "@/components/group-color-picker";
 import {
   GroupColorsProvider,
@@ -611,7 +611,7 @@ function TimerCard({
           )}
         </button>
 
-        <TimerDescriptionInput
+        <DescriptionCombobox
           value={draft}
           onChange={setDraft}
           onCommit={flushDescription}
@@ -621,6 +621,7 @@ function TimerCard({
           }}
           onPick={pickRecent}
           recents={recents}
+          optionTitle="Mit gleicher Beschreibung neu starten"
           placeholder={
             allgemeines
               ? "Worklogtext für Allgemeines"

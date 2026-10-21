@@ -60,6 +60,6 @@ tray menu already calls it.
 ## Related
 
 The recent-entries dropdown in the timer field
-(`src/components/timer-description-input.tsx`) already has full keyboard
+(`src/components/description-combobox.tsx`) already has full keyboard
 control once the field has focus: arrows move, `Enter` picks, `Escape`
 closes. A "open the dropdown" shortcut only makes sense on top of that.
