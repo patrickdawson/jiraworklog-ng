@@ -143,8 +143,19 @@ export default function HilfePage() {
               du Beginn und Ende selbst ein.
             </li>
             <li>
-              <b>Bearbeiten und löschen</b> — Klicke auf einen Eintrag in der
-              Liste.
+              <b>Bearbeiten und löschen</b> — Klicke auf den Stift an einem
+              Eintrag. Das Feld <Ui>Beschreibung</Ui> zeigt dieselben Vorschläge
+              wie das Timer-Feld. Ein Vorschlag übernimmt Beschreibung,
+              Allgemein-Haken und Kategorie. Gespeichert wird erst mit{" "}
+              <Ui>Speichern</Ui>.
+            </li>
+            <li>
+              <b>Gruppe bearbeiten</b> — Einträge mit gleicher Beschreibung am
+              selben Tag bilden eine Gruppe. Der Stift an der Gruppe öffnet{" "}
+              <Ui>Gruppe bearbeiten</Ui>. Dort änderst du die Beschreibung aller
+              Einträge auf einmal. Die Zeiten bleiben gleich. Passt die neue
+              Beschreibung zu einer anderen Gruppe des Tages, werden beide eine
+              Gruppe.
             </li>
             <li>
               <b>Wiederholen</b> — Der Play-Knopf an einem Eintrag startet einen

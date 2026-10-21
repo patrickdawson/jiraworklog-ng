@@ -7,6 +7,10 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Buchen: „Gruppe bearbeiten“ ändert Beschreibung, Allgemein-Haken und Kategorie aller Einträge einer Gruppe auf einmal. Die Zeiten bleiben gleich.
+- Eintrag bearbeiten und anlegen: Das Feld „Beschreibung“ zeigt dieselben Vorschläge wie das Timer-Feld, auch im Kalender. Ein Vorschlag übernimmt Beschreibung, Allgemein-Haken und Kategorie.
+
 ### Geändert
 - Farbe pro Ticket: „Rot“ heißt jetzt „Pink“. „Orange“ ist jetzt ein kräftiges Orange statt Gelb-Orange. Schon gewählte Farben wechseln automatisch mit.
 - Kalender: Lücken haben keine gelbe Fläche mehr, nur einen grauen gestrichelten Rand. Überlappungen sind grau statt rot schraffiert. So sieht kein Ticket mehr wie eine Lücke oder Überlappung aus. Die Zahlen im Tageskopf bleiben rot und gelb.
