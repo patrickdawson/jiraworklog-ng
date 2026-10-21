@@ -11,8 +11,13 @@ import {
   ALLGEMEINES_CATEGORIES,
   type AllgemeinesCategory,
 } from "@/db/schema";
-import { createManualEntry, deleteEntry, updateEntry } from "@/lib/actions";
-import type { EntryView, RecentEntry } from "@/lib/entries";
+import {
+  createManualEntry,
+  deleteEntry,
+  updateEntries,
+  updateEntry,
+} from "@/lib/actions";
+import type { DescGroup, EntryView, RecentEntry } from "@/lib/entries";
 import { GroupColorPicker } from "@/components/group-color-picker";
 import { groupColorKey } from "@/lib/group-color";
 
@@ -352,6 +357,108 @@ export function EditEntryDialog({
               Speichern
             </Button>
           </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ───────────────────────── Edit group dialog ───────────────────────
+
+/**
+ * Changes the description, Allgemeines flag and category of every entry in a
+ * Buchen group at once. Times stay as they are.
+ */
+export function EditGroupDialog({
+  group,
+  recents,
+  onClose,
+}: {
+  group: DescGroup;
+  recents: RecentEntry[];
+  onClose: () => void;
+}) {
+  const [description, setDescription] = useState(group.description);
+  const [isAllgemeines, setIsAllgemeines] = useState(group.isAllgemeines);
+  const [category, setCategory] = useState<AllgemeinesCategory>(
+    group.category ?? DEFAULT_CATEGORY,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const count = group.entries.length;
+  const submittedCount = group.entries.filter((e) => e.submittedAt).length;
+
+  function onPick(recent: RecentEntry) {
+    setDescription(recent.description);
+    setIsAllgemeines(recent.isAllgemeines);
+    setCategory(recent.category ?? DEFAULT_CATEGORY);
+  }
+
+  async function onSave() {
+    setPending(true);
+    setError(null);
+    try {
+      const res = await updateEntries(
+        group.entries.map((e) => e.id),
+        {
+          description,
+          isAllgemeines,
+          category: isAllgemeines ? category : null,
+        },
+      );
+      if (res.ok) onClose();
+      else setError(res.message ?? "Speichern fehlgeschlagen.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Modal title="Gruppe bearbeiten" onClose={onClose}>
+      <div className="space-y-3.5">
+        <DescriptionField
+          value={description}
+          onChange={setDescription}
+          onPick={onPick}
+          recents={recents}
+          isAllgemeines={isAllgemeines}
+        />
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <label className="flex items-center gap-2 text-[13px]">
+            <input
+              type="checkbox"
+              checked={isAllgemeines}
+              onChange={(e) => setIsAllgemeines(e.target.checked)}
+            />
+            <span style={{ color: "var(--text-2)" }}>
+              Als Allgemein speichern (nicht nach Jira buchen)
+            </span>
+          </label>
+          {isAllgemeines && (
+            <CategorySelect value={category} onChange={setCategory} />
+          )}
+        </div>
+        <div className="text-[13px]" style={{ color: "var(--text-2)" }}>
+          Gilt für {count} Einträge.
+        </div>
+        {submittedCount > 0 && (
+          <div className="text-[12px]" style={{ color: "var(--text-3)" }}>
+            {submittedCount === 1
+              ? "1 Eintrag ist"
+              : `${submittedCount} Einträge sind`}{" "}
+            bereits nach Jira übertragen. Änderungen wirken nur lokal.
+          </div>
+        )}
+        {error && (
+          <div className="text-[13px]" style={{ color: "var(--neg)" }}>
+            {error}
+          </div>
+        )}
+        <div className="flex justify-end gap-2.5 pt-2">
+          <Button onClick={onClose}>Abbrechen</Button>
+          <Button variant="primary" onClick={onSave} disabled={pending}>
+            Speichern
+          </Button>
         </div>
       </div>
     </Modal>

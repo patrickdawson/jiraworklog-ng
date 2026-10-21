@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, isNotNull, isNull, lt } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
@@ -395,6 +395,42 @@ export async function updateEntry(
   }
 
   db.update(timeEntries).set(patch).where(eq(timeEntries.id, id)).run();
+  revalidateAll();
+  return { ok: true };
+}
+
+const entriesTextSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1),
+  description: z.string(),
+  isAllgemeines: z.boolean(),
+  category: z.enum(ALLGEMEINES_CATEGORIES).nullable(),
+});
+
+/**
+ * Gives several entries the same description, Allgemeines flag and category,
+ * e.g. every entry of a Buchen group. Times stay as they are.
+ */
+export async function updateEntries(
+  ids: number[],
+  input: {
+    description: string;
+    isAllgemeines: boolean;
+    category: AllgemeinesCategory | null;
+  },
+): Promise<ActionResult> {
+  const parsed = entriesTextSchema.safeParse({ ids, ...input });
+  if (!parsed.success) return { ok: false, message: "Ungültige Eingabe." };
+
+  const { isAllgemeines } = parsed.data;
+  db.update(timeEntries)
+    .set({
+      description: parsed.data.description,
+      isAllgemeines,
+      category: resolveCategory(isAllgemeines, parsed.data.category),
+      updatedAt: nowIso(),
+    })
+    .where(inArray(timeEntries.id, parsed.data.ids))
+    .run();
   revalidateAll();
   return { ok: true };
 }

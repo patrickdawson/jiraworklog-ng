@@ -26,6 +26,7 @@ import {
   DEFAULT_CATEGORY,
   DescriptionField,
   EditEntryDialog,
+  EditGroupDialog,
   Field,
   Modal,
   TextInput,
@@ -126,6 +127,7 @@ export function BuchenView({ data }: { data: BuchenData }) {
   // ── Dialog & toast state ──────────────────────────────────────
   const [manualOpen, setManualOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<EntryView | null>(null);
+  const [editGroup, setEditGroup] = useState<DescGroup | null>(null);
   const [jiraScope, setJiraScope] = useState<JiraScope | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -240,6 +242,7 @@ export function BuchenView({ data }: { data: BuchenData }) {
                   }
                 }}
                 onEdit={(entry) => setEditEntry(entry)}
+                onEditGroup={(group) => setEditGroup(group)}
                 onSubmitJira={() =>
                   setJiraScope({
                     kind: "day",
@@ -263,6 +266,13 @@ export function BuchenView({ data }: { data: BuchenData }) {
           <EditEntryDialog
             entry={editEntry}
             onClose={() => setEditEntry(null)}
+            recents={recents}
+          />
+        )}
+        {editGroup && (
+          <EditGroupDialog
+            group={editGroup}
+            onClose={() => setEditGroup(null)}
             recents={recents}
           />
         )}
@@ -740,6 +750,7 @@ function DaySection({
   forceBooking,
   onPlay,
   onEdit,
+  onEditGroup,
   onSubmitJira,
 }: {
   day: DayGroup;
@@ -751,6 +762,7 @@ function DaySection({
     category: AllgemeinesCategory | null,
   ) => void;
   onEdit: (entry: EntryView) => void;
+  onEditGroup: (group: DescGroup) => void;
   onSubmitJira: () => void;
 }) {
   const bookable = bookableCount(day, forceBooking);
@@ -793,6 +805,7 @@ function DaySection({
               group={g}
               onPlay={onPlay}
               onEdit={onEdit}
+              onEditGroup={onEditGroup}
             />
           ))}
         </div>
@@ -805,6 +818,7 @@ function GroupRow({
   group,
   onPlay,
   onEdit,
+  onEditGroup,
 }: {
   group: DescGroup;
   onPlay: (
@@ -813,6 +827,7 @@ function GroupRow({
     category: AllgemeinesCategory | null,
   ) => void;
   onEdit: (entry: EntryView) => void;
+  onEditGroup: (group: DescGroup) => void;
 }) {
   const [open, setOpen] = useState(false);
   const isSingle = group.entries.length === 1;
@@ -915,6 +930,20 @@ function GroupRow({
             <path d="M8 5v14l11-7z" />
           </svg>
         </IconButton>
+        {!singleEntry && (
+          <IconButton title="Gruppe bearbeiten" onClick={() => onEditGroup(group)}>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-[13px] w-[13px]"
+            >
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
+            </svg>
+          </IconButton>
+        )}
         {singleEntry && (
           <>
             <IconButton title="Bearbeiten" onClick={() => onEdit(singleEntry)}>
