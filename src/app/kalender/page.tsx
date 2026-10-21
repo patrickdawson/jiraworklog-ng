@@ -1,17 +1,21 @@
 import { KalenderView } from "@/components/kalender-view";
 import {
   getEntriesBetween,
+  getEntriesFrom,
   getGroupColors,
   getRunningEntry,
   getSettings,
 } from "@/db/queries";
 import {
+  buildDayGroups,
+  buildRecentEntries,
   isWeekendKey,
   overtimeBalanceMinutes,
+  RECENT_WINDOW_DAYS,
   secondsByDay,
   toEntryView,
 } from "@/lib/entries";
-import { dayKey } from "@/lib/format";
+import { dayKey, daysAgoStartIso } from "@/lib/format";
 import { resolveRange, shiftRange } from "@/lib/report-range";
 import { parseProjectKeys } from "@/lib/settings";
 import { consecutiveDayKeys } from "@/lib/timeline";
@@ -46,6 +50,11 @@ export default async function KalenderPage({
 
   const entries = rows.map((r) => toEntryView(r, cfg));
 
+  // Same suggestions as the Buchen timer field, independent of the shown week.
+  const recents = buildRecentEntries(
+    buildDayGroups(getEntriesFrom(daysAgoStartIso(RECENT_WINDOW_DAYS - 1)), cfg),
+  );
+
   // Same rule as the overall saldo, limited to the days of this week: every
   // day with tracked time counts its worked time minus the weekday target.
   const dayKeys = consecutiveDayKeys(week.from, 7);
@@ -76,6 +85,7 @@ export default async function KalenderPage({
         hasRunning: running !== undefined,
         entries,
         groupColors: getGroupColors(),
+        recents,
         breaks: cfg.breaks,
         autoPauseEnabled: cfg.autoPauseEnabled,
         weekOvertimeMinutes,

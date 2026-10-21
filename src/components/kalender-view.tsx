@@ -6,7 +6,7 @@ import { EditEntryDialog, type EntryDraft } from "@/components/entry-dialogs";
 import { GroupColorsProvider, useGroupColors } from "@/components/group-colors-context";
 import { Card, PageHeader } from "@/components/ui";
 import { NowProvider, useNow, useRunningSeconds } from "@/components/now-context";
-import type { EntryView } from "@/lib/entries";
+import type { EntryView, RecentEntry } from "@/lib/entries";
 import { dayKey, formatHm, formatSignedHm } from "@/lib/format";
 import { resolveGroupColor, type GroupColorMap } from "@/lib/group-color";
 import { buildTimeline, type DayTimeline, type Interval } from "@/lib/timeline";
@@ -21,6 +21,8 @@ export type KalenderData = {
   hasRunning: boolean;
   entries: EntryView[];
   groupColors: GroupColorMap;
+  /** Suggestions for the description field of the entry dialog. */
+  recents: RecentEntry[];
   breaks: BreakWindow[];
   autoPauseEnabled: boolean;
   /** Overtime of this week's days, from finished entries only. */
@@ -252,10 +254,18 @@ function KalenderInner({ data }: { data: KalenderData }) {
       </Card>
 
       {editEntry && (
-        <EditEntryDialog entry={editEntry} onClose={() => setEditEntry(null)} />
+        <EditEntryDialog
+          entry={editEntry}
+          onClose={() => setEditEntry(null)}
+          recents={data.recents}
+        />
       )}
       {newDraft && (
-        <EditEntryDialog draft={newDraft} onClose={() => setNewDraft(null)} />
+        <EditEntryDialog
+          draft={newDraft}
+          onClose={() => setNewDraft(null)}
+          recents={data.recents}
+        />
       )}
     </main>
   );

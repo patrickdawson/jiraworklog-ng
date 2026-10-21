@@ -24,6 +24,7 @@ import {
   Button,
   CategorySelect,
   DEFAULT_CATEGORY,
+  DescriptionField,
   EditEntryDialog,
   Field,
   Modal,
@@ -253,10 +254,17 @@ export function BuchenView({ data }: { data: BuchenData }) {
         </div>
 
         {manualOpen && (
-          <ManualEntryDialog onClose={() => setManualOpen(false)} />
+          <ManualEntryDialog
+            onClose={() => setManualOpen(false)}
+            recents={recents}
+          />
         )}
         {editEntry && (
-          <EditEntryDialog entry={editEntry} onClose={() => setEditEntry(null)} />
+          <EditEntryDialog
+            entry={editEntry}
+            onClose={() => setEditEntry(null)}
+            recents={recents}
+          />
         )}
         {jiraScope && (
           <JiraSubmitDialog
@@ -1034,7 +1042,13 @@ function IconButton({
 
 // ───────────────────────── Manual entry dialog ─────────────────────
 
-function ManualEntryDialog({ onClose }: { onClose: () => void }) {
+function ManualEntryDialog({
+  onClose,
+  recents,
+}: {
+  onClose: () => void;
+  recents: RecentEntry[];
+}) {
   const [description, setDescription] = useState("");
   const [startedAt, setStartedAt] = useState(defaultStartedAt());
   const [endedAt, setEndedAt] = useState(defaultEndedAt());
@@ -1064,17 +1078,17 @@ function ManualEntryDialog({ onClose }: { onClose: () => void }) {
   return (
     <Modal title="Eintrag manuell anlegen" onClose={onClose}>
       <div className="space-y-3.5">
-        <Field label="Beschreibung">
-          <TextInput
-            value={description}
-            onChange={setDescription}
-            placeholder={
-              isAllgemeines
-                ? "Worklogtext für Allgemeines"
-                : "Merksatz  TXR-1234  Worklogtext"
-            }
-          />
-        </Field>
+        <DescriptionField
+          value={description}
+          onChange={setDescription}
+          onPick={(recent) => {
+            setDescription(recent.description);
+            setIsAllgemeines(recent.isAllgemeines);
+            setCategory(recent.category ?? DEFAULT_CATEGORY);
+          }}
+          recents={recents}
+          isAllgemeines={isAllgemeines}
+        />
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <label className="flex items-center gap-2 text-[13px]">
             <input

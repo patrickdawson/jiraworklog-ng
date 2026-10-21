@@ -4,14 +4,15 @@
  * Entry form bits and dialogs shared by Buchen and Kalender.
  */
 
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { useConfirm } from "@/components/confirm-dialog";
+import { DescriptionCombobox } from "@/components/description-combobox";
 import {
   ALLGEMEINES_CATEGORIES,
   type AllgemeinesCategory,
 } from "@/db/schema";
 import { createManualEntry, deleteEntry, updateEntry } from "@/lib/actions";
-import type { EntryView } from "@/lib/entries";
+import type { EntryView, RecentEntry } from "@/lib/entries";
 import { GroupColorPicker } from "@/components/group-color-picker";
 import { groupColorKey } from "@/lib/group-color";
 
@@ -163,6 +164,45 @@ export function defaultEndedAt(): string {
   return toLocalInputValue(new Date().toISOString());
 }
 
+/**
+ * The "Beschreibung" field of the entry dialogs, with the recent-entries
+ * suggestions of the timer. Picking a suggestion only fills the form: the
+ * description, the Allgemeines flag and the category. Nothing is saved yet.
+ */
+export function DescriptionField({
+  value,
+  onChange,
+  onPick,
+  recents,
+  isAllgemeines,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onPick: (entry: RecentEntry) => void;
+  recents: RecentEntry[];
+  isAllgemeines: boolean;
+}) {
+  const id = useId();
+  return (
+    <Field label="Beschreibung" htmlFor={id}>
+      <DescriptionCombobox
+        id={id}
+        size="md"
+        value={value}
+        onChange={onChange}
+        onPick={onPick}
+        recents={recents}
+        optionTitle="Beschreibung übernehmen"
+        placeholder={
+          isAllgemeines
+            ? "Worklogtext für Allgemeines"
+            : "Merksatz  TXR-1234  Worklogtext"
+        }
+      />
+    </Field>
+  );
+}
+
 // ───────────────────────── Edit entry dialog ───────────────────────
 
 /** Time range for a new entry, e.g. a Kalender gap. ISO strings. */
@@ -174,8 +214,12 @@ export type EntryDraft = { startedAt: string; endedAt: string };
  */
 export function EditEntryDialog({
   onClose,
+  recents,
   ...target
-}: ({ entry: EntryView } | { draft: EntryDraft }) & { onClose: () => void }) {
+}: ({ entry: EntryView } | { draft: EntryDraft }) & {
+  onClose: () => void;
+  recents: RecentEntry[];
+}) {
   const entry = "entry" in target ? target.entry : null;
   const draft = "draft" in target ? target.draft : null;
   const [description, setDescription] = useState(entry?.description ?? "");
@@ -201,6 +245,12 @@ export function EditEntryDialog({
     issueKey: entry?.issueKey,
   });
   const colorLabel = isAllgemeines ? category : (entry?.issueKey ?? "");
+
+  function onPick(recent: RecentEntry) {
+    setDescription(recent.description);
+    setIsAllgemeines(recent.isAllgemeines);
+    setCategory(recent.category ?? DEFAULT_CATEGORY);
+  }
 
   async function onSave() {
     setPending(true);
@@ -238,17 +288,13 @@ export function EditEntryDialog({
   return (
     <Modal title={entry ? "Eintrag bearbeiten" : "Eintrag anlegen"} onClose={onClose}>
       <div className="space-y-3.5">
-        <Field label="Beschreibung">
-          <TextInput
-            value={description}
-            onChange={setDescription}
-            placeholder={
-              isAllgemeines
-                ? "Worklogtext für Allgemeines"
-                : "Merksatz  TXR-1234  Worklogtext"
-            }
-          />
-        </Field>
+        <DescriptionField
+          value={description}
+          onChange={setDescription}
+          onPick={onPick}
+          recents={recents}
+          isAllgemeines={isAllgemeines}
+        />
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <label className="flex items-center gap-2 text-[13px]">
             <input
@@ -314,13 +360,34 @@ export function EditEntryDialog({
 
 // ───────────────────────────── Form bits ───────────────────────────
 
+/**
+ * A labelled form field. With `htmlFor` the label points at the control
+ * instead of wrapping it — needed for the description combo box, whose
+ * suggestion list must not become part of the input's label.
+ */
 export function Field({
   label,
+  htmlFor,
   children,
 }: {
   label: string;
+  htmlFor?: string;
   children: ReactNode;
 }) {
+  if (htmlFor) {
+    return (
+      <div>
+        <label
+          htmlFor={htmlFor}
+          className="block text-[12px] mb-1.5"
+          style={{ color: "var(--text-2)" }}
+        >
+          {label}
+        </label>
+        {children}
+      </div>
+    );
+  }
   return (
     <label className="block">
       <div className="text-[12px] mb-1.5" style={{ color: "var(--text-2)" }}>
