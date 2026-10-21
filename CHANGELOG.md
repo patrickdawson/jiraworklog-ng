@@ -7,6 +7,8 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-21
+
 ### Hinzugefügt
 - Buchen: „Gruppe bearbeiten“ ändert Beschreibung, Allgemein-Haken und Kategorie aller Einträge einer Gruppe auf einmal. Die Zeiten bleiben gleich.
 - Eintrag bearbeiten und anlegen: Das Feld „Beschreibung“ zeigt dieselben Vorschläge wie das Timer-Feld, auch im Kalender. Ein Vorschlag übernimmt Beschreibung, Allgemein-Haken und Kategorie.
