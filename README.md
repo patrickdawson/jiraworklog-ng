@@ -25,6 +25,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 ![Kalender-Wochenansicht](docs/readme-calendar.png)
 
 - **Zeitstrahl pro Woche** — Eine Spalte pro Tag, Stunden auf der senkrechten Achse
+- **Arbeitszeit pro Tag** — Der Tageskopf zeigt die erfasste Zeit des Tages ohne Pausen, inkl. laufendem Timer
 - **Überschneidungen** — Überlappende Einträge stehen nebeneinander, die gemeinsame Zeit ist schraffiert
 - **Lücken** — Nicht erfasste Zeit zwischen erstem und letztem Eintrag eines Tages erscheint grau gestrichelt umrandet
 - **Pausen** — Konfigurierte Pausenfenster sind grau und zählen nicht als Lücke

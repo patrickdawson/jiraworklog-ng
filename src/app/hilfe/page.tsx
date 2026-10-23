@@ -262,6 +262,11 @@ export default function HilfePage() {
           </P>
           <List>
             <li>
+              <b>Arbeitszeit</b> — Der Tageskopf zeigt unter dem Datum die
+              Arbeitszeit des Tages. Pausen sind abgezogen. Ein laufender Timer
+              zählt live mit.
+            </li>
+            <li>
               <b>Überschneidungen</b> — Einträge, die sich überlappen, stehen
               nebeneinander. Die gemeinsame Zeit ist schraffiert. Unter 1
               Minute zählt nicht. Der Tageskopf zeigt die Anzahl rot.
