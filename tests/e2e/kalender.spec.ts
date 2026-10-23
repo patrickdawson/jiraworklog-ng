@@ -195,3 +195,29 @@ test("kalender — week saldo counts weekday targets and weekend time", async ({
     "Wochensaldo −01:30",
   );
 });
+
+test("kalender — each day header shows its worked time", async ({ page }) => {
+  await seedSettings({ regularWorkMinutes: 420, autoPauseEnabled: true });
+  await seedEntries([
+    {
+      description: "Mo",
+      startedAt: new Date(2026, 8, 14, 8).toISOString(),
+      endedAt: new Date(2026, 8, 14, 12).toISOString(),
+    },
+    // 8h minus 30 min break.
+    { description: "Di", startedAt: at(8), endedAt: at(16) },
+    {
+      description: "Sa",
+      startedAt: new Date(2026, 8, 19, 10).toISOString(),
+      endedAt: new Date(2026, 8, 19, 11).toISOString(),
+    },
+  ]);
+
+  await page.goto("/kalender?anchor=2026-09-15");
+
+  // Days without entries show no time.
+  const worked = page.getByTestId("kalender-day-worked");
+  await expect(worked).toHaveText(["04:00", "07:30", "01:00"]);
+  await expect(worked.first()).toHaveAttribute("title", /Soll 07:00/);
+  await expect(worked.last()).toHaveAttribute("title", /Soll 00:00/);
+});
