@@ -6,7 +6,7 @@ import { EditEntryDialog, type EntryDraft } from "@/components/entry-dialogs";
 import { GroupColorsProvider, useGroupColors } from "@/components/group-colors-context";
 import { Card, PageHeader } from "@/components/ui";
 import { NowProvider, useNow, useRunningSeconds } from "@/components/now-context";
-import type { EntryView, RecentEntry } from "@/lib/entries";
+import { isWeekendKey, type EntryView, type RecentEntry } from "@/lib/entries";
 import { dayKey, formatHm, formatSignedHm } from "@/lib/format";
 import { resolveGroupColor, type GroupColorMap } from "@/lib/group-color";
 import { buildTimeline, type DayTimeline, type Interval } from "@/lib/timeline";
@@ -27,6 +27,10 @@ export type KalenderData = {
   autoPauseEnabled: boolean;
   /** Overtime of this week's days, from finished entries only. */
   weekOvertimeMinutes: number;
+  /** Worked minutes per day key, from finished entries only. */
+  workedMinutesByDay: Record<string, number>;
+  /** Weekday target, for the tooltip of the day's worked time. */
+  regularWorkMinutes: number;
   /** Whether the running timer started on a day of this week. */
   runningInWeek: boolean;
   /** Target of the running entry's day if it is not yet in the overtime. */
@@ -132,6 +136,13 @@ function KalenderInner({ data }: { data: KalenderData }) {
         )
       : data.weekOvertimeMinutes;
 
+  // Same rule as the saldo: an entry counts toward its start day, and the
+  // running timer only after the first tick.
+  const runningDayKey = running && now ? dayKey(running.startedAt) : null;
+  const workedMinutes = (key: string) =>
+    (data.workedMinutesByDay[key] ?? 0) +
+    (key === runningDayKey ? runningSeconds / 60 : 0);
+
   const overlapList = days.flatMap((d) => d.overlaps);
   const gapList = days.flatMap((d) => d.gaps);
   const hours = Array.from(
@@ -213,7 +224,14 @@ function KalenderInner({ data }: { data: KalenderData }) {
           >
             <div />
             {days.map((d) => (
-              <DayHeader key={d.dayKey} day={d} isToday={d.dayKey === todayKey} />
+              <DayHeader
+                key={d.dayKey}
+                day={d}
+                isToday={d.dayKey === todayKey}
+                workedMinutes={workedMinutes(d.dayKey)}
+                targetMinutes={isWeekendKey(d.dayKey) ? 0 : data.regularWorkMinutes}
+                running={d.dayKey === runningDayKey}
+              />
             ))}
           </div>
 
@@ -353,7 +371,19 @@ function BreakSwatch() {
   );
 }
 
-function DayHeader({ day, isToday }: { day: DayTimeline; isToday: boolean }) {
+function DayHeader({
+  day,
+  isToday,
+  workedMinutes,
+  targetMinutes,
+  running,
+}: {
+  day: DayTimeline;
+  isToday: boolean;
+  workedMinutes: number;
+  targetMinutes: number;
+  running: boolean;
+}) {
   return (
     <div
       className="flex items-center justify-between gap-1 px-2 py-2 border-l text-[12.5px] font-semibold"
@@ -362,7 +392,21 @@ function DayHeader({ day, isToday }: { day: DayTimeline; isToday: boolean }) {
         color: isToday ? "var(--accent)" : "var(--text)",
       }}
     >
-      <span>{dayHeading(day.dayKey)}</span>
+      <span className="flex flex-col">
+        <span>{dayHeading(day.dayKey)}</span>
+        {workedMinutes > 0 && (
+          <span
+            data-testid="kalender-day-worked"
+            className="text-[11px] font-normal tabular-nums"
+            style={{ color: "var(--text-2)" }}
+            title={`Arbeitszeit · Soll ${formatHm(targetMinutes)}${
+              running ? " · inkl. laufendem Timer" : ""
+            }`}
+          >
+            {formatHm(workedMinutes)}
+          </span>
+        )}
+      </span>
       <span className="flex gap-1">
         {day.overlaps.length > 0 && (
           <span

@@ -89,6 +89,10 @@ export default async function KalenderPage({
         breaks: cfg.breaks,
         autoPauseEnabled: cfg.autoPauseEnabled,
         weekOvertimeMinutes,
+        workedMinutesByDay: Object.fromEntries(
+          [...worked].map(([key, seconds]) => [key, seconds / 60]),
+        ),
+        regularWorkMinutes: s.regularWorkMinutes,
         runningInWeek,
         runningDayTargetMinutes,
       }}
