@@ -136,7 +136,9 @@ export default function HilfePage() {
             </li>
             <li>
               <b>Startzeit korrigieren</b> — Zu spät gestartet? Setze die
-              Startzeit des laufenden Timers einfach früher.
+              Startzeit des laufenden Timers einfach früher. Klicke auf die
+              Zeit neben <Ui>Gestartet</Ui>. Du tippst sofort die Uhrzeit, das
+              Datum steht daneben.
             </li>
             <li>
               <b>Manuell anlegen</b> — Mit <Ui>Eintrag manuell anlegen</Ui> gibst

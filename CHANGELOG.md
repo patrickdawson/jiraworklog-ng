@@ -10,6 +10,9 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 ### Hinzugefügt
 - Kalender: Der Tageskopf zeigt die Arbeitszeit des Tages. Pausen sind abgezogen, ein laufender Timer zählt live mit.
 
+### Geändert
+- Buchen: Beim Ändern der Startzeit des laufenden Timers steht die Uhrzeit vorn und das Datum dahinter. Du änderst so nicht mehr aus Versehen das Datum.
+
 ## [0.6.0] - 2026-10-21
 
 ### Hinzugefügt

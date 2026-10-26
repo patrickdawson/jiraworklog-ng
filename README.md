@@ -14,7 +14,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Timer starten/stoppen** — Ein-Klick-Timer mit Live-Anzeige der laufenden Zeit
 - **Beschreibungsformat** `Merksatz  ISSUE-123  Worklogtext` — Jira-Issue-Key wird automatisch aus der Beschreibung extrahiert
 - **Vorschläge im Timer-Feld** — Beim Fokus zeigt das Feld die acht zuletzt genutzten Einträge der letzten 30 Tage (mit Issue-Key bzw. Kategorie, Anzahl und Gesamtzeit). Tippen filtert, Pfeiltasten wählen, Enter startet den Timer.
-- **Startzeit des laufenden Timers korrigieren** — Zu spät auf Start gedrückt? Die Startzeit lässt sich direkt nachträglich vorverlegen.
+- **Startzeit des laufenden Timers korrigieren** — Zu spät auf Start gedrückt? Die Startzeit lässt sich direkt nachträglich vorverlegen. Ein Klick auf „Gestartet“ zeigt zuerst die Uhrzeit, daneben das Datum.
 - **Manuelle Einträge** — Zeiteinträge mit Start- und Endzeit manuell anlegen oder nachträglich bearbeiten. Das Feld „Beschreibung“ im Dialog zeigt dieselben Vorschläge wie das Timer-Feld. Ein Vorschlag übernimmt Beschreibung, Allgemein-Haken und Kategorie; gespeichert wird erst mit „Speichern“.
 - **Gruppen bearbeiten** — Einträge mit gleicher Beschreibung am selben Tag bilden eine Gruppe. „Gruppe bearbeiten“ ändert Beschreibung, Allgemein-Haken und Kategorie aller Einträge der Gruppe auf einmal (auch mit Vorschlägen). Die Zeiten bleiben gleich. Passt die neue Beschreibung zu einer anderen Gruppe des Tages, werden beide zu einer Gruppe.
 - **Einträge wiederholen** — Laufenden Timer mit gleicher Beschreibung eines bestehenden Eintrags neu starten
