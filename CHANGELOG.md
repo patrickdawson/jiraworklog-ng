@@ -7,6 +7,8 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-26
+
 ### Hinzugefügt
 - Kalender: Der Tageskopf zeigt die Arbeitszeit des Tages. Pausen sind abgezogen, ein laufender Timer zählt live mit.
 
