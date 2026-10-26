@@ -196,6 +196,41 @@ test("kalender — week saldo counts weekday targets and weekend time", async ({
   );
 });
 
+test("kalender — ctrl + wheel zooms the time axis, the wheel alone scrolls", async ({
+  page,
+}) => {
+  await seedEntries([{ description: "A", startedAt: at(9), endedAt: at(10) }]);
+
+  await page.goto("/kalender?anchor=2026-09-15");
+  const block = page.getByTestId("kalender-entry");
+  const scroll = page.getByTestId("kalender-scroll");
+  const height = async () => (await block.boundingBox())!.height;
+  const scrollTop = () => scroll.evaluate((el) => el.scrollTop);
+
+  // Default scale is 48 px per hour, scrolled to the week's first hour (07:00).
+  expect(await height()).toBeCloseTo(48, 0);
+  expect(await scrollTop()).toBe(7 * 48);
+
+  const box = (await scroll.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+
+  // The wheel alone scrolls and keeps the scale.
+  await page.mouse.wheel(0, 100);
+  await expect.poll(scrollTop).toBeGreaterThan(7 * 48);
+  expect(await height()).toBeCloseTo(48, 0);
+
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, -300);
+  await page.keyboard.up("Control");
+  await expect.poll(height).toBeGreaterThan(70);
+
+  const reset = page.getByRole("button", { name: "Zoom zurücksetzen" });
+  await reset.click();
+  await expect(reset).toHaveCount(0);
+  expect(await height()).toBeCloseTo(48, 0);
+  expect(await scrollTop()).toBe(7 * 48);
+});
+
 test("kalender — each day header shows its worked time", async ({ page }) => {
   await seedSettings({ regularWorkMinutes: 420, autoPauseEnabled: true });
   await seedEntries([
