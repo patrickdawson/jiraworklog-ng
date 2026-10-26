@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EditEntryDialog, type EntryDraft } from "@/components/entry-dialogs";
 import { GroupColorsProvider, useGroupColors } from "@/components/group-colors-context";
 import { Card, PageHeader } from "@/components/ui";
@@ -37,8 +37,14 @@ export type KalenderData = {
   runningDayTargetMinutes: number;
 };
 
-/** Vertical scale of the grid. */
+/** Vertical scale of the grid before the user zooms. */
 const PX_PER_HOUR = 48;
+/** Largest zoom: a quarter hour is 60 px. */
+const MAX_PX_PER_HOUR = 240;
+/** Zoom change per pixel of wheel delta. A mouse wheel notch is ~100 px. */
+const ZOOM_PER_DELTA = 0.0015;
+/** Space above and below the grid: page header, summary and day headers. */
+const GRID_CHROME_PX = 220;
 /** Hours shown when the week has no entries outside them. */
 const DEFAULT_FIRST_HOUR = 7;
 const DEFAULT_LAST_HOUR = 19;
@@ -145,12 +151,82 @@ function KalenderInner({ data }: { data: KalenderData }) {
 
   const overlapList = days.flatMap((d) => d.overlaps);
   const gapList = days.flatMap((d) => d.gaps);
-  const hours = Array.from(
-    { length: lastHour - firstHour },
-    (_, i) => firstHour + i,
+
+  // The grid always holds the whole day. The scroll area is as high as the
+  // week's hours at the default scale, so the first view looks as before.
+  // Ctrl + wheel changes the scale: in shows fewer hours, out shows more.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [pxPerHour, setPxPerHour] = useState(PX_PER_HOUR);
+  const pxRef = useRef(PX_PER_HOUR);
+  // The minute to keep at `offsetY` px below the scroll area's top after the
+  // next render.
+  const anchorRef = useRef<{ minute: number; offsetY: number } | null>(
+    null,
   );
-  const gridHeight = (lastHour - firstHour) * PX_PER_HOUR;
-  const toY = (min: number) => ((min - firstHour * 60) / 60) * PX_PER_HOUR;
+  const firstHourRef = useRef(firstHour);
+
+  const resetZoom = () => {
+    pxRef.current = PX_PER_HOUR;
+    anchorRef.current = { minute: firstHour * 60, offsetY: 0 };
+    setPxPerHour(PX_PER_HOUR);
+  };
+
+  // Only the first render scrolls to the week's hours. A later timer tick
+  // must not move a view the user has scrolled.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = firstHourRef.current * PX_PER_HOUR;
+  }, []);
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    const anchor = anchorRef.current;
+    if (!el || !anchor) return;
+    anchorRef.current = null;
+    el.scrollTop = (anchor.minute / 60) * pxPerHour - anchor.offsetY;
+  }, [pxPerHour]);
+
+  // React's onWheel is passive, so it cannot stop the browser's page zoom.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const px = pxRef.current;
+      const minPx = el.clientHeight / 24;
+      const next = Math.min(
+        MAX_PX_PER_HOUR,
+        Math.max(minPx, px * Math.exp(-e.deltaY * ZOOM_PER_DELTA)),
+      );
+      if (next === px) return;
+      const offsetY = e.clientY - el.getBoundingClientRect().top;
+      anchorRef.current = {
+        minute: ((el.scrollTop + offsetY) / px) * 60,
+        offsetY,
+      };
+      pxRef.current = next;
+      setPxPerHour(next);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const zoomed = pxPerHour !== PX_PER_HOUR;
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  // Finer lines when zoomed in, fewer labels when zoomed far out.
+  const subStep = pxPerHour >= 192 ? 15 : pxPerHour >= 96 ? 30 : null;
+  const subMinutes = subStep
+    ? Array.from({ length: (24 * 60) / subStep }, (_, i) => i * subStep).filter(
+        (m) => m % 60 !== 0,
+      )
+    : [];
+  const labelEvery = pxPerHour < 28 ? 2 : 1;
+  const gridHeight = 24 * pxPerHour;
+  const viewHeight = `min(max(240px, calc(100vh - ${GRID_CHROME_PX}px)), ${
+    (lastHour - firstHour) * PX_PER_HOUR
+  }px)`;
+  const toY = (min: number) => (min / 60) * pxPerHour;
 
   return (
     <main className="px-4 py-5 sm:px-8 sm:py-7">
@@ -210,6 +286,28 @@ function KalenderInner({ data }: { data: KalenderData }) {
             <BreakSwatch /> Pause (keine Lücke)
           </span>
         )}
+        {zoomed ? (
+          <button
+            type="button"
+            onClick={resetZoom}
+            className="ml-auto cursor-pointer rounded-md border px-2 py-0.5 text-[12px] font-medium"
+            style={{
+              background: "var(--surface)",
+              borderColor: "var(--border)",
+              color: "var(--text)",
+            }}
+          >
+            Zoom zurücksetzen
+          </button>
+        ) : (
+          // Same box as the button, so the row keeps its height.
+          <span
+            className="ml-auto border border-transparent py-0.5 text-[12px]"
+            style={{ color: "var(--text-3)" }}
+          >
+            Strg + Mausrad zoomt die Zeitachse
+          </span>
+        )}
       </div>
 
       <Card padded={false} className="overflow-x-auto">
@@ -220,6 +318,9 @@ function KalenderInner({ data }: { data: KalenderData }) {
             style={{
               gridTemplateColumns: "52px repeat(7, minmax(0, 1fr))",
               borderColor: "var(--border)",
+              // Same gutter as the scroll area below, so the columns line up.
+              overflowY: "hidden",
+              scrollbarGutter: "stable",
             }}
           >
             <div />
@@ -237,36 +338,44 @@ function KalenderInner({ data }: { data: KalenderData }) {
 
           {/* Grid body */}
           <div
-            className="grid"
-            style={{ gridTemplateColumns: "52px repeat(7, minmax(0, 1fr))" }}
+            ref={scrollRef}
+            data-testid="kalender-scroll"
+            className="overflow-y-auto"
+            style={{ height: viewHeight, scrollbarGutter: "stable" }}
           >
-            <div className="relative" style={{ height: gridHeight }}>
-              {hours.map((h) => (
-                <div
-                  key={h}
-                  className="absolute right-2 text-[11px] -translate-y-1/2 tabular-nums"
-                  style={{ top: toY(h * 60), color: "var(--text-3)" }}
-                >
-                  {h > firstHour ? `${String(h).padStart(2, "0")}:00` : ""}
-                </div>
+            <div
+              className="grid"
+              style={{ gridTemplateColumns: "52px repeat(7, minmax(0, 1fr))" }}
+            >
+              <div className="relative" style={{ height: gridHeight }}>
+                {hours.map((h) => (
+                  <div
+                    key={h}
+                    className="absolute right-2 text-[11px] -translate-y-1/2 tabular-nums"
+                    style={{ top: toY(h * 60), color: "var(--text-3)" }}
+                  >
+                    {h > 0 && h % labelEvery === 0
+                      ? `${String(h).padStart(2, "0")}:00`
+                      : ""}
+                  </div>
+                ))}
+              </div>
+
+              {days.map((d) => (
+                <DayColumn
+                  key={d.dayKey}
+                  day={d}
+                  hours={hours}
+                  subMinutes={subMinutes}
+                  height={gridHeight}
+                  toY={toY}
+                  entryById={entryById}
+                  nowMin={d.dayKey === todayKey ? nowMin : null}
+                  onEdit={setEditEntry}
+                  onFillGap={(g) => setNewDraft(gapDraft(d.dayKey, g))}
+                />
               ))}
             </div>
-
-            {days.map((d) => (
-              <DayColumn
-                key={d.dayKey}
-                day={d}
-                hours={hours}
-                height={gridHeight}
-                toY={toY}
-                entryById={entryById}
-                nowMin={d.dayKey === todayKey ? nowMin : null}
-                firstMin={firstHour * 60}
-                lastMin={lastHour * 60}
-                onEdit={setEditEntry}
-                onFillGap={(g) => setNewDraft(gapDraft(d.dayKey, g))}
-              />
-            ))}
           </div>
         </div>
       </Card>
@@ -434,27 +543,28 @@ function DayHeader({
 function DayColumn({
   day,
   hours,
+  subMinutes,
   height,
   toY,
   entryById,
   nowMin,
-  firstMin,
-  lastMin,
   onEdit,
   onFillGap,
 }: {
   day: DayTimeline;
   hours: number[];
+  /** Half or quarter hour lines, when zoomed in. */
+  subMinutes: number[];
   height: number;
   toY: (min: number) => number;
   entryById: Map<number, EntryView>;
   nowMin: number | null;
-  firstMin: number;
-  lastMin: number;
   onEdit: (entry: EntryView) => void;
   onFillGap: (gap: Interval) => void;
 }) {
   const groupColors = useGroupColors();
+  const firstMin = 0;
+  const lastMin = 24 * 60;
   const visible = (i: Interval) => i.endMin > firstMin && i.startMin < lastMin;
   const box = (i: Interval) => {
     const top = toY(Math.max(i.startMin, firstMin));
@@ -473,6 +583,13 @@ function DayColumn({
           key={h}
           className="absolute inset-x-0 border-t"
           style={{ top: toY(h * 60), borderColor: "var(--border)" }}
+        />
+      ))}
+      {subMinutes.map((m) => (
+        <div
+          key={`s${m}`}
+          className="absolute inset-x-0 border-t border-dashed opacity-60"
+          style={{ top: toY(m), borderColor: "var(--border)" }}
         />
       ))}
 
