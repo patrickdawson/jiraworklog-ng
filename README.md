@@ -25,6 +25,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 ![Kalender-Wochenansicht](docs/readme-calendar.png)
 
 - **Zeitstrahl pro Woche** — Eine Spalte pro Tag, Stunden auf der senkrechten Achse
+- **Zeitachse zoomen** — Strg + Mausrad (oder Pinch auf dem Touchpad) zoomt um den Mauszeiger: hinein zeigt weniger Stunden mit Halb- und Viertelstundenlinien, heraus bis zum ganzen Tag. Das Mausrad allein scrollt. „Zoom zurücksetzen“ stellt die Startansicht wieder her.
 - **Arbeitszeit pro Tag** — Der Tageskopf zeigt die erfasste Zeit des Tages ohne Pausen, inkl. laufendem Timer
 - **Überschneidungen** — Überlappende Einträge stehen nebeneinander, die gemeinsame Zeit ist schraffiert
 - **Lücken** — Nicht erfasste Zeit zwischen erstem und letztem Eintrag eines Tages erscheint grau gestrichelt umrandet

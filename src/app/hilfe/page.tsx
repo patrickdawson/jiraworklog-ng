@@ -264,6 +264,14 @@ export default function HilfePage() {
           </P>
           <List>
             <li>
+              <b>Zoomen</b> — Halte <Ui>Strg</Ui> und drehe das Mausrad über dem
+              Kalender. Auf dem Touchpad geht auch Zusammenziehen mit zwei
+              Fingern. Hinein zeigt weniger Stunden, heraus mehr bis zum ganzen
+              Tag. Die Zeit unter dem Mauszeiger bleibt stehen. Das Mausrad allein
+              scrollt. <Ui>Zoom zurücksetzen</Ui> stellt die Startansicht wieder
+              her.
+            </li>
+            <li>
               <b>Arbeitszeit</b> — Der Tageskopf zeigt unter dem Datum die
               Arbeitszeit des Tages. Pausen sind abgezogen. Ein laufender Timer
               zählt live mit.

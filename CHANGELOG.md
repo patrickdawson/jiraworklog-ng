@@ -7,6 +7,9 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Hinzugefügt
+- Kalender: Strg + Mausrad zoomt die Zeitachse. Hinein zeigt weniger Stunden, heraus mehr bis zum ganzen Tag. Das Mausrad allein scrollt im Kalender. „Zoom zurücksetzen“ stellt die Startansicht wieder her.
+
 ## [0.7.0] - 2026-10-26
 
 ### Hinzugefügt
