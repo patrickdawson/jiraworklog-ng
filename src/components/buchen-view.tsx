@@ -585,6 +585,11 @@ function TimerCard({
       setEditStart(false);
       return;
     }
+    // A cleared time or date field leaves no valid value: keep the old start.
+    if (startDraft.startsWith("T") || startDraft.endsWith("T")) {
+      setEditStart(false);
+      return;
+    }
     const iso = fromLocalInputValue(startDraft);
     if (iso === running.startedAt) {
       setEditStart(false);
@@ -658,28 +663,46 @@ function TimerCard({
         <div className="mt-3 flex items-center gap-2 text-[13px]">
           <span style={{ color: "var(--text-2)" }}>Gestartet</span>
           {editStart ? (
-            <>
+            // Time first, date second: the label shows a time, so the first
+            // keystrokes should change the time. Moving focus between the
+            // two fields (or to "Abbrechen") does not commit yet.
+            <span
+              className="flex items-center gap-2"
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                  commitStartEdit();
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  commitStartEdit();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  setEditStart(false);
+                }
+              }}
+            >
               <input
-                type="datetime-local"
-                value={startDraft}
+                type="time"
+                aria-label="Startzeit"
+                value={startDraft.slice(11)}
                 autoFocus
-                onChange={(e) => setStartDraft(e.target.value)}
-                onBlur={commitStartEdit}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    commitStartEdit();
-                  } else if (e.key === "Escape") {
-                    e.preventDefault();
-                    setEditStart(false);
-                  }
-                }}
+                onChange={(e) =>
+                  setStartDraft(`${startDraft.slice(0, 10)}T${e.target.value}`)
+                }
                 className="rounded-md border px-2 py-1 text-[13px] outline-none"
-                style={{
-                  background: "var(--surface-2)",
-                  borderColor: "var(--border-strong)",
-                  color: "var(--text)",
-                }}
+                style={startInputStyle}
+              />
+              <input
+                type="date"
+                aria-label="Startdatum"
+                value={startDraft.slice(0, 10)}
+                onChange={(e) =>
+                  setStartDraft(`${e.target.value}T${startDraft.slice(11)}`)
+                }
+                className="rounded-md border px-2 py-1 text-[13px] outline-none"
+                style={startInputStyle}
               />
               <button
                 type="button"
@@ -689,7 +712,7 @@ function TimerCard({
               >
                 Abbrechen
               </button>
-            </>
+            </span>
           ) : (
             <button
               type="button"
@@ -725,6 +748,12 @@ function TimerCard({
     </Card>
   );
 }
+
+const startInputStyle = {
+  background: "var(--surface-2)",
+  borderColor: "var(--border-strong)",
+  color: "var(--text)",
+};
 
 function formatRunningStart(iso: string): string {
   const d = new Date(iso);
