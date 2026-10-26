@@ -13,7 +13,7 @@ concurrency:
 jobs:
   quality:
     name: Lint and type check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       # The Electron binary is not needed for lint or type checks.
       ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
@@ -30,7 +30,9 @@ jobs:
 
   e2e:
     name: E2E tests
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.60 cannot install Chromium on Ubuntu 26.04, which
+    # ubuntu-latest became in October 2026.
+    runs-on: ubuntu-24.04
     env:
       # The web E2E tests do not start Electron.
       ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
@@ -54,7 +56,7 @@ jobs:
   detect-release:
     name: Detect release
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.check.outputs.version }}
       release: ${{ steps.check.outputs.release }}
