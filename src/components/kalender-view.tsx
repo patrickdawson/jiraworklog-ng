@@ -43,11 +43,12 @@ const PX_PER_HOUR = 48;
 const MAX_PX_PER_HOUR = 240;
 /** Zoom change per pixel of wheel delta. A mouse wheel notch is ~100 px. */
 const ZOOM_PER_DELTA = 0.0015;
-/** Space above and below the grid: page header, summary and day headers. */
+/** Space above and below the grid before it is measured. */
 const GRID_CHROME_PX = 220;
-/** Hours shown when the week has no entries outside them. */
+/** Smallest height of the grid's scroll area. */
+const MIN_VIEW_PX = 240;
+/** First hour in view when the week has no earlier entry. */
 const DEFAULT_FIRST_HOUR = 7;
-const DEFAULT_LAST_HOUR = 19;
 
 const WEEKDAY_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
@@ -111,16 +112,13 @@ function KalenderInner({ data }: { data: KalenderData }) {
   const todayKey = now ? dayKey(now) : null;
   const nowMin = now ? now.getHours() * 60 + now.getMinutes() : null;
 
-  const [firstHour, lastHour] = useMemo(() => {
+  // The first view starts at this hour.
+  const firstHour = useMemo(() => {
     let lo = DEFAULT_FIRST_HOUR * 60;
-    let hi = DEFAULT_LAST_HOUR * 60;
     for (const d of days) {
-      for (const s of d.segments) {
-        lo = Math.min(lo, s.startMin);
-        hi = Math.max(hi, s.endMin);
-      }
+      for (const s of d.segments) lo = Math.min(lo, s.startMin);
     }
-    return [Math.max(0, Math.floor(lo / 60)), Math.min(24, Math.ceil(hi / 60))];
+    return Math.max(0, Math.floor(lo / 60));
   }, [days]);
 
   const running = data.runningInWeek
@@ -152,10 +150,11 @@ function KalenderInner({ data }: { data: KalenderData }) {
   const overlapList = days.flatMap((d) => d.overlaps);
   const gapList = days.flatMap((d) => d.gaps);
 
-  // The grid always holds the whole day. The scroll area is as high as the
-  // week's hours at the default scale, so the first view looks as before.
+  // The grid always holds the whole day. The scroll area fills the window
+  // down to the page's bottom padding, so a tall window shows more hours.
   // Ctrl + wheel changes the scale: in shows fewer hours, out shows more.
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [viewHeight, setViewHeight] = useState<number | null>(null);
   const [pxPerHour, setPxPerHour] = useState(PX_PER_HOUR);
   const pxRef = useRef(PX_PER_HOUR);
   // The minute to keep at `offsetY` px below the scroll area's top after the
@@ -170,6 +169,27 @@ function KalenderInner({ data }: { data: KalenderData }) {
     anchorRef.current = { minute: firstHour * 60, offsetY: 0 };
     setPxPerHour(PX_PER_HOUR);
   };
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      const top = rect.top + window.scrollY;
+      // Card border and page padding below the scroll area.
+      const main = el.closest("main");
+      const below = main ? main.getBoundingClientRect().bottom - rect.bottom : 0;
+      setViewHeight(
+        Math.min(
+          24 * PX_PER_HOUR,
+          Math.max(MIN_VIEW_PX, window.innerHeight - top - below),
+        ),
+      );
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
 
   // Only the first render scrolls to the week's hours. A later timer tick
   // must not move a view the user has scrolled.
@@ -223,9 +243,6 @@ function KalenderInner({ data }: { data: KalenderData }) {
     : [];
   const labelEvery = pxPerHour < 28 ? 2 : 1;
   const gridHeight = 24 * pxPerHour;
-  const viewHeight = `min(max(240px, calc(100vh - ${GRID_CHROME_PX}px)), ${
-    (lastHour - firstHour) * PX_PER_HOUR
-  }px)`;
   const toY = (min: number) => (min / 60) * pxPerHour;
 
   return (
@@ -341,7 +358,12 @@ function KalenderInner({ data }: { data: KalenderData }) {
             ref={scrollRef}
             data-testid="kalender-scroll"
             className="overflow-y-auto"
-            style={{ height: viewHeight, scrollbarGutter: "stable" }}
+            style={{
+              height:
+                viewHeight ??
+                `max(${MIN_VIEW_PX}px, calc(100vh - ${GRID_CHROME_PX}px))`,
+              scrollbarGutter: "stable",
+            }}
           >
             <div
               className="grid"

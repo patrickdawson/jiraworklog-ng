@@ -231,6 +231,23 @@ test("kalender — ctrl + wheel zooms the time axis, the wheel alone scrolls", a
   expect(await scrollTop()).toBe(7 * 48);
 });
 
+test("kalender — the grid fills the window height", async ({ page }) => {
+  await page.goto("/kalender?anchor=2026-09-15");
+  const scroll = page.getByTestId("kalender-scroll");
+  // Only the page's bottom padding and the card border stay below the grid.
+  const gapBelow = async () => {
+    const box = (await scroll.boundingBox())!;
+    return page.viewportSize()!.height - (box.y + box.height);
+  };
+
+  await expect.poll(gapBelow).toBeLessThan(40);
+  expect(await gapBelow()).toBeGreaterThanOrEqual(0);
+
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await expect.poll(gapBelow).toBeLessThan(40);
+  expect(await gapBelow()).toBeGreaterThanOrEqual(0);
+});
+
 test("kalender — each day header shows its worked time", async ({ page }) => {
   await seedSettings({ regularWorkMinutes: 420, autoPauseEnabled: true });
   await seedEntries([
