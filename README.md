@@ -58,7 +58,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 ### Auswertung
 - **Zeit pro Ticket** — Balken pro Ticket und pro Allgemeines-Kategorie, in getrennten Abschnitten. Je Abschnitt bis zu 12 Balken, der Rest lässt sich aufklappen. Ein Klick auf einen Balken zeigt seine Einträge, je 20 auf einmal mit „Weitere laden“.
 - **Tagesbalkendiagramm** — Gearbeitete Zeit pro Tag der letzten 14 Tage als SVG-Balkendiagramm
-- **Saldo-Verlauf** — Überstundensaldo am Ende jedes Tages im Zeitraum als Liniendiagramm. Die Werte sind absolut, der letzte Punkt entspricht der KPI. Plus ist grün, Minus rot. Ein Tag ohne Buchung lässt den Saldo unverändert.
+- **Saldo-Verlauf** — Überstundensaldo am Ende jedes Tages im Zeitraum als Liniendiagramm. Die Werte sind absolut, der letzte Punkt entspricht der KPI. Ein grünes Band zeigt den erlaubten Saldo-Korridor (Standard 100 ± 40 h, in den Einstellungen änderbar). Die y-Achse zeigt diesen Korridor und wird nur größer, wenn der Saldo ihn verlässt. Außerhalb ist die Linie rot. Ein Tag ohne Buchung lässt den Saldo unverändert.
 - **Zeitraum-Filter** — Woche, Sprint, Monat, YTD oder alle Daten, mit Vor/Zurück-Navigation
 - **Sprints** — Sprint-Ankerdatum und Sprint-Länge (Tage) in den Einstellungen festlegen
 - **Statistische KPIs** — Durchschnittliche Arbeitszeit pro Woche und pro Arbeitstag
@@ -90,6 +90,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - Mehrere Pausenfenster konfigurierbar
 - Jira-URL, Atlassian-E-Mail, API-Token, Projekt-Keys, Buchungsmodus, „Verbindung testen“
 - Sprint-Ankerdatum, Sprint-Länge und Ziel für die Quote konkreter Issues
+- Saldo-Korridor für den Saldo-Verlauf: Mitte und Spanne ± in ganzen Stunden (Standard 100 ± 40)
 - Farbschema: System, Hell oder Dunkel
 - Desktop: Autostart (nur in der Desktop-App)
 - Datenpflege: alte Einträge löschen (Aufbewahrungsdauer in Tagen). Der Überstundensaldo bleibt dabei erhalten, weil die gelöschten Tage in den Startwert wandern.

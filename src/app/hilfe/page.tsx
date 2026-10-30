@@ -327,7 +327,11 @@ export default function HilfePage() {
               <b>Saldo-Verlauf</b> — dein Überstundensaldo am Ende jedes Tages
               als Linie. Der letzte Punkt ist der aktuelle Saldo. Fährst du mit
               der Maus über die Linie, siehst du Datum und Wert. Ein Tag ohne
-              Buchung ändert den Saldo nicht.
+              Buchung ändert den Saldo nicht. Das grüne Band ist der erlaubte
+              Korridor, z. B. 100 ± 40 Stunden. Die Achse zeigt nur dieses Band.
+              Verlässt dein Saldo das Band, wird die Achse größer und die Linie
+              rot. Mitte und Spanne stellst du unter <Ui>Sprint &amp; KPI</Ui>{" "}
+              ein.
             </li>
             <li>Durchschnitt pro Woche und pro Arbeitstag, Wochenstatus.</li>
             <li>
@@ -421,7 +425,7 @@ export default function HilfePage() {
             </li>
             <li>
               <b>Sprint &amp; KPI</b> — Sprint-Start, Sprint-Länge, Ziel der
-              Quote.
+              Quote und der Saldo-Korridor (Mitte und Spanne in Stunden).
             </li>
             <li>
               <b>Darstellung</b> — System, Hell oder Dunkel.
