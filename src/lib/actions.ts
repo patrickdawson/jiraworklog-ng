@@ -500,6 +500,8 @@ const settingsSchema = z.object({
   sprintAnchorDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   sprintLengthDays: z.number().int().min(1).max(365),
   concreteIssueTargetPercent: z.number().int().min(0).max(100),
+  overtimeCorridorCenterHours: z.number().int().min(-9999).max(9999),
+  overtimeCorridorRangeHours: z.number().int().min(1).max(9999),
   awayCheckEnabled: z.boolean(),
 });
 
@@ -536,6 +538,8 @@ export async function updateSettings(
       sprintAnchorDate: d.sprintAnchorDate,
       sprintLengthDays: d.sprintLengthDays,
       concreteIssueTargetPercent: d.concreteIssueTargetPercent,
+      overtimeCorridorCenterHours: d.overtimeCorridorCenterHours,
+      overtimeCorridorRangeHours: d.overtimeCorridorRangeHours,
       awayCheckEnabled: d.awayCheckEnabled,
       updatedAt: nowIso(),
     })

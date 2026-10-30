@@ -57,6 +57,13 @@
       "when": 1779340767573,
       "tag": "0007_rename_group_colors",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1779340767574,
+      "tag": "0008_add_overtime_corridor",
+      "breakpoints": true
     }
   ]
 }

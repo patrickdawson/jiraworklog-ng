@@ -40,6 +40,8 @@ const BASELINE: SettingsBaseline = {
   sprintAnchorDate: "2026-01-07",
   sprintLengthDays: 14,
   concreteIssueTargetPercent: 60,
+  overtimeCorridorCenterHours: 100,
+  overtimeCorridorRangeHours: 40,
   awayCheckEnabled: true,
 };
 

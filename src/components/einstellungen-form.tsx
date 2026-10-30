@@ -55,6 +55,8 @@ type FormValues = {
   sprintAnchorDate: string;
   sprintLengthDays: string;
   concreteTarget: string;
+  corridorCenter: string;
+  corridorRange: string;
   awayCheck: boolean;
 };
 
@@ -75,6 +77,8 @@ function toFormValues(initial: Initial): FormValues {
     sprintAnchorDate: initial.sprintAnchorDate,
     sprintLengthDays: String(initial.sprintLengthDays),
     concreteTarget: String(initial.concreteIssueTargetPercent),
+    corridorCenter: String(initial.overtimeCorridorCenterHours),
+    corridorRange: String(initial.overtimeCorridorRangeHours),
     awayCheck: initial.awayCheckEnabled,
   };
 }
@@ -103,6 +107,8 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
     saved.sprintLengthDays,
   );
   const [concreteTarget, setConcreteTarget] = useState(saved.concreteTarget);
+  const [corridorCenter, setCorridorCenter] = useState(saved.corridorCenter);
+  const [corridorRange, setCorridorRange] = useState(saved.corridorRange);
   const [awayCheck, setAwayCheck] = useState(saved.awayCheck);
   const [forceBooking, setForceBookingState] = useState(initial.forceBooking);
 
@@ -122,6 +128,8 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
     sprintAnchorDate,
     sprintLengthDays,
     concreteTarget,
+    corridorCenter,
+    corridorRange,
     awayCheck,
   };
   const dirty = JSON.stringify(values) !== JSON.stringify(saved);
@@ -142,6 +150,8 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
     setSprintAnchorDate(saved.sprintAnchorDate);
     setSprintLengthDays(saved.sprintLengthDays);
     setConcreteTarget(saved.concreteTarget);
+    setCorridorCenter(saved.corridorCenter);
+    setCorridorRange(saved.corridorRange);
     setAwayCheck(saved.awayCheck);
     setSaveStatus(null);
   }
@@ -272,6 +282,22 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
       });
       return;
     }
+    const centerH = Number(corridorCenter);
+    const rangeH = Number(corridorRange);
+    if (
+      corridorCenter.trim() === "" ||
+      !Number.isInteger(centerH) ||
+      Math.abs(centerH) > 9999 ||
+      !Number.isInteger(rangeH) ||
+      rangeH < 1 ||
+      rangeH > 9999
+    ) {
+      setSaveStatus({
+        tone: "err",
+        msg: "Saldo-Korridor bitte als ganze Stunden angeben, Spanne mindestens 1.",
+      });
+      return;
+    }
     setPending(true);
     try {
       const res = await updateSettings({
@@ -292,6 +318,8 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         sprintAnchorDate,
         sprintLengthDays: sprintLen,
         concreteIssueTargetPercent: targetPct,
+        overtimeCorridorCenterHours: centerH,
+        overtimeCorridorRangeHours: rangeH,
         awayCheckEnabled: awayCheck,
       });
       if (res.ok) setSaved(values);
@@ -673,6 +701,26 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
           Beliebiger Tag aus einem vergangenen oder aktuellen Sprint reicht als
           Anker — alle anderen Sprints werden daraus berechnet. Die Quote misst
           den Anteil der Zeit, die nicht auf „Allgemeines&rdquo; gebucht wurde.
+        </div>
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <Field label="Saldo-Korridor: Mitte (h)">
+            <TextInput
+              value={corridorCenter}
+              onChange={setCorridorCenter}
+              type="number"
+            />
+          </Field>
+          <Field label="Saldo-Korridor: Spanne ± (h)">
+            <TextInput
+              value={corridorRange}
+              onChange={setCorridorRange}
+              type="number"
+            />
+          </Field>
+          <div className="text-[12px] self-end pb-2" style={{ color: "var(--text-3)" }}>
+            Erlaubter Bereich für den Überstundensaldo, z. B. 100 ± 40 h. Der
+            Saldo-Verlauf in der Auswertung zeigt diesen Bereich.
+          </div>
         </div>
       </Section>
 

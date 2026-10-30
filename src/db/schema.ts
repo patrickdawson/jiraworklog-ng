@@ -115,6 +115,17 @@ export const settings = sqliteTable("settings", {
     .notNull()
     .default(60),
   /**
+   * Allowed overtime balance as a corridor of whole hours: center ± range. The
+   * Saldo-Verlauf chart shows this corridor and zooms out only when the balance
+   * leaves it.
+   */
+  overtimeCorridorCenterHours: integer("overtime_corridor_center_hours")
+    .notNull()
+    .default(100),
+  overtimeCorridorRangeHours: integer("overtime_corridor_range_hours")
+    .notNull()
+    .default(40),
+  /**
    * Desktop app only: after the screen was locked or the PC slept while a timer
    * ran, ask whether the away time should be removed from the entry.
    */

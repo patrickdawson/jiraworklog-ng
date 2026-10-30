@@ -28,6 +28,8 @@ export default function EinstellungenPage() {
         sprintAnchorDate: s.sprintAnchorDate,
         sprintLengthDays: s.sprintLengthDays,
         concreteIssueTargetPercent: s.concreteIssueTargetPercent,
+        overtimeCorridorCenterHours: s.overtimeCorridorCenterHours,
+        overtimeCorridorRangeHours: s.overtimeCorridorRangeHours,
         awayCheckEnabled: s.awayCheckEnabled,
         forceBooking: isForceBookingEnabled(),
       }}
