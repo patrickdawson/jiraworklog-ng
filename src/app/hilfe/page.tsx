@@ -323,6 +323,12 @@ export default function HilfePage() {
           </P>
           <List>
             <li>Arbeitszeit pro Tag als Balkendiagramm.</li>
+            <li>
+              <b>Saldo-Verlauf</b> — dein Überstundensaldo am Ende jedes Tages
+              als Linie. Der letzte Punkt ist der aktuelle Saldo. Fährst du mit
+              der Maus über die Linie, siehst du Datum und Wert. Ein Tag ohne
+              Buchung ändert den Saldo nicht.
+            </li>
             <li>Durchschnitt pro Woche und pro Arbeitstag, Wochenstatus.</li>
             <li>
               <b>Quote konkrete Issues</b> — Anteil der Zeit auf echten

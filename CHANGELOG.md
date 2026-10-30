@@ -13,6 +13,7 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 - Issue-Keys sind Links. Ein Klick öffnet das Issue in Jira im Browser. Das gilt in „Buchen“, in der Buchungsvorschau, im Bearbeiten-Dialog und in der Auswertung.
 - Auswertung: Ein Klick auf einen Balken in „Zeit pro Ticket“ zeigt die Einträge dahinter, je 20 auf einmal. „Weitere laden“ zeigt die nächsten 20.
 - Auswertung: Der Balken „Rest“ in „Zeit pro Ticket“ lässt sich aufklappen und zeigt dann alle Tickets.
+- Auswertung: Das neue Liniendiagramm „Saldo-Verlauf“ zeigt den Überstundensaldo am Ende jedes Tages im gewählten Zeitraum.
 
 ### Geändert
 - Auswertung: „Zeit pro Ticket“ zeigt Tickets und Allgemeines in getrennten Abschnitten. Krankheit oder Urlaub verdrängen so keine Tickets mehr aus den Top 12.

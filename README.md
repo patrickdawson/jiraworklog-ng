@@ -58,6 +58,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 ### Auswertung
 - **Zeit pro Ticket** — Balken pro Ticket und pro Allgemeines-Kategorie, in getrennten Abschnitten. Je Abschnitt bis zu 12 Balken, der Rest lässt sich aufklappen. Ein Klick auf einen Balken zeigt seine Einträge, je 20 auf einmal mit „Weitere laden“.
 - **Tagesbalkendiagramm** — Gearbeitete Zeit pro Tag der letzten 14 Tage als SVG-Balkendiagramm
+- **Saldo-Verlauf** — Überstundensaldo am Ende jedes Tages im Zeitraum als Liniendiagramm. Die Werte sind absolut, der letzte Punkt entspricht der KPI. Plus ist grün, Minus rot. Ein Tag ohne Buchung lässt den Saldo unverändert.
 - **Zeitraum-Filter** — Woche, Sprint, Monat, YTD oder alle Daten, mit Vor/Zurück-Navigation
 - **Sprints** — Sprint-Ankerdatum und Sprint-Länge (Tage) in den Einstellungen festlegen
 - **Statistische KPIs** — Durchschnittliche Arbeitszeit pro Woche und pro Arbeitstag
