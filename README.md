@@ -56,7 +56,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Axapta-Bericht als PDF** — Siehe [Auswertung](#auswertung). Damit wird die Zeit von Hand in einem externen Tool gebucht.
 
 ### Auswertung
-- **Zeit pro Ticket** — Balken pro Ticket und pro Allgemeines-Kategorie, in getrennten Abschnitten. Je Abschnitt bis zu 12 Balken, der Rest lässt sich aufklappen. Ein Klick auf einen Balken zeigt seine Einträge.
+- **Zeit pro Ticket** — Balken pro Ticket und pro Allgemeines-Kategorie, in getrennten Abschnitten. Je Abschnitt bis zu 12 Balken, der Rest lässt sich aufklappen. Ein Klick auf einen Balken zeigt seine Einträge, je 20 auf einmal mit „Weitere laden“.
 - **Tagesbalkendiagramm** — Gearbeitete Zeit pro Tag der letzten 14 Tage als SVG-Balkendiagramm
 - **Zeitraum-Filter** — Woche, Sprint, Monat, YTD oder alle Daten, mit Vor/Zurück-Navigation
 - **Sprints** — Sprint-Ankerdatum und Sprint-Länge (Tage) in den Einstellungen festlegen

@@ -335,7 +335,8 @@ export default function HilfePage() {
               getrennten Abschnitten. Jeder Abschnitt zeigt bis zu 12 Balken,
               den Rest fasst <Ui>Rest</Ui> zusammen. Ein Klick auf <Ui>Rest</Ui>{" "}
               zeigt alle Balken. Ein Klick auf einen Balken zeigt seine
-              Einträge.
+              Einträge, je 20 auf einmal. <Ui>Weitere laden</Ui> zeigt die
+              nächsten 20.
             </li>
             <li>
               <b>Stundenzettel</b> — alle Einträge des Zeitraums als PDF.
