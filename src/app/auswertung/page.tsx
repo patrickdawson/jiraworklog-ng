@@ -257,7 +257,11 @@ export default async function AuswertungPage({
       <div className="mt-3.5">
         <Card>
           <div className="text-[15px] font-semibold mb-3">Saldo-Verlauf</div>
-          <BalanceLine data={balanceData} />
+          <BalanceLine
+            data={balanceData}
+            centerMinutes={s.overtimeCorridorCenterHours * 60}
+            rangeMinutes={s.overtimeCorridorRangeHours * 60}
+          />
         </Card>
       </div>
 
@@ -312,7 +316,20 @@ function balanceLabels(keys: string[]): (string | null)[] {
   });
 }
 
-function BalanceLine({ data }: { data: BalancePoint[] }) {
+/**
+ * The overtime balance per day against the allowed corridor (center ± range,
+ * in minutes). The y-axis shows the corridor and widens only when the balance
+ * leaves it, so a balance around +100 h does not waste the chart on 0–60 h.
+ */
+function BalanceLine({
+  data,
+  centerMinutes,
+  rangeMinutes,
+}: {
+  data: BalancePoint[];
+  centerMinutes: number;
+  rangeMinutes: number;
+}) {
   if (data.length === 0) {
     return (
       <div
@@ -330,11 +347,16 @@ function BalanceLine({ data }: { data: BalancePoint[] }) {
   const innerW = width - padding.left - padding.right;
   const innerH = height - padding.top - padding.bottom;
 
+  const lower = centerMinutes - rangeMinutes;
+  const upper = centerMinutes + rangeMinutes;
   const values = data.map((d) => d.minutes);
-  const maxMin = Math.max(0, ...values);
-  const minMin = Math.min(0, ...values);
-  // Keep a flat line at zero from collapsing the scale.
-  const span = Math.max(60, maxMin - minMin);
+  const dataMin = Math.min(...values);
+  const dataMax = Math.max(...values);
+  // Outside the corridor, leave a little room so the line does not touch the edge.
+  const margin = (upper - lower) * 0.05;
+  const minMin = dataMin < lower ? dataMin - margin : lower;
+  const maxMin = dataMax > upper ? dataMax + margin : upper;
+  const span = maxMin - minMin;
   const yOf = (minutes: number) =>
     padding.top + ((maxMin - minutes) * innerH) / span;
   const xOf = (i: number) =>
@@ -342,12 +364,21 @@ function BalanceLine({ data }: { data: BalancePoint[] }) {
       ? padding.left + innerW / 2
       : padding.left + (i * innerW) / (data.length - 1);
 
-  const zeroY = yOf(0);
+  const upperY = yOf(upper);
+  const lowerY = yOf(lower);
   const points = data.map((d, i) => `${xOf(i)},${yOf(d.minutes)}`).join(" ");
-  const area = `${xOf(0)},${zeroY} ${points} ${xOf(data.length - 1)},${zeroY}`;
   const labels = balanceLabels(data.map((d) => d.key));
   const last = data[data.length - 1];
-  const lastColor = last.minutes >= 0 ? "var(--pos)" : "var(--neg)";
+  const inCorridor = (m: number) => m >= lower && m <= upper;
+  const lastColor = inCorridor(last.minutes) ? "var(--pos)" : "var(--neg)";
+
+  // Corridor bounds and center first; the data extremes only when they leave
+  // the corridor and do not crowd a corridor label.
+  const ticks: number[] = [upper, centerMinutes, lower];
+  for (const v of [dataMax, dataMin]) {
+    if (inCorridor(v)) continue;
+    if (ticks.every((t) => Math.abs(yOf(t) - yOf(v)) >= 14)) ticks.push(v);
+  }
 
   return (
     <svg
@@ -357,44 +388,59 @@ function BalanceLine({ data }: { data: BalancePoint[] }) {
       aria-label={`Saldo-Verlauf, aktuell ${formatSignedHm(last.minutes)}`}
     >
       <defs>
-        <clipPath id="saldo-above">
-          <rect x={0} y={0} width={width} height={zeroY} />
+        <clipPath id="saldo-inside">
+          <rect x={0} y={upperY} width={width} height={lowerY - upperY} />
         </clipPath>
-        <clipPath id="saldo-below">
-          <rect x={0} y={zeroY} width={width} height={height - zeroY} />
+        <clipPath id="saldo-outside">
+          <rect x={0} y={0} width={width} height={upperY} />
+          <rect x={0} y={lowerY} width={width} height={height - lowerY} />
         </clipPath>
       </defs>
+      <rect
+        data-testid="saldo-corridor"
+        x={padding.left}
+        y={upperY}
+        width={innerW}
+        height={lowerY - upperY}
+        fill="var(--pos-soft)"
+      />
       <line
         x1={padding.left}
-        y1={zeroY}
+        y1={yOf(centerMinutes)}
         x2={width - padding.right}
-        y2={zeroY}
+        y2={yOf(centerMinutes)}
         stroke="var(--border-strong)"
         strokeDasharray="4 4"
       />
-      {[maxMin, 0, minMin]
-        .filter((v, i, all) => all.indexOf(v) === i)
-        .map((v) => (
-          <text
-            key={v}
-            x={padding.left - 8}
-            y={yOf(v) + 3.5}
-            fontSize="10.5"
-            textAnchor="end"
-            fill="var(--text-3)"
-          >
-            {v === 0 ? "0" : formatSignedHm(v)}
-          </text>
-        ))}
-      <polygon points={area} fill="var(--pos-soft)" clipPath="url(#saldo-above)" />
-      <polygon points={area} fill="var(--neg-soft)" clipPath="url(#saldo-below)" />
+      {minMin <= 0 && maxMin >= 0 && centerMinutes !== 0 && (
+        <line
+          x1={padding.left}
+          y1={yOf(0)}
+          x2={width - padding.right}
+          y2={yOf(0)}
+          stroke="var(--border)"
+        />
+      )}
+      {ticks.map((v) => (
+        <text
+          key={v}
+          data-testid="saldo-tick"
+          x={padding.left - 8}
+          y={yOf(v) + 3.5}
+          fontSize="10.5"
+          textAnchor="end"
+          fill="var(--text-3)"
+        >
+          {formatSignedHm(Math.round(v))}
+        </text>
+      ))}
       <polyline
         points={points}
         fill="none"
         stroke="var(--pos)"
         strokeWidth="2"
         strokeLinejoin="round"
-        clipPath="url(#saldo-above)"
+        clipPath="url(#saldo-inside)"
       />
       <polyline
         points={points}
@@ -402,7 +448,7 @@ function BalanceLine({ data }: { data: BalancePoint[] }) {
         stroke="var(--neg)"
         strokeWidth="2"
         strokeLinejoin="round"
-        clipPath="url(#saldo-below)"
+        clipPath="url(#saldo-outside)"
       />
       {data.map((d, i) => (
         <g key={d.key} data-testid="saldo-point">
