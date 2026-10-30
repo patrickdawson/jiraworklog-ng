@@ -10,6 +10,12 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 ### Hinzugefügt
 - Kalender: Strg + Mausrad zoomt die Zeitachse. Hinein zeigt weniger Stunden, heraus mehr bis zum ganzen Tag. Das Mausrad allein scrollt im Kalender. „Zoom zurücksetzen“ stellt die Startansicht wieder her.
 - Kalender: Das Raster nutzt die ganze Fensterhöhe. Ein hohes Fenster zeigt mehr Stunden.
+- Issue-Keys sind Links. Ein Klick öffnet das Issue in Jira im Browser. Das gilt in „Buchen“, in der Buchungsvorschau, im Bearbeiten-Dialog und in der Auswertung.
+- Auswertung: Ein Klick auf einen Balken in „Zeit pro Ticket“ zeigt die Einträge dahinter.
+- Auswertung: Der Balken „Rest“ in „Zeit pro Ticket“ lässt sich aufklappen und zeigt dann alle Tickets.
+
+### Geändert
+- Auswertung: „Zeit pro Ticket“ zeigt Tickets und Allgemeines in getrennten Abschnitten. Krankheit oder Urlaub verdrängen so keine Tickets mehr aus den Top 12.
 
 ## [0.7.0] - 2026-10-26
 

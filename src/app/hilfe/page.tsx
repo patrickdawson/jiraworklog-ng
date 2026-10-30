@@ -110,7 +110,8 @@ export default function HilfePage() {
             </li>
             <li>
               <b>ISSUE-123</b> — der Jira-Issue-Key. Er muss zu einem deiner
-              Projekt-Keys passen.
+              Projekt-Keys passen. In der App ist der Key ein Link: Ein Klick
+              öffnet das Issue im Browser.
             </li>
             <li>
               <b>Worklog-Kommentar</b> — erscheint als Kommentar im Jira-Worklog.
@@ -330,7 +331,11 @@ export default function HilfePage() {
             </li>
             <li>
               <b>Zeit pro Ticket</b> — Balken pro Ticket und Kategorie, mit
-              Anteil in Prozent.
+              Anteil an der Gesamtzeit. Tickets und Allgemeines stehen in
+              getrennten Abschnitten. Jeder Abschnitt zeigt bis zu 12 Balken,
+              den Rest fasst <Ui>Rest</Ui> zusammen. Ein Klick auf <Ui>Rest</Ui>{" "}
+              zeigt alle Balken. Ein Klick auf einen Balken zeigt seine
+              Einträge.
             </li>
             <li>
               <b>Stundenzettel</b> — alle Einträge des Zeitraums als PDF.

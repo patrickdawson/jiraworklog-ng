@@ -44,6 +44,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Tagesweise oder alles auf einmal buchen** — Pro Tag oder alle offenen Einträge in einem Schritt nach Jira übertragen
 - **Buchungsmodi** — Einträge gleicher Beschreibung bündeln (gruppiert) oder jeden Eintrag einzeln buchen
 - **Jira Cloud (Basic Auth)** — Atlassian-Konto-E-Mail und [API-Token](https://id.atlassian.com/manage-profile/security/api-tokens) (kein Bearer-PAT, kein Kontopasswort)
+- **Issue-Keys als Link** — Ein Klick auf einen Issue-Key öffnet das Issue in Jira im Browser
 - **Status-Badges** — Jeder Eintrag zeigt deutlich ob er bereits gebucht (`gebucht`) oder noch offen (`offen`) ist
 - **Force-Buchung** — Schalter in den Einstellungen, um bereits gebuchte Einträge erneut nach Jira zu senden. Er gilt nur bis zum nächsten App-Neustart. Solange er aktiv ist, zeigt „Buchen“ ein Warnbanner.
 
@@ -55,6 +56,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Axapta-Bericht als PDF** — Siehe [Auswertung](#auswertung). Damit wird die Zeit von Hand in einem externen Tool gebucht.
 
 ### Auswertung
+- **Zeit pro Ticket** — Balken pro Ticket und pro Allgemeines-Kategorie, in getrennten Abschnitten. Je Abschnitt bis zu 12 Balken, der Rest lässt sich aufklappen. Ein Klick auf einen Balken zeigt seine Einträge.
 - **Tagesbalkendiagramm** — Gearbeitete Zeit pro Tag der letzten 14 Tage als SVG-Balkendiagramm
 - **Zeitraum-Filter** — Woche, Sprint, Monat, YTD oder alle Daten, mit Vor/Zurück-Navigation
 - **Sprints** — Sprint-Ankerdatum und Sprint-Länge (Tage) in den Einstellungen festlegen
