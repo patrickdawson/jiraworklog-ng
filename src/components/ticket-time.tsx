@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { IssueKeyLink } from "@/components/issue-key-link";
-import { getGroupEntries, type GroupEntry } from "@/lib/actions";
+import {
+  getGroupEntries,
+  type GroupEntriesPage,
+  type GroupEntry,
+} from "@/lib/actions";
 import type { GroupTotal } from "@/lib/entries";
 import { clockTime, dayKey, dayLabel, formatHm } from "@/lib/format";
 import { groupColorVars, type GroupColorMap } from "@/lib/group-color";
@@ -164,23 +168,42 @@ function GroupRow({
   range: Range;
 }) {
   const [open, setOpen] = useState(false);
-  const [entries, setEntries] = useState<GroupEntry[] | null>(null);
+  const [loaded, setLoaded] = useState<GroupEntriesPage | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const color = group.key ? colors[group.key] : undefined;
   const fill = group.key
     ? groupColorVars(color, group.isAllgemeines).accent
     : "var(--text-3)";
 
-  async function toggle() {
-    const next = !open;
-    setOpen(next);
-    if (!next || entries) return;
+  async function load(offset: number) {
+    setLoading(true);
     setError(null);
     try {
-      setEntries(await getGroupEntries({ ...range, groupId: group.id }));
+      const page = await getGroupEntries({ ...range, groupId: group.id, offset });
+      setLoaded((prev) => {
+        // An entry booked between two pages shifts the offsets by one; skip
+        // what is already shown instead of listing it twice.
+        const seen = new Set(prev?.entries.map((e) => e.id));
+        return {
+          entries: [
+            ...(prev?.entries ?? []),
+            ...page.entries.filter((e) => !seen.has(e.id)),
+          ],
+          total: page.total,
+        };
+      });
     } catch {
       setError("Einträge konnten nicht geladen werden.");
+    } finally {
+      setLoading(false);
     }
+  }
+
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && !loaded && !loading) void load(0);
   }
 
   return (
@@ -197,7 +220,7 @@ function GroupRow({
           aria-label={`Einträge zu ${group.label} anzeigen`}
           onClick={(e) => {
             e.stopPropagation();
-            void toggle();
+            toggle();
           }}
           className="flex items-center justify-center cursor-pointer"
         >
@@ -216,16 +239,35 @@ function GroupRow({
       </div>
       {open && (
         <div className="mt-2 mb-3 ml-7">
-          {error ? (
-            <div className="text-[12px]" style={{ color: "var(--neg)" }}>
+          {loaded && <GroupEntryList entries={loaded.entries} />}
+          {error && (
+            <div className="mt-1.5 text-[12px]" style={{ color: "var(--neg)" }}>
               {error}
             </div>
-          ) : entries === null ? (
+          )}
+          {!loaded && !error && (
             <div className="text-[12px]" style={{ color: "var(--text-3)" }}>
               Lade …
             </div>
-          ) : (
-            <GroupEntryList entries={entries} />
+          )}
+          {loaded && loaded.entries.length < loaded.total && (
+            <div
+              className="mt-1.5 flex items-center gap-3 text-[12px]"
+              style={{ color: "var(--text-3)" }}
+            >
+              <span data-testid="group-entries-count">
+                {loaded.entries.length} von {loaded.total} Einträgen
+              </span>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void load(loaded.entries.length)}
+                className="font-semibold cursor-pointer disabled:cursor-default disabled:opacity-60"
+                style={{ color: "var(--accent)" }}
+              >
+                {loading ? "Lade …" : "Weitere laden"}
+              </button>
+            </div>
           )}
         </div>
       )}

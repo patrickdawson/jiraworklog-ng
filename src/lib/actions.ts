@@ -962,10 +962,14 @@ export async function setForceBooking(enabled: boolean): Promise<void> {
 
 // ──────────────────────────── Auswertung ──────────────────────────
 
+/** Entries per page in the "Zeit pro Ticket" drilldown. */
+const GROUP_ENTRIES_PAGE = 20;
+
 const groupEntriesSchema = z.object({
   fromIso: z.iso.datetime(),
   toIso: z.iso.datetime(),
   groupId: z.string().max(100),
+  offset: z.number().int().min(0),
 });
 
 export type GroupEntry = {
@@ -976,35 +980,49 @@ export type GroupEntry = {
   description: string;
 };
 
+export type GroupEntriesPage = {
+  entries: GroupEntry[];
+  /** All entries of the bar, not only this page. */
+  total: number;
+};
+
 /**
- * The finished entries of one "Zeit pro Ticket" bar, newest first. Loaded on
- * demand: the range "Alle" holds too many entries to send them with the page.
+ * One page of the finished entries of a "Zeit pro Ticket" bar, newest first.
+ * Loaded on demand and paged: a bar over the range "Alle" can hold thousands
+ * of entries.
  */
 export async function getGroupEntries(input: {
   fromIso: string;
   toIso: string;
   groupId: string;
-}): Promise<GroupEntry[]> {
-  const { fromIso, toIso, groupId } = groupEntriesSchema.parse(input);
+  offset: number;
+}): Promise<GroupEntriesPage> {
+  const { fromIso, toIso, groupId, offset } = groupEntriesSchema.parse(input);
   const s = getSettings();
   const cfg = {
     projectKeys: parseProjectKeys(s.jiraProjectKeys),
     breaks: parseBreaks(s.breaks),
     autoPauseEnabled: s.autoPauseEnabled,
   };
-  const result: GroupEntry[] = [];
+  // The group is derived from the parsed description, so SQL cannot filter
+  // by it: count every match, map only the requested page.
+  const entries: GroupEntry[] = [];
+  let total = 0;
   for (const row of getEntriesBetween(fromIso, toIso)) {
     const view = toEntryView(row, cfg);
     // Same filter as `secondsByGroup`, so the list adds up to the bar.
     if (view.effectiveSeconds <= 0 || !view.endedAt) continue;
     if (groupTotalId(view) !== groupId) continue;
-    result.push({
-      id: view.id,
-      startedAt: view.startedAt,
-      endedAt: view.endedAt,
-      seconds: view.effectiveSeconds,
-      description: view.description,
-    });
+    if (total >= offset && entries.length < GROUP_ENTRIES_PAGE) {
+      entries.push({
+        id: view.id,
+        startedAt: view.startedAt,
+        endedAt: view.endedAt,
+        seconds: view.effectiveSeconds,
+        description: view.description,
+      });
+    }
+    total += 1;
   }
-  return result;
+  return { entries, total };
 }
