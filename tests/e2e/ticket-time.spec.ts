@@ -81,6 +81,32 @@ test("ticket time — the Rest bar opens the remaining tickets", async ({
   await expect(tickets.getByTestId("group-bar")).toHaveCount(12);
 });
 
+test("ticket time — a bar's entries load in pages of 20", async ({ page }) => {
+  // 45 ten-minute entries on one ticket, spread over two days.
+  await seedEntries(
+    Array.from({ length: 45 }, (_, i) => ({
+      description: `Work TEST-1 #${i + 1}`,
+      startedAt: at(1 + (i % 2), 6, i * 10),
+      endedAt: at(1 + (i % 2), 6, i * 10 + 10),
+    })),
+  );
+
+  await page.goto(WEEK);
+  await page.getByRole("button", { name: "Einträge zu TEST-1 anzeigen" }).click();
+  const entries = page.getByTestId("group-entry");
+  const count = page.getByTestId("group-entries-count");
+  const more = page.getByRole("button", { name: "Weitere laden" });
+
+  await expect(entries).toHaveCount(20);
+  await expect(count).toHaveText("20 von 45 Einträgen");
+  await more.click();
+  await expect(entries).toHaveCount(40);
+  await expect(count).toHaveText("40 von 45 Einträgen");
+  await more.click();
+  await expect(entries).toHaveCount(45);
+  await expect(more).toHaveCount(0);
+});
+
 test("issue keys on the Buchen page link to Jira", async ({ page }) => {
   await seedEntries([
     { description: "Fix TEST-1 a", startedAt: at(1, 9), endedAt: at(1, 10) },
