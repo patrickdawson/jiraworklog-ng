@@ -14,6 +14,7 @@ import {
 import {
   getBookableEntries,
   getBookableEntriesBetween,
+  getEntriesBetween,
   getFinishedDurationsBefore,
   getRunningEntry,
   getSettings,
@@ -25,7 +26,12 @@ import {
   daysAgoStartIso,
   formatDurationHoursMinutes,
 } from "@/lib/format";
-import { overtimeBalanceMinutes, secondsByDay } from "@/lib/entries";
+import {
+  groupTotalId,
+  overtimeBalanceMinutes,
+  secondsByDay,
+  toEntryView,
+} from "@/lib/entries";
 import { groupColorSchema, type GroupColor } from "@/lib/group-color";
 import {
   checkCredentials,
@@ -952,4 +958,53 @@ export async function getForceBooking(): Promise<boolean> {
 export async function setForceBooking(enabled: boolean): Promise<void> {
   setForceBookingState(enabled);
   revalidateAll();
+}
+
+// ──────────────────────────── Auswertung ──────────────────────────
+
+const groupEntriesSchema = z.object({
+  fromIso: z.iso.datetime(),
+  toIso: z.iso.datetime(),
+  groupId: z.string().max(100),
+});
+
+export type GroupEntry = {
+  id: number;
+  startedAt: string;
+  endedAt: string;
+  seconds: number;
+  description: string;
+};
+
+/**
+ * The finished entries of one "Zeit pro Ticket" bar, newest first. Loaded on
+ * demand: the range "Alle" holds too many entries to send them with the page.
+ */
+export async function getGroupEntries(input: {
+  fromIso: string;
+  toIso: string;
+  groupId: string;
+}): Promise<GroupEntry[]> {
+  const { fromIso, toIso, groupId } = groupEntriesSchema.parse(input);
+  const s = getSettings();
+  const cfg = {
+    projectKeys: parseProjectKeys(s.jiraProjectKeys),
+    breaks: parseBreaks(s.breaks),
+    autoPauseEnabled: s.autoPauseEnabled,
+  };
+  const result: GroupEntry[] = [];
+  for (const row of getEntriesBetween(fromIso, toIso)) {
+    const view = toEntryView(row, cfg);
+    // Same filter as `secondsByGroup`, so the list adds up to the bar.
+    if (view.effectiveSeconds <= 0 || !view.endedAt) continue;
+    if (groupTotalId(view) !== groupId) continue;
+    result.push({
+      id: view.id,
+      startedAt: view.startedAt,
+      endedAt: view.endedAt,
+      seconds: view.effectiveSeconds,
+      description: view.description,
+    });
+  }
+  return result;
 }

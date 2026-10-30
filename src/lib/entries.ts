@@ -122,12 +122,21 @@ export function toEntryView(
 }
 
 export type GroupTotal = {
+  /** `groupTotalId` of the group; stable across requests. */
+  id: string;
   /** `groupColorKey` of the group; null for concrete entries without a key. */
   key: string | null;
+  /** The ticket of a concrete group; undefined for Allgemeines and "kein Issue-Key". */
+  issueKey: string | undefined;
   label: string;
   isAllgemeines: boolean;
   seconds: number;
 };
+
+/** The bucket `secondsByGroup` puts an entry in. */
+export function groupTotalId(e: EntryView): string {
+  return groupColorKey(e) ?? "none";
+}
 
 /**
  * Worked time per ticket (concrete entries) or category (Allgemeines),
@@ -138,9 +147,11 @@ export function secondsByGroup(entries: EntryView[]): GroupTotal[] {
   for (const e of entries) {
     if (e.effectiveSeconds <= 0) continue;
     const key = groupColorKey(e);
-    const id = key ?? "none";
+    const id = groupTotalId(e);
     const total = totals.get(id) ?? {
+      id,
       key,
+      issueKey: e.isAllgemeines ? undefined : e.issueKey,
       label: e.isAllgemeines
         ? `Allgemein · ${e.category ?? "—"}`
         : (e.issueKey ?? "kein Issue-Key"),

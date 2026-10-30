@@ -1,4 +1,5 @@
 import { RangeControls } from "@/components/auswertung-export";
+import { TicketTime } from "@/components/ticket-time";
 import { Card, KpiCard, PageHeader } from "@/components/ui";
 import {
   getEntriesBetween,
@@ -11,9 +12,7 @@ import {
   secondsByDay,
   secondsByGroup,
   toEntryView,
-  type GroupTotal,
 } from "@/lib/entries";
-import { groupColorVars, type GroupColorMap } from "@/lib/group-color";
 import { formatHm, formatSignedHm } from "@/lib/format";
 import {
   parseRangeKind,
@@ -248,7 +247,14 @@ export default async function AuswertungPage({
       <div className="mt-3.5">
         <Card>
           <div className="text-[15px] font-semibold mb-3">Zeit pro Ticket</div>
-          <GroupBars data={groupTotals} colors={getGroupColors()} />
+          <TicketTime
+            // A new range starts with every bar closed and nothing cached.
+            key={`${resolved.from.toISOString()}|${resolved.to.toISOString()}`}
+            data={groupTotals}
+            colors={getGroupColors()}
+            fromIso={resolved.from.toISOString()}
+            toIso={resolved.to.toISOString()}
+          />
         </Card>
       </div>
     </main>
@@ -433,98 +439,5 @@ function DailyBars({
         );
       })}
     </svg>
-  );
-}
-
-/** Share of the total as a whole percent; tiny but non-zero shares show as "<1 %". */
-function formatShare(seconds: number, total: number): string {
-  const pct = (seconds * 100) / total;
-  return pct > 0 && pct < 1 ? "<1 %" : `${Math.round(pct)} %`;
-}
-
-/** Groups shown as their own bar; the rest is summed into one "Rest" bar. */
-const GROUP_BARS_MAX = 12;
-
-function GroupBars({
-  data,
-  colors,
-}: {
-  data: GroupTotal[];
-  colors: GroupColorMap;
-}) {
-  if (data.length === 0) {
-    return (
-      <div
-        className="text-center py-10 text-[13px]"
-        style={{ color: "var(--text-2)" }}
-      >
-        Noch keine Daten im gewählten Zeitraum.
-      </div>
-    );
-  }
-
-  const shown = data.slice(0, GROUP_BARS_MAX);
-  const restSeconds = data
-    .slice(GROUP_BARS_MAX)
-    .reduce((sum, g) => sum + g.seconds, 0);
-  const rows = shown.map((g) => {
-    const color = g.key ? colors[g.key] : undefined;
-    return {
-      id: g.key ?? "none",
-      label: g.label,
-      seconds: g.seconds,
-      fill: g.key ? groupColorVars(color, g.isAllgemeines).accent : "var(--text-3)",
-      color,
-    };
-  });
-  if (restSeconds > 0) {
-    rows.push({
-      id: "rest",
-      label: `Rest (${data.length - GROUP_BARS_MAX})`,
-      seconds: restSeconds,
-      fill: "var(--border-strong)",
-      color: undefined,
-    });
-  }
-  const max = Math.max(...rows.map((r) => r.seconds));
-  const total = data.reduce((sum, g) => sum + g.seconds, 0);
-
-  return (
-    <div className="space-y-2">
-      {rows.map((r) => (
-        <div
-          key={r.id}
-          data-testid="group-bar"
-          data-group-color={r.color ?? "default"}
-          className="grid grid-cols-[minmax(0,160px)_1fr_64px_44px] items-center gap-3 text-[13px]"
-        >
-          <div className="truncate font-semibold" title={r.label}>
-            {r.label}
-          </div>
-          <div
-            className="h-3 rounded"
-            style={{ background: "var(--surface-2)" }}
-          >
-            <div
-              className="h-3 rounded"
-              style={{
-                width: `${(r.seconds * 100) / max}%`,
-                background: r.fill,
-              }}
-            />
-          </div>
-          <div className="num text-right tabular-nums" style={{ color: "var(--text-2)" }}>
-            {formatHm(Math.round(r.seconds / 60))}
-          </div>
-          <div
-            data-testid="group-bar-percent"
-            className="num text-right tabular-nums"
-            style={{ color: "var(--text-3)" }}
-          >
-            {formatShare(r.seconds, total)}
-          </div>
-        </div>
-      ))}
-    </div>
   );
 }
