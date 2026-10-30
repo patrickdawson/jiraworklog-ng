@@ -44,6 +44,7 @@ import {
 } from "@/lib/entries";
 import { DescriptionCombobox } from "@/components/description-combobox";
 import { GroupColorPicker } from "@/components/group-color-picker";
+import { IssueKeyLink } from "@/components/issue-key-link";
 import {
   GroupColorsProvider,
   useGroupColors,
@@ -934,7 +935,11 @@ function GroupRow({
                   colorKey || group.isAllgemeines ? accent : "var(--text-3)",
               }}
             >
-              {groupLabel}
+              {!group.isAllgemeines && group.issueKey ? (
+                <IssueKeyLink issueKey={group.issueKey} />
+              ) : (
+                groupLabel
+              )}
             </div>
           </div>
         </div>
@@ -1287,12 +1292,11 @@ function JiraSubmitDialog({
                   {plan.worklogs.map((w, i) => (
                     <div key={i} className="px-3 py-2 text-[13px]">
                       <div className="flex items-center justify-between">
-                        <span
+                        <IssueKeyLink
+                          issueKey={w.issueKey}
                           className="font-semibold"
                           style={{ color: "var(--accent)" }}
-                        >
-                          {w.issueKey}
-                        </span>
+                        />
                         <span className="num font-semibold tabular-nums">
                           {w.timeSpent}
                         </span>

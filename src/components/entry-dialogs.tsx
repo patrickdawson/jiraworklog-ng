@@ -19,6 +19,7 @@ import {
 } from "@/lib/actions";
 import type { DescGroup, EntryView, RecentEntry } from "@/lib/entries";
 import { GroupColorPicker } from "@/components/group-color-picker";
+import { IssueKeyLink } from "@/components/issue-key-link";
 import { groupColorKey } from "@/lib/group-color";
 
 export const DEFAULT_CATEGORY: AllgemeinesCategory = "Projektorganisation";
@@ -321,7 +322,14 @@ export function EditEntryDialog({
                 isAllgemeines={isAllgemeines}
                 label={colorLabel}
               />
-              <span style={{ color: "var(--text-2)" }}>Farbe für {colorLabel}</span>
+              <span style={{ color: "var(--text-2)" }}>
+                Farbe für{" "}
+                {!isAllgemeines && entry?.issueKey ? (
+                  <IssueKeyLink issueKey={entry.issueKey} />
+                ) : (
+                  colorLabel
+                )}
+              </span>
             </div>
           )}
         </div>
