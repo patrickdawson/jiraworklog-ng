@@ -9,7 +9,9 @@ import {
 } from "@/db/queries";
 import {
   overtimeBalanceMinutes,
+  overtimeBalanceSeries,
   secondsByDay,
+  type BalancePoint,
   secondsByGroup,
   toEntryView,
 } from "@/lib/entries";
@@ -136,6 +138,14 @@ export default async function AuswertungPage({
     ).map((r) => toEntryView(r, cfg)),
   );
 
+  const balanceData = overtimeBalanceSeries(
+    byDay,
+    s.regularWorkMinutes,
+    dayKeys,
+    isoDayKey(new Date()),
+    s.overtimeBaselineMinutes,
+  );
+
   const chartDays = dayKeys.slice(-14);
   const chartData = chartDays.map((k) => ({
     key: k,
@@ -246,6 +256,13 @@ export default async function AuswertungPage({
 
       <div className="mt-3.5">
         <Card>
+          <div className="text-[15px] font-semibold mb-3">Saldo-Verlauf</div>
+          <BalanceLine data={balanceData} />
+        </Card>
+      </div>
+
+      <div className="mt-3.5">
+        <Card>
           <div className="text-[15px] font-semibold mb-3">Zeit pro Ticket</div>
           <TicketTime
             // A new range starts with every bar closed and nothing cached.
@@ -258,6 +275,172 @@ export default async function AuswertungPage({
         </Card>
       </div>
     </main>
+  );
+}
+
+const MONTH_SHORT = [
+  "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
+  "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
+];
+
+/**
+ * X-axis labels for the balance line. Short ranges label every day, up to two
+ * months label each Monday, longer ranges label month starts — thinned out so
+ * that "Alle" over several years still shows about twelve.
+ */
+function balanceLabels(keys: string[]): (string | null)[] {
+  const WEEKDAY_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  const parts = keys.map((k) => k.split("-").map(Number));
+  if (keys.length <= 14) {
+    return parts.map(
+      ([y, m, d]) => `${WEEKDAY_SHORT[new Date(y, m - 1, d).getDay()]} ${d}`,
+    );
+  }
+  if (keys.length <= 62) {
+    return parts.map(([y, m, d]) =>
+      new Date(y, m - 1, d).getDay() === 1 ? `${d}.${m}.` : null,
+    );
+  }
+  const monthStarts = parts.filter(([, , d]) => d === 1).length;
+  const step = Math.max(1, Math.ceil(monthStarts / 12));
+  let seen = 0;
+  return parts.map(([y, m, d]) => {
+    if (d !== 1) return null;
+    return seen++ % step === 0
+      ? `${MONTH_SHORT[m - 1]} ${String(y).slice(2)}`
+      : null;
+  });
+}
+
+function BalanceLine({ data }: { data: BalancePoint[] }) {
+  if (data.length === 0) {
+    return (
+      <div
+        className="text-center py-10 text-[13px]"
+        style={{ color: "var(--text-2)" }}
+      >
+        Noch keine Daten im gewählten Zeitraum.
+      </div>
+    );
+  }
+
+  const width = 1440;
+  const height = 240;
+  const padding = { top: 24, right: 72, bottom: 30, left: 64 };
+  const innerW = width - padding.left - padding.right;
+  const innerH = height - padding.top - padding.bottom;
+
+  const values = data.map((d) => d.minutes);
+  const maxMin = Math.max(0, ...values);
+  const minMin = Math.min(0, ...values);
+  // Keep a flat line at zero from collapsing the scale.
+  const span = Math.max(60, maxMin - minMin);
+  const yOf = (minutes: number) =>
+    padding.top + ((maxMin - minutes) * innerH) / span;
+  const xOf = (i: number) =>
+    data.length === 1
+      ? padding.left + innerW / 2
+      : padding.left + (i * innerW) / (data.length - 1);
+
+  const zeroY = yOf(0);
+  const points = data.map((d, i) => `${xOf(i)},${yOf(d.minutes)}`).join(" ");
+  const area = `${xOf(0)},${zeroY} ${points} ${xOf(data.length - 1)},${zeroY}`;
+  const labels = balanceLabels(data.map((d) => d.key));
+  const last = data[data.length - 1];
+  const lastColor = last.minutes >= 0 ? "var(--pos)" : "var(--neg)";
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="w-full h-auto"
+      role="img"
+      aria-label={`Saldo-Verlauf, aktuell ${formatSignedHm(last.minutes)}`}
+    >
+      <defs>
+        <clipPath id="saldo-above">
+          <rect x={0} y={0} width={width} height={zeroY} />
+        </clipPath>
+        <clipPath id="saldo-below">
+          <rect x={0} y={zeroY} width={width} height={height - zeroY} />
+        </clipPath>
+      </defs>
+      <line
+        x1={padding.left}
+        y1={zeroY}
+        x2={width - padding.right}
+        y2={zeroY}
+        stroke="var(--border-strong)"
+        strokeDasharray="4 4"
+      />
+      {[maxMin, 0, minMin]
+        .filter((v, i, all) => all.indexOf(v) === i)
+        .map((v) => (
+          <text
+            key={v}
+            x={padding.left - 8}
+            y={yOf(v) + 3.5}
+            fontSize="10.5"
+            textAnchor="end"
+            fill="var(--text-3)"
+          >
+            {v === 0 ? "0" : formatSignedHm(v)}
+          </text>
+        ))}
+      <polygon points={area} fill="var(--pos-soft)" clipPath="url(#saldo-above)" />
+      <polygon points={area} fill="var(--neg-soft)" clipPath="url(#saldo-below)" />
+      <polyline
+        points={points}
+        fill="none"
+        stroke="var(--pos)"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        clipPath="url(#saldo-above)"
+      />
+      <polyline
+        points={points}
+        fill="none"
+        stroke="var(--neg)"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        clipPath="url(#saldo-below)"
+      />
+      {data.map((d, i) => (
+        <g key={d.key} data-testid="saldo-point">
+          <circle cx={xOf(i)} cy={yOf(d.minutes)} r="6" fill="transparent">
+            <title>
+              {`${d.key.split("-").reverse().join(".")}: ${formatSignedHm(d.minutes)}`}
+            </title>
+          </circle>
+          {labels[i] && (
+            <text
+              x={xOf(i)}
+              y={padding.top + innerH + 18}
+              fontSize="10.5"
+              textAnchor="middle"
+              fill="var(--text-3)"
+            >
+              {labels[i]}
+            </text>
+          )}
+        </g>
+      ))}
+      <circle
+        cx={xOf(data.length - 1)}
+        cy={yOf(last.minutes)}
+        r="3.5"
+        fill={lastColor}
+      />
+      <text
+        data-testid="saldo-last"
+        x={xOf(data.length - 1) + 8}
+        y={yOf(last.minutes) + 4}
+        fontSize="12"
+        fontWeight="600"
+        fill={lastColor}
+      >
+        {formatSignedHm(last.minutes)}
+      </text>
+    </svg>
   );
 }
 

@@ -317,6 +317,41 @@ export function overtimeBalanceMinutes(
   return Math.round(balance);
 }
 
+export type BalancePoint = { key: string; minutes: number };
+
+/**
+ * The overtime balance at the end of each day in `dayKeys`, by the same rule as
+ * `overtimeBalanceMinutes`. Days before the first key still count, so the values
+ * are absolute and the last point matches the KPI. Days before the first tracked
+ * day and after `todayKey` are dropped: there is no balance to draw yet.
+ */
+export function overtimeBalanceSeries(
+  workedByDay: Map<string, number>,
+  regularWorkMinutes: number,
+  dayKeys: string[],
+  todayKey: string,
+  baselineMinutes = 0,
+): BalancePoint[] {
+  const tracked = [...workedByDay.keys()].sort();
+  if (tracked.length === 0) return [];
+  const visible = dayKeys.filter((k) => k >= tracked[0] && k <= todayKey);
+  if (visible.length === 0) return [];
+
+  const delta = (key: string) =>
+    (workedByDay.get(key) ?? 0) / 60 -
+    (workedByDay.has(key) && !isWeekendKey(key) ? regularWorkMinutes : 0);
+
+  let balance = baselineMinutes;
+  for (const key of tracked) {
+    if (key >= visible[0]) break;
+    balance += delta(key);
+  }
+  return visible.map((key) => {
+    balance += delta(key);
+    return { key, minutes: Math.round(balance) };
+  });
+}
+
 /** The columns the per-day aggregate needs — see `DurationRow` in the queries. */
 export type DurationLike = Pick<
   TimeEntry,
