@@ -60,6 +60,34 @@ test("saldo line — starts at the first tracked day", async ({ page }) => {
   await expect(points.first().locator("title")).toHaveText("11.09.2026: +02:00");
 });
 
+test("saldo line — the y-axis shows the corridor while the balance stays in it", async ({
+  page,
+}) => {
+  await seedSettings({
+    overtimeCorridorCenterHours: 0,
+    overtimeCorridorRangeHours: 5,
+  });
+  await page.goto("/auswertung?range=week&anchor=2026-09-15");
+  await expect(chart(page).getByTestId("saldo-tick")).toHaveText([
+    "+05:00",
+    "+00:00",
+    "−05:00",
+  ]);
+});
+
+test("saldo line — the y-axis widens when the balance leaves the corridor", async ({
+  page,
+}) => {
+  // Default corridor 100 ± 40 h, balance around 0 h: far below it.
+  await page.goto("/auswertung?range=week&anchor=2026-09-15");
+  await expect(chart(page).getByTestId("saldo-tick")).toHaveText([
+    "+140:00",
+    "+100:00",
+    "+60:00",
+    "+02:00",
+  ]);
+});
+
 test("saldo line — empty before anything was tracked", async ({ page }) => {
   await page.goto("/auswertung?range=month&anchor=2026-08-01");
   await expect(chart(page)).toHaveCount(0);

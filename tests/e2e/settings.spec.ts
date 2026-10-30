@@ -17,6 +17,8 @@ test("settings — save round-trips to DB and survives reload", async ({
   await page.getByLabel("Jira-URL").fill(newUrl);
   await page.getByLabel("Atlassian-E-Mail").fill(newEmail);
   await page.getByLabel("API-Token").fill(newToken);
+  await page.getByLabel("Saldo-Korridor: Mitte (h)").fill("-10");
+  await page.getByLabel("Saldo-Korridor: Spanne ± (h)").fill("25");
 
   // Add a fresh project key so we know the array path also persists.
   const newKeyInput = page.getByPlaceholder("z.B. TXR");
@@ -35,12 +37,15 @@ test("settings — save round-trips to DB and survives reload", async ({
   expect(after.jiraUser).toBe(newEmail);
   expect(after.jiraToken).toBe(newToken);
   expect(JSON.parse(after.jiraProjectKeys) as string[]).toContain("PW");
+  expect(after.overtimeCorridorCenterHours).toBe(-10);
+  expect(after.overtimeCorridorRangeHours).toBe(25);
 
   // Reload — values come back from the server.
   await page.reload();
   await expect(page.getByLabel("Jira-URL")).toHaveValue(newUrl);
   await expect(page.getByLabel("Atlassian-E-Mail")).toHaveValue(newEmail);
   await expect(page.getByLabel("API-Token")).toHaveValue(newToken);
+  await expect(page.getByLabel("Saldo-Korridor: Mitte (h)")).toHaveValue("-10");
   await expect(
     page.getByRole("button", { name: "PW entfernen" }),
   ).toBeVisible();
