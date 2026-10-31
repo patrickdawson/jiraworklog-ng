@@ -37,7 +37,7 @@
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^9.0.0",
-    "@types/node": "^20",
+    "@types/node": "^26.0.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "concurrently": "^10.0.0",
