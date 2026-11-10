@@ -1,10 +1,10 @@
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Mutex, MutexGuard};
 
 use rusqlite::Connection;
 use serde::Serialize;
 use specta::Type;
-use tauri::{AppHandle, Manager};
 
 /// Folder of the Electron app's `userData` (named after package.json `name`).
 /// The new app keeps using it so existing data is picked up as it is.
@@ -29,15 +29,26 @@ impl Db {
 /// "Force booking": also (re-)book entries already sent to Jira. Deliberately
 /// in memory only, so this dangerous mode resets on every app start.
 #[derive(Default)]
-pub struct ForceBooking(pub std::sync::atomic::AtomicBool);
+pub struct ForceBooking(pub AtomicBool);
+
+/// Index into [`crate::menu::ZOOM_STEPS`] of the current page zoom.
+pub struct Zoom(pub Mutex<usize>);
 
 /// `%APPDATA%\jiraworklog-ng\jiraworklog.db`, or `JWL_DB_PATH` if set
 /// (dev on a real-DB copy, E2E runs).
-pub fn db_path(app: &AppHandle) -> tauri::Result<PathBuf> {
+pub fn db_path() -> PathBuf {
     if let Some(p) = std::env::var_os("JWL_DB_PATH").filter(|p| !p.is_empty()) {
-        return Ok(PathBuf::from(p));
+        return PathBuf::from(p);
     }
-    Ok(app.path().data_dir()?.join(DATA_DIR_NAME).join(DB_FILE))
+    let appdata = std::env::var_os("APPDATA")
+        .map(PathBuf::from)
+        .unwrap_or_default();
+    appdata.join(DATA_DIR_NAME).join(DB_FILE)
+}
+
+/// The folder holding the database (and the log). "Datenordner öffnen" opens it.
+pub fn data_dir() -> PathBuf {
+    db_path().parent().map(PathBuf::from).unwrap_or_default()
 }
 
 /// Error type of every command. It reaches the UI as a plain string.
@@ -47,6 +58,12 @@ pub struct CommandError(String);
 
 impl From<jwl_core::Error> for CommandError {
     fn from(e: jwl_core::Error) -> Self {
+        Self(e.to_string())
+    }
+}
+
+impl From<tauri_plugin_autostart::Error> for CommandError {
+    fn from(e: tauri_plugin_autostart::Error) -> Self {
         Self(e.to_string())
     }
 }

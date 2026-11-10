@@ -4,13 +4,15 @@
 use std::sync::atomic::Ordering;
 
 use chrono::{Local, Utc};
+use jwl_core::away::{self, AwayCheck, AwayPeriod, ResolveAwayInput};
 use jwl_core::buchen::{self, BuchenData};
 use jwl_core::entries::AllgemeinesCategory;
 use jwl_core::settings::{self, Settings, SettingsInput};
 use jwl_core::store::{self, GroupColor};
 use jwl_core::timer::{self, EntriesTextInput, EntryInput, StartTimerResult, StopTimerResult};
 use jwl_core::AppInfo;
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_autostart::ManagerExt;
 
 use crate::state::{CommandResult, Db, ForceBooking};
 
@@ -164,4 +166,49 @@ pub fn set_group_color(
     color: Option<GroupColor>,
 ) -> CommandResult<()> {
     Ok(store::set_group_color(&db.lock(), &group_key, color)?)
+}
+
+// ── Away time ───────────────────────────────────────────────────────────────
+
+/// Whether an away span (from the `away-ended` event) is worth a question.
+#[tauri::command]
+#[specta::specta]
+pub fn check_away_time(db: State<'_, Db>, period: AwayPeriod) -> CommandResult<Option<AwayCheck>> {
+    Ok(away::check(&db.lock(), &period, Utc::now())?)
+}
+
+/// Cuts the away span out of the running timer.
+#[tauri::command]
+#[specta::specta]
+pub fn resolve_away_time(db: State<'_, Db>, input: ResolveAwayInput) -> CommandResult<()> {
+    Ok(away::resolve(&mut db.lock(), &input, &Local)?)
+}
+
+// ── Desktop ─────────────────────────────────────────────────────────────────
+
+/// Brings the window to the front, also out of the tray.
+#[tauri::command]
+#[specta::specta]
+pub fn show_window(app: AppHandle) {
+    crate::window::show(&app);
+}
+
+/// Whether the app starts at Windows login.
+#[tauri::command]
+#[specta::specta]
+pub fn get_auto_launch(app: AppHandle) -> CommandResult<bool> {
+    Ok(app.autolaunch().is_enabled()?)
+}
+
+/// Turns start at login on or off; returns the state that applies now.
+#[tauri::command]
+#[specta::specta]
+pub fn set_auto_launch(app: AppHandle, enabled: bool) -> CommandResult<bool> {
+    let launcher = app.autolaunch();
+    if enabled {
+        launcher.enable()?;
+    } else {
+        launcher.disable()?;
+    }
+    Ok(launcher.is_enabled()?)
 }
