@@ -77,6 +77,33 @@ pub fn close_running<Tz: TimeZone>(
     })
 }
 
+/// What the tray shows about the running timer.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RunningStatus {
+    pub description: String,
+    pub effective_seconds: f64,
+}
+
+/// The running timer with its effective time so far (breaks deducted), like
+/// the old `/api/timer/status` route.
+pub fn running_status<Tz: TimeZone>(
+    conn: &Connection,
+    now: DateTime<Utc>,
+    tz: &Tz,
+) -> Result<Option<RunningStatus>> {
+    let Some(running) = store::running_entry(conn)? else {
+        return Ok(None);
+    };
+    let s = settings::get(conn)?.values;
+    let seconds = parse_iso(&running.started_at).map_or(0.0, |start| {
+        effective_duration_seconds(start, None, &s.breaks, s.auto_pause_enabled, now, tz)
+    });
+    Ok(Some(RunningStatus {
+        description: running.description,
+        effective_seconds: seconds,
+    }))
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct StartTimerResult {
