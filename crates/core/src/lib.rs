@@ -4,13 +4,25 @@
 //! events, the tray and the window. Keeping them here makes them testable with
 //! a plain `cargo test`.
 
+pub mod buchen;
+pub mod days;
 pub mod db;
+pub mod description;
+pub mod entries;
 pub mod error;
 pub mod migrations;
 pub mod settings;
+pub mod store;
 pub mod time;
+pub mod timer;
+pub mod work_time;
 
 pub use error::{Error, Result};
+
+/// Overrides the TypeScript type of `f64` fields. specta exports `f64` as
+/// `number | null` (serde writes NaN as null); ours are never NaN, so the UI
+/// gets a plain `number`. Only the TS type changes, the value stays a float.
+pub(crate) type JsNumber = i32;
 
 use serde::Serialize;
 use specta::Type;
