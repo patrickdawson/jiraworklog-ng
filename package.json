@@ -22,7 +22,12 @@
     "db:realcopy": "node scripts/real-db-copy.mjs",
     "dev:realdb": "node scripts/real-db-copy.mjs && cross-env JWL_DB_PATH=./data/real-copy/jiraworklog.db next dev -p 3878",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "tauri:bindings": "cargo test -p jiraworklog export_bindings",
+    "tauri:check": "cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace && npm --prefix ui run lint && npm --prefix ui run typecheck"
   },
   "dependencies": {
     "@react-pdf/renderer": "4.5.1",
@@ -36,6 +41,7 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
+    "@tauri-apps/cli": "^2.12.4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -1,0 +1,10 @@
+[package]
+name = "jwl-core"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "JiraWorklog domain logic, storage and Jira client. Free of Tauri."
+
+[dependencies]
+serde.workspace = true
+specta.workspace = true

@@ -29,5 +29,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "electron", "dist-electron"]
+  "exclude": ["node_modules", "electron", "dist-electron", "ui", "src-tauri", "target"]
 }

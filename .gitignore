@@ -24,3 +24,9 @@ npm-debug.log*
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# tauri rewrite
+/target
+/ui/node_modules
+/ui/dist
+/src-tauri/gen/schemas

@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "drizzle/**",
     "mockups/**",
     "assets/**",
+    "ui/**",
+    "src-tauri/**",
+    "crates/**",
+    "target/**",
     "next-env.d.ts",
   ]),
 ]);
