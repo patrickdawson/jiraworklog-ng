@@ -12,7 +12,12 @@
     "resolveJsonModule": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "next/link": ["./src/next/link.tsx"],
+      "next/navigation": ["./src/next/navigation.ts"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }
