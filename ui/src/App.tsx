@@ -2,7 +2,9 @@ import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { HashRouter, Route, Routes } from "react-router";
 import { commands } from "@/bindings";
+import { AwayDialog } from "@/components/away-dialog";
 import { ConfirmProvider } from "@/components/confirm-dialog";
+import { DesktopBridge } from "@/components/desktop-bridge";
 import { JiraUrlProvider } from "@/components/issue-key-link";
 import { Sidebar } from "@/components/sidebar";
 import { orThrow, queryClient } from "@/lib/query";
@@ -24,6 +26,8 @@ function Layout() {
 
   return (
     <ConfirmProvider>
+      <DesktopBridge />
+      <AwayDialog />
       <JiraUrlProvider jiraUrl={jiraUrl}>
         <div className="grid min-h-screen grid-cols-[232px_1fr]">
           <Sidebar />

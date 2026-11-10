@@ -4,11 +4,12 @@
 import {
   commands,
   type AllgemeinesCategory,
+  type AwayCheck,
   type GroupColor,
   type StartTimerResult,
   type StopTimerResult,
 } from "@/bindings";
-import { queryClient } from "@/lib/query";
+import { orThrow, queryClient } from "@/lib/query";
 
 export type { StartTimerResult, StopTimerResult };
 export type ActionResult = { ok: boolean; message?: string };
@@ -65,6 +66,24 @@ export async function updateRunningCategory(category: AllgemeinesCategory): Prom
 
 export function updateRunningStartedAt(startedAtIso: string): Promise<ActionResult> {
   return toActionResult(commands.updateRunningStartedAt(startedAtIso));
+}
+
+// ── Away ────────────────────────────────────────────────────────────────────
+
+export type { AwayCheck };
+
+/** Whether an away span is worth a question; null when not. */
+export function checkAwayTime(awayFromIso: string, awayToIso: string): Promise<AwayCheck | null> {
+  return orThrow(commands.checkAwayTime({ from: awayFromIso, to: awayToIso }));
+}
+
+export function resolveAwayTime(input: {
+  entryId: number;
+  awayFrom: string;
+  awayTo: string;
+  mode: "continue" | "stop";
+}): Promise<ActionResult> {
+  return toActionResult(commands.resolveAwayTime(input));
 }
 
 // ── Entries ─────────────────────────────────────────────────────────────────
