@@ -14,6 +14,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 jwl-core = { path = "../crates/core" }
+rusqlite = "0.41"
 serde.workspace = true
 specta.workspace = true
 tauri = { version = "2", features = [] }

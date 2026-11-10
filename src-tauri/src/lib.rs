@@ -1,20 +1,23 @@
-use jwl_core::AppInfo;
+mod commands;
+mod state;
+
 use tauri::webview::PageLoadEvent;
+use tauri::Manager;
 use tauri_specta::{collect_commands, Builder};
+
+use state::Db;
 
 /// Where the generated TypeScript bindings land, relative to `src-tauri/`.
 pub const BINDINGS_PATH: &str = "../ui/src/bindings.ts";
 
-#[tauri::command]
-#[specta::specta]
-fn app_info() -> AppInfo {
-    jwl_core::app_info()
-}
-
 /// The command registry. The same builder serves the invoke handler and the
 /// TypeScript export, so the bindings can never drift from the commands.
 pub fn specta_builder() -> Builder<tauri::Wry> {
-    Builder::<tauri::Wry>::new().commands(collect_commands![app_info])
+    Builder::<tauri::Wry>::new().commands(collect_commands![
+        commands::app_info,
+        commands::get_settings,
+        commands::update_settings,
+    ])
 }
 
 pub fn run() {
@@ -24,6 +27,17 @@ pub fn run() {
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
+
+            let path = state::db_path(app.handle())?;
+            let (conn, report) = jwl_core::db::open(&path)?;
+            // Replaced by the log plugin in milestone 4.
+            eprintln!(
+                "db {} · migrated {:?} · backup {:?}",
+                path.display(),
+                report.migrated,
+                report.backup
+            );
+            app.manage(Db::new(conn));
             Ok(())
         })
         // The window starts hidden (tauri.conf.json) and appears once the UI

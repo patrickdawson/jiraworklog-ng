@@ -7,6 +7,10 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 /** Commands */
 export const commands = {
 	appInfo: () => __TAURI_INVOKE<AppInfo>("app_info"),
+	/**  The settings, created with defaults on first use. */
+	getSettings: () => typedError<Settings_Serialize, CommandError>(__TAURI_INVOKE("get_settings")),
+	/**  Validates and saves the settings form, then returns what is stored. */
+	updateSettings: (input: SettingsInput_Deserialize) => typedError<Settings_Serialize, CommandError>(__TAURI_INVOKE("update_settings", { input })),
 };
 
 /* Types */
@@ -14,4 +18,96 @@ export const commands = {
 export type AppInfo = {
 	version: string,
 };
+
+/**  How finished entries are turned into Jira worklogs. */
+export type BookingMode = "grouped" | "individual";
+
+/**  A fixed daily break, e.g. lunch from `12:00` to `12:30`. */
+export type BreakWindow = {
+	start: string,
+	end: string,
+};
+
+/**  Error type of every command. It reaches the UI as a plain string. */
+export type CommandError = string;
+
+/**  Which Jira credentials the user entered. */
+export type JiraAuthMode = "token" | "basic";
+
+/**  The stored settings: the editable values plus when they last changed. */
+export type Settings = Settings_Serialize | Settings_Deserialize;
+
+/**  The editable settings, as the settings form sends them. */
+export type SettingsInput = SettingsInput_Serialize | SettingsInput_Deserialize;
+
+/**  The editable settings, as the settings form sends them. */
+export type SettingsInput_Deserialize = {
+	regularWorkMinutes: number,
+	dailyTargetMinutes: number,
+	breaks: BreakWindow[],
+	autoPauseEnabled: boolean,
+	bookingMode: BookingMode,
+	dataRetentionDays: number,
+	jiraUrl: string,
+	jiraProjectKeys: string[],
+	jiraAuthMode: JiraAuthMode,
+	jiraToken?: string | null,
+	jiraUser?: string | null,
+	jiraPassword?: string | null,
+	overtimeBaselineMinutes: number,
+	themeMode: ThemeMode,
+	sprintAnchorDate: string,
+	sprintLengthDays: number,
+	concreteIssueTargetPercent: number,
+	overtimeCorridorCenterHours: number,
+	overtimeCorridorRangeHours: number,
+	awayCheckEnabled: boolean,
+};
+
+/**  The editable settings, as the settings form sends them. */
+export type SettingsInput_Serialize = {
+	regularWorkMinutes: number,
+	dailyTargetMinutes: number,
+	breaks: BreakWindow[],
+	autoPauseEnabled: boolean,
+	bookingMode: BookingMode,
+	dataRetentionDays: number,
+	jiraUrl: string,
+	jiraProjectKeys: string[],
+	jiraAuthMode: JiraAuthMode,
+	jiraToken: string | null,
+	jiraUser: string | null,
+	jiraPassword: string | null,
+	overtimeBaselineMinutes: number,
+	themeMode: ThemeMode,
+	sprintAnchorDate: string,
+	sprintLengthDays: number,
+	concreteIssueTargetPercent: number,
+	overtimeCorridorCenterHours: number,
+	overtimeCorridorRangeHours: number,
+	awayCheckEnabled: boolean,
+};
+
+/**  The stored settings: the editable values plus when they last changed. */
+export type Settings_Deserialize = {
+	updatedAt: string,
+} & SettingsInput_Deserialize;
+
+/**  The stored settings: the editable values plus when they last changed. */
+export type Settings_Serialize = {
+	updatedAt: string,
+} & SettingsInput_Serialize;
+
+/**  UI theme: follow the OS or force one. */
+export type ThemeMode = "system" | "light" | "dark";
+
+/* Tauri Specta runtime */
+async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {
+    try {
+        return { status: "ok", data: await result };
+    } catch (e) {
+        if (e instanceof Error) throw e;
+        return { status: "error", error: e as any };
+    }
+}
 
