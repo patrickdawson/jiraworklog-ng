@@ -5,7 +5,7 @@ use tauri::webview::PageLoadEvent;
 use tauri::Manager;
 use tauri_specta::{collect_commands, Builder};
 
-use state::Db;
+use state::{Db, ForceBooking};
 
 /// Where the generated TypeScript bindings land, relative to `src-tauri/`.
 pub const BINDINGS_PATH: &str = "../ui/src/bindings.ts";
@@ -17,6 +17,18 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
         commands::app_info,
         commands::get_settings,
         commands::update_settings,
+        commands::buchen_data,
+        commands::start_timer,
+        commands::stop_timer,
+        commands::update_running_description,
+        commands::update_running_allgemeines,
+        commands::update_running_category,
+        commands::update_running_started_at,
+        commands::create_manual_entry,
+        commands::update_entry,
+        commands::update_entries,
+        commands::delete_entry,
+        commands::set_group_color,
     ])
 }
 
@@ -38,6 +50,7 @@ pub fn run() {
                 report.backup
             );
             app.manage(Db::new(conn));
+            app.manage(ForceBooking::default());
             Ok(())
         })
         // The window starts hidden (tauri.conf.json) and appears once the UI

@@ -26,6 +26,11 @@ impl Db {
     }
 }
 
+/// "Force booking": also (re-)book entries already sent to Jira. Deliberately
+/// in memory only, so this dangerous mode resets on every app start.
+#[derive(Default)]
+pub struct ForceBooking(pub std::sync::atomic::AtomicBool);
+
 /// `%APPDATA%\jiraworklog-ng\jiraworklog.db`, or `JWL_DB_PATH` if set
 /// (dev on a real-DB copy, E2E runs).
 pub fn db_path(app: &AppHandle) -> tauri::Result<PathBuf> {

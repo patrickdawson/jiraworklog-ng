@@ -11,9 +11,29 @@ export const commands = {
 	getSettings: () => typedError<Settings_Serialize, CommandError>(__TAURI_INVOKE("get_settings")),
 	/**  Validates and saves the settings form, then returns what is stored. */
 	updateSettings: (input: SettingsInput_Deserialize) => typedError<Settings_Serialize, CommandError>(__TAURI_INVOKE("update_settings", { input })),
+	/**  Everything the Buchen page shows. `days = null` loads the whole history. */
+	buchenData: (days: number | null) => typedError<BuchenData_Serialize, CommandError>(__TAURI_INVOKE("buchen_data", { days })),
+	/**  Stops any running timer, then starts a new one. */
+	startTimer: (description: string, isAllgemeines: boolean, category: AllgemeinesCategory | null) => typedError<StartTimerResult, CommandError>(__TAURI_INVOKE("start_timer", { description, isAllgemeines, category })),
+	stopTimer: () => typedError<StopTimerResult, CommandError>(__TAURI_INVOKE("stop_timer")),
+	updateRunningDescription: (description: string) => typedError<null, CommandError>(__TAURI_INVOKE("update_running_description", { description })),
+	updateRunningAllgemeines: (isAllgemeines: boolean, category: AllgemeinesCategory | null) => typedError<null, CommandError>(__TAURI_INVOKE("update_running_allgemeines", { isAllgemeines, category })),
+	updateRunningCategory: (category: AllgemeinesCategory) => typedError<null, CommandError>(__TAURI_INVOKE("update_running_category", { category })),
+	/**  Back-dates the running timer. */
+	updateRunningStartedAt: (startedAt: string) => typedError<null, CommandError>(__TAURI_INVOKE("update_running_started_at", { startedAt })),
+	createManualEntry: (input: EntryInput_Deserialize) => typedError<null, CommandError>(__TAURI_INVOKE("create_manual_entry", { input })),
+	updateEntry: (id: number, input: EntryInput_Deserialize) => typedError<null, CommandError>(__TAURI_INVOKE("update_entry", { id, input })),
+	/**  Same text, flag and category for several entries (a Buchen group). */
+	updateEntries: (ids: number[], input: EntriesTextInput_Deserialize) => typedError<null, CommandError>(__TAURI_INVOKE("update_entries", { ids, input })),
+	deleteEntry: (id: number) => typedError<null, CommandError>(__TAURI_INVOKE("delete_entry", { id })),
+	/**  Stores a group's color; `null` resets it. */
+	setGroupColor: (groupKey: string, color: GroupColor | null) => typedError<null, CommandError>(__TAURI_INVOKE("set_group_color", { groupKey, color })),
 };
 
 /* Types */
+/**  Report category of an Allgemeines entry. */
+export type AllgemeinesCategory = "Projektorganisation" | "Implementierung" | "QA" | "Release";
+
 /**  Static facts about the running build, shown in "Über JiraWorklog". */
 export type AppInfo = {
 	version: string,
@@ -28,11 +48,234 @@ export type BreakWindow = {
 	end: string,
 };
 
+export type BuchenConfig = {
+	dailyTargetMinutes: number,
+	autoPauseEnabled: boolean,
+	breaks: BreakWindow[],
+	bookingMode: BookingMode,
+	jiraConfigured: boolean,
+	forceBooking: boolean,
+};
+
+export type BuchenData = BuchenData_Serialize | BuchenData_Deserialize;
+
+export type BuchenData_Deserialize = {
+	running?: RunningEntry_Deserialize | null,
+	todayCommittedSeconds: number,
+	/**  Overtime balance from finished entries only. */
+	overtimeBalanceMinutes: number,
+	/**
+	 *  Target the running entry's start day adds once the timer stops; 0 when
+	 *  that day already has finished time, is a weekend, or nothing runs.
+	 */
+	runningDayTargetMinutes: number,
+	days: DayGroup_Deserialize[],
+	groupColors: { [key in string]: GroupColor },
+	recents: RecentEntry_Deserialize[],
+	/**  Bookable entries across the WHOLE history; the header button books all. */
+	openBookableCount: number,
+	history: HistoryWindow_Deserialize,
+	config: BuchenConfig,
+};
+
+export type BuchenData_Serialize = {
+	running: RunningEntry_Serialize | null,
+	todayCommittedSeconds: number,
+	/**  Overtime balance from finished entries only. */
+	overtimeBalanceMinutes: number,
+	/**
+	 *  Target the running entry's start day adds once the timer stops; 0 when
+	 *  that day already has finished time, is a weekend, or nothing runs.
+	 */
+	runningDayTargetMinutes: number,
+	days: DayGroup_Serialize[],
+	groupColors: { [key in string]: GroupColor },
+	recents: RecentEntry_Serialize[],
+	/**  Bookable entries across the WHOLE history; the header button books all. */
+	openBookableCount: number,
+	history: HistoryWindow_Serialize,
+	config: BuchenConfig,
+};
+
 /**  Error type of every command. It reaches the UI as a plain string. */
 export type CommandError = string;
 
+export type DayGroup = DayGroup_Serialize | DayGroup_Deserialize;
+
+export type DayGroup_Deserialize = {
+	dayKey: string,
+	label: string,
+	groups: DescGroup_Deserialize[],
+	totalSeconds: number,
+	unsubmittedCount: number,
+};
+
+export type DayGroup_Serialize = {
+	dayKey: string,
+	label: string,
+	groups: DescGroup_Serialize[],
+	totalSeconds: number,
+	unsubmittedCount: number,
+};
+
+export type DescGroup = DescGroup_Serialize | DescGroup_Deserialize;
+
+export type DescGroup_Deserialize = {
+	description: string,
+	issueKey?: string | null,
+	entries: EntryView_Deserialize[],
+	totalSeconds: number,
+	allSubmitted: boolean,
+	isAllgemeines: boolean,
+	category?: AllgemeinesCategory | null,
+};
+
+export type DescGroup_Serialize = {
+	description: string,
+	issueKey?: string,
+	entries: EntryView_Serialize[],
+	totalSeconds: number,
+	allSubmitted: boolean,
+	isAllgemeines: boolean,
+	category: AllgemeinesCategory | null,
+};
+
+/**  The "Gruppe bearbeiten" dialog: same text, flag and category for many entries. */
+export type EntriesTextInput = EntriesTextInput_Serialize | EntriesTextInput_Deserialize;
+
+/**  The "Gruppe bearbeiten" dialog: same text, flag and category for many entries. */
+export type EntriesTextInput_Deserialize = {
+	description: string,
+	isAllgemeines: boolean,
+	category?: AllgemeinesCategory | null,
+};
+
+/**  The "Gruppe bearbeiten" dialog: same text, flag and category for many entries. */
+export type EntriesTextInput_Serialize = {
+	description: string,
+	isAllgemeines: boolean,
+	category: AllgemeinesCategory | null,
+};
+
+/**  The form of the "Eintrag hinzufügen" and "Eintrag bearbeiten" dialogs. */
+export type EntryInput = EntryInput_Serialize | EntryInput_Deserialize;
+
+/**  The form of the "Eintrag hinzufügen" and "Eintrag bearbeiten" dialogs. */
+export type EntryInput_Deserialize = {
+	description: string,
+	/**  Both times or neither (a description-only edit). */
+	startedAt?: string | null,
+	endedAt?: string | null,
+	isAllgemeines?: boolean | null,
+	category?: AllgemeinesCategory | null,
+};
+
+/**  The form of the "Eintrag hinzufügen" and "Eintrag bearbeiten" dialogs. */
+export type EntryInput_Serialize = {
+	description: string,
+	/**  Both times or neither (a description-only edit). */
+	startedAt: string | null,
+	endedAt: string | null,
+	isAllgemeines: boolean | null,
+	category: AllgemeinesCategory | null,
+};
+
+export type EntryView = EntryView_Serialize | EntryView_Deserialize;
+
+export type EntryView_Deserialize = {
+	id: number,
+	description: string,
+	startedAt: string,
+	endedAt?: string | null,
+	submittedAt?: string | null,
+	jiraIssueKey?: string | null,
+	issueKey?: string | null,
+	comment: string,
+	effectiveSeconds: number,
+	isAllgemeines: boolean,
+	category?: AllgemeinesCategory | null,
+};
+
+export type EntryView_Serialize = {
+	id: number,
+	description: string,
+	startedAt: string,
+	endedAt: string | null,
+	submittedAt: string | null,
+	jiraIssueKey: string | null,
+	issueKey?: string,
+	comment: string,
+	effectiveSeconds: number,
+	isAllgemeines: boolean,
+	category: AllgemeinesCategory | null,
+};
+
+/**  Palette a group can be colored with; the theme decides the shade. */
+export type GroupColor = "indigo" | "teal" | "pink" | "orange" | "green" | "sky" | "purple" | "slate";
+
+export type HistoryWindow = HistoryWindow_Serialize | HistoryWindow_Deserialize;
+
+export type HistoryWindow_Deserialize = {
+	/**  Days of history `days` covers; `None` = everything. */
+	windowDays?: number | null,
+	/**  Entries older than the window; 0 when everything is shown. */
+	hiddenOlderCount: number,
+};
+
+export type HistoryWindow_Serialize = {
+	/**  Days of history `days` covers; `None` = everything. */
+	windowDays: number | null,
+	/**  Entries older than the window; 0 when everything is shown. */
+	hiddenOlderCount: number,
+};
+
 /**  Which Jira credentials the user entered. */
 export type JiraAuthMode = "token" | "basic";
+
+/**  One distinct piece of work the user can pick up again, merged across days. */
+export type RecentEntry = RecentEntry_Serialize | RecentEntry_Deserialize;
+
+/**  One distinct piece of work the user can pick up again, merged across days. */
+export type RecentEntry_Deserialize = {
+	key: string,
+	description: string,
+	issueKey?: string | null,
+	isAllgemeines: boolean,
+	category?: AllgemeinesCategory | null,
+	count: number,
+	totalSeconds: number,
+	lastStartedAt: string,
+};
+
+/**  One distinct piece of work the user can pick up again, merged across days. */
+export type RecentEntry_Serialize = {
+	key: string,
+	description: string,
+	issueKey?: string,
+	isAllgemeines: boolean,
+	category: AllgemeinesCategory | null,
+	count: number,
+	totalSeconds: number,
+	lastStartedAt: string,
+};
+
+export type RunningEntry = RunningEntry_Serialize | RunningEntry_Deserialize;
+
+export type RunningEntry_Deserialize = {
+	id: number,
+	description: string,
+	startedAt: string,
+	isAllgemeines: boolean,
+	category?: AllgemeinesCategory | null,
+};
+
+export type RunningEntry_Serialize = {
+	id: number,
+	description: string,
+	startedAt: string,
+	isAllgemeines: boolean,
+	category: AllgemeinesCategory | null,
+};
 
 /**  The stored settings: the editable values plus when they last changed. */
 export type Settings = Settings_Serialize | Settings_Deserialize;
@@ -97,6 +340,17 @@ export type Settings_Deserialize = {
 export type Settings_Serialize = {
 	updatedAt: string,
 } & SettingsInput_Serialize;
+
+export type StartTimerResult = {
+	previousDiscarded: boolean,
+	previousSecondsTracked: number,
+};
+
+export type StopTimerResult = {
+	stopped: boolean,
+	discarded: boolean,
+	secondsTracked: number,
+};
 
 /**  UI theme: follow the OS or force one. */
 export type ThemeMode = "system" | "light" | "dark";
