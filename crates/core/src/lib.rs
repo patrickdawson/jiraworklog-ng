@@ -7,6 +7,7 @@
 pub mod db;
 pub mod error;
 pub mod migrations;
+pub mod settings;
 pub mod time;
 
 pub use error::{Error, Result};
