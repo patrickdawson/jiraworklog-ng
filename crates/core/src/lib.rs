@@ -4,6 +4,13 @@
 //! events, the tray and the window. Keeping them here makes them testable with
 //! a plain `cargo test`.
 
+pub mod db;
+pub mod error;
+pub mod migrations;
+pub mod time;
+
+pub use error::{Error, Result};
+
 use serde::Serialize;
 use specta::Type;
 
