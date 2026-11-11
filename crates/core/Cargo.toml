@@ -8,15 +8,20 @@ description = "JiraWorklog domain logic, storage and Jira client. Free of Tauri.
 [dependencies]
 base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+miniz_oxide = "0.9"
+pdf-writer = "0.15"
 regex = "1"
 rusqlite = { version = "0.41", features = ["bundled"] }
 serde.workspace = true
 serde_json = "1"
 sha2 = "0.10"
 specta.workspace = true
+subsetter = { version = "0.2", default-features = false }
 thiserror = "2"
+ttf-parser = { version = "0.25", default-features = false, features = ["std"] }
 ureq = { version = "3", default-features = false, features = ["native-tls", "gzip"] }
 
 [dev-dependencies]
 chrono-tz = "0.10"
+lopdf = "0.47"
 tempfile = "3"

@@ -8,6 +8,7 @@ pub mod auswertung;
 pub mod away;
 pub mod booking;
 pub mod buchen;
+pub mod category_report;
 pub mod cleanup;
 pub mod days;
 pub mod db;
@@ -17,12 +18,14 @@ pub mod error;
 pub mod jira;
 pub mod kalender;
 pub mod migrations;
+pub mod pdf;
 pub mod report_range;
 pub mod settings;
 pub mod store;
 pub mod time;
 pub mod timer;
 pub mod work_time;
+pub mod worklog_report;
 
 pub use error::{Error, Result};
 
