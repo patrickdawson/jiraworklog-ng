@@ -9,6 +9,11 @@ description = "JiraWorklog desktop shell"
 name = "jiraworklog_lib"
 crate-type = ["rlib"]
 
+[features]
+# Test hooks for the WebdriverIO suite (e2e/): no single-instance lock, a fake
+# UI clock. Only `npm run tauri:e2e` builds with it, into target/e2e.
+e2e = []
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 

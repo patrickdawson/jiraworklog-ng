@@ -1,4 +1,6 @@
 mod commands;
+#[cfg(feature = "e2e")]
+mod e2e;
 mod events;
 mod menu;
 mod power;
@@ -81,12 +83,17 @@ fn log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 pub fn run() {
     let builder = specta_builder();
 
-    tauri::Builder::default()
-        // Must be first: a second start only brings the running app forward.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            window::show(app);
-        }))
-        .plugin(log_plugin())
+    let app = tauri::Builder::default();
+    // Must be first: a second start only brings the running app forward.
+    // The E2E build leaves it out (see `e2e.rs`).
+    #[cfg(not(feature = "e2e"))]
+    let app = app.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        window::show(app);
+    }));
+    #[cfg(feature = "e2e")]
+    let app = app.plugin(e2e::plugin());
+
+    app.plugin(log_plugin())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
