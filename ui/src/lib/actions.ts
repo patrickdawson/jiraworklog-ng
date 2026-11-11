@@ -8,6 +8,7 @@ import {
   type BookingPlan,
   type GroupColor,
   type GroupEntriesPage,
+  type SettingsInput_Serialize,
   type StartTimerResult,
   type StopTimerResult,
   type SubmitResult_Serialize,
@@ -130,6 +131,34 @@ export async function deleteEntry(id: number): Promise<void> {
 
 export async function setGroupColor(groupKey: string, color: GroupColor | null): Promise<void> {
   await unwrap(commands.setGroupColor(groupKey, color));
+}
+
+// ── Settings ────────────────────────────────────────────────────────────────
+
+export type SettingsInput = SettingsInput_Serialize;
+
+const INTEGER_FIELDS = [
+  "regularWorkMinutes",
+  "dailyTargetMinutes",
+  "dataRetentionDays",
+  "overtimeBaselineMinutes",
+  "sprintLengthDays",
+  "concreteIssueTargetPercent",
+  "overtimeCorridorCenterHours",
+  "overtimeCorridorRangeHours",
+] as const;
+
+/**
+ * Saves the settings form. Rust checks the ranges; numbers that are no
+ * 32-bit integers would fail while the command's arguments are read, with a
+ * technical text, so they get the old zod message here.
+ */
+export function updateSettings(input: SettingsInput): Promise<ActionResult> {
+  const isI32 = (n: number) => Number.isInteger(n) && n >= -(2 ** 31) && n < 2 ** 31;
+  if (!INTEGER_FIELDS.every((k) => isI32(input[k]))) {
+    return Promise.resolve({ ok: false, message: "Ungültige Einstellungen." });
+  }
+  return toActionResult(commands.updateSettings(input));
 }
 
 // ── Jira ────────────────────────────────────────────────────────────────────

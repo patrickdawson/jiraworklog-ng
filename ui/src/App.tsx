@@ -10,6 +10,7 @@ import { Sidebar } from "@/components/sidebar";
 import { orThrow, queryClient } from "@/lib/query";
 import { AuswertungPage } from "@/pages/auswertung";
 import { BuchenPage } from "@/pages/buchen";
+import { EinstellungenPage } from "@/pages/einstellungen";
 import { KalenderPage } from "@/pages/kalender";
 import { NotPortedYet } from "@/pages/status";
 
@@ -40,7 +41,7 @@ function Layout() {
               <Route path="/" element={<BuchenPage />} />
               <Route path="/kalender" element={<KalenderPage />} />
               <Route path="/auswertung" element={<AuswertungPage />} />
-              <Route path="/einstellungen" element={<NotPortedYet title="Einstellungen" />} />
+              <Route path="/einstellungen" element={<EinstellungenPage />} />
               <Route path="/hilfe/*" element={<NotPortedYet title="Hilfe" />} />
             </Routes>
           </div>
