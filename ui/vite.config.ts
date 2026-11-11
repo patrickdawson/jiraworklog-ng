@@ -27,6 +27,13 @@ export default defineConfig({
     port: 1420,
     strictPort: true,
     watch: { ignored: ["**/src-tauri/**"] },
+    // "Was ist neu" imports the repo's CHANGELOG.md, which lies outside ui/.
+    fs: {
+      allow: [
+        fileURLToPath(new URL(".", import.meta.url)),
+        fileURLToPath(new URL("../CHANGELOG.md", import.meta.url)),
+      ],
+    },
   },
   build: {
     target: "es2022",

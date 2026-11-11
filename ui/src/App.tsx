@@ -11,8 +11,9 @@ import { orThrow, queryClient } from "@/lib/query";
 import { AuswertungPage } from "@/pages/auswertung";
 import { BuchenPage } from "@/pages/buchen";
 import { EinstellungenPage } from "@/pages/einstellungen";
+import { HilfePage } from "@/pages/hilfe";
+import { WasIstNeuPage } from "@/pages/hilfe-neu";
 import { KalenderPage } from "@/pages/kalender";
-import { NotPortedYet } from "@/pages/status";
 
 /** The app frame: what the Next app's root layout rendered around each page. */
 function Layout() {
@@ -42,7 +43,8 @@ function Layout() {
               <Route path="/kalender" element={<KalenderPage />} />
               <Route path="/auswertung" element={<AuswertungPage />} />
               <Route path="/einstellungen" element={<EinstellungenPage />} />
-              <Route path="/hilfe/*" element={<NotPortedYet title="Hilfe" />} />
+              <Route path="/hilfe" element={<HilfePage />} />
+              <Route path="/hilfe/neu" element={<WasIstNeuPage />} />
             </Routes>
           </div>
         </div>
