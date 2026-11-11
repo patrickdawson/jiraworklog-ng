@@ -1,0 +1,26 @@
+{
+  "name": "jiraworklog-e2e",
+  "private": true,
+  "version": "0.8.0",
+  "type": "module",
+  "description": "End-to-end tests: WebdriverIO + tauri-driver against the built Tauri app",
+  "scripts": {
+    "test": "wdio run ./wdio.conf.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24",
+    "@wdio/cli": "10.2.0",
+    "@wdio/globals": "10.2.0",
+    "@wdio/local-runner": "10.2.0",
+    "@wdio/mocha-framework": "10.2.0",
+    "@wdio/spec-reporter": "10.2.0",
+    "better-sqlite3": "^12.10.0",
+    "expect": "^30.5.2",
+    "expect-webdriverio": "8.0.0",
+    "typescript": "^5",
+    "webdriverio": "10.2.0"
+  }
+}

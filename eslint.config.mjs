@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     "mockups/**",
     "assets/**",
     "ui/**",
+    "e2e/**",
     "src-tauri/**",
     "crates/**",
     "target/**",

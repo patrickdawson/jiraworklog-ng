@@ -27,7 +27,8 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "tauri:bindings": "cargo test -p jiraworklog export_bindings",
-    "tauri:check": "cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace && npm --prefix ui run lint && npm --prefix ui run typecheck"
+    "tauri:check": "cargo clippy --workspace --all-targets -- -D warnings && cargo clippy -p jiraworklog --all-targets --features e2e -- -D warnings && cargo test --workspace && npm --prefix ui run lint && npm --prefix ui run typecheck && npm --prefix e2e run typecheck",
+    "tauri:e2e": "npm --prefix e2e test"
   },
   "dependencies": {
     "@react-pdf/renderer": "4.5.1",

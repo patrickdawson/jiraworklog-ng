@@ -29,4 +29,5 @@ npm-debug.log*
 /target
 /ui/node_modules
 /ui/dist
+/e2e/node_modules
 /src-tauri/gen/schemas
