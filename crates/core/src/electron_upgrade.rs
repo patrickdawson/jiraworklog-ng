@@ -2,15 +2,16 @@
 //!
 //! The NSIS installer stops and uninstalls the old Electron app (see
 //! `src-tauri/windows/installer-hooks.nsh`) and then runs the new exe once with
-//! `--upgrade-from-electron`. That step lives here, behind the
+//! `--post-install` (plus `--from-electron` after removing the old app). That
+//! step lives here, behind the
 //! [`StartupRegistry`] trait, so it can be tested without touching the real
 //! registry:
 //!
 //! - the autostart setting moves from the Run value Electron's
 //!   `setLoginItemSettings` wrote (`electron.app.JiraWorklog`) to the one
 //!   `tauri-plugin-autostart` reads (`JiraWorklog`), in exactly the plugin's
-//!   format, and
-//! - the database gets a copy (`db::backup_existing`, label `electron`) before
+//!   format (later installs re-point the value at the installed exe), and
+//! - after removing Electron, the database gets a copy (`db::backup_existing`, label `electron`) before
 //!   the new app opens it for the first time.
 //!
 //! The data folder itself needs nothing: both apps use
@@ -65,29 +66,47 @@ pub fn approved_is_enabled(bytes: Option<&[u8]>) -> bool {
 /// What [`migrate_autostart`] found and did.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AutostartOutcome {
-    /// The Electron app had no autostart: nothing set.
+    /// Neither app has an autostart entry: nothing set.
     NotSet,
-    /// Autostart was on: the new value was written (`value`) and the old one removed.
+    /// Electron's autostart was on: the new value was written (`value`) and
+    /// the old one removed.
     Carried { value: String },
-    /// The old value existed but was switched off in Task Manager: removed,
-    /// nothing set, so the new app starts with autostart off as well.
+    /// Electron's value existed but was switched off in Task Manager:
+    /// removed, nothing set, so the new app starts with autostart off too.
     WasDisabled,
+    /// The Tauri app's own value already points to `exe`.
+    Kept,
+    /// The Tauri app's own value pointed elsewhere (e.g. installed to another
+    /// folder this time) and now points to `exe`.
+    Repointed { from: String, value: String },
 }
 
-/// Moves the Electron app's autostart entry to the Tauri app at `exe`.
+/// Brings the autostart entry in line with the app just installed at `exe`.
 ///
-/// Idempotent: once the Electron value is gone, it reports `NotSet` and
-/// leaves an existing `JiraWorklog` value alone.
+/// - Electron's `electron.app.JiraWorklog` (if any) moves to `JiraWorklog`
+///   (see [`AutostartOutcome`]).
+/// - Otherwise an existing `JiraWorklog` value is pointed at `exe`, in the
+///   plugin's format; its Task Manager state is left as it is.
+/// - No value at all: nothing is written.
+///
+/// Idempotent.
 pub fn migrate_autostart(
     reg: &mut impl StartupRegistry,
     exe: &str,
 ) -> std::io::Result<AutostartOutcome> {
+    let value = autostart_command(exe, &[]);
     if reg.run_value(ELECTRON_RUN_VALUE)?.is_none() {
-        return Ok(AutostartOutcome::NotSet);
+        return Ok(match reg.run_value(TAURI_RUN_VALUE)? {
+            None => AutostartOutcome::NotSet,
+            Some(current) if current == value => AutostartOutcome::Kept,
+            Some(from) => {
+                reg.set_run_value(TAURI_RUN_VALUE, &value)?;
+                AutostartOutcome::Repointed { from, value }
+            }
+        });
     }
     let approved = reg.approved(ELECTRON_RUN_VALUE)?;
     let outcome = if approved_is_enabled(approved.as_deref()) {
-        let value = autostart_command(exe, &[]);
         // Same order as auto-launch's enable: Run value, then the approval.
         reg.set_run_value(TAURI_RUN_VALUE, &value)?;
         reg.set_approved_if_key_exists(TAURI_RUN_VALUE, &STARTUP_APPROVED_ENABLED)?;
@@ -262,9 +281,32 @@ mod tests {
         let after_first = r.clone();
         assert_eq!(
             migrate_autostart(&mut r, NEW_EXE).unwrap(),
-            AutostartOutcome::NotSet
+            AutostartOutcome::Kept
         );
         assert_eq!(r, after_first);
+    }
+
+    #[test]
+    fn a_tauri_value_for_another_folder_is_repointed() {
+        let disabled: &[u8] = &[3, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8];
+        let old = r"C:\elsewhere\jiraworklog.exe ";
+        let mut r = reg(
+            &[(TAURI_RUN_VALUE, old)],
+            Some(&[(TAURI_RUN_VALUE, disabled)]),
+        );
+        assert_eq!(
+            migrate_autostart(&mut r, NEW_EXE).unwrap(),
+            AutostartOutcome::Repointed {
+                from: old.into(),
+                value: format!("{NEW_EXE} ")
+            }
+        );
+        assert_eq!(r.run.get(TAURI_RUN_VALUE).unwrap(), &format!("{NEW_EXE} "));
+        // Task Manager's "disabled" stays as the user set it.
+        assert_eq!(
+            r.approved.unwrap().get(TAURI_RUN_VALUE).unwrap(),
+            &disabled.to_vec()
+        );
     }
 
     #[test]
