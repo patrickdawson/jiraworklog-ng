@@ -3,26 +3,13 @@
   "version": "0.8.0",
   "private": true,
   "author": "JiraWorklog",
-  "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "next dev -p 3877",
-    "build": "next build",
-    "start": "next start -p 3877",
-    "lint": "eslint",
+    "lint": "npm --prefix ui run lint",
+    "typecheck": "npm --prefix ui run typecheck && npm --prefix e2e run typecheck",
     "icons": "node scripts/gen-icons.mjs",
-    "electron:compile": "tsc -p tsconfig.electron.json",
-    "electron:dev:launch": "npm run electron:compile && electron dist-electron/main.js",
-    "electron:dev": "cross-env JWL_IPC_SECRET=dev-secret concurrently -k -n next,electron \"next dev -p 3877\" \"npm run electron:dev:launch\"",
-    "electron:build": "next build --webpack && node scripts/prepare-standalone.mjs && npm run electron:compile && node scripts/rebuild-electron.mjs && electron-builder --win nsis",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio",
     "db:seed": "node scripts/db-sample.mjs seed",
     "db:unseed": "node scripts/db-sample.mjs clean",
     "db:realcopy": "node scripts/real-db-copy.mjs",
-    "dev:realdb": "node scripts/real-db-copy.mjs && cross-env JWL_DB_PATH=./data/real-copy/jiraworklog.db next dev -p 3878",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
@@ -30,69 +17,8 @@
     "tauri:check": "cargo clippy --workspace --all-targets -- -D warnings && cargo clippy -p jiraworklog --all-targets --features e2e -- -D warnings && cargo test --workspace && npm --prefix ui run lint && npm --prefix ui run typecheck && npm --prefix e2e run typecheck",
     "tauri:e2e": "npm --prefix e2e test"
   },
-  "dependencies": {
-    "@react-pdf/renderer": "4.5.1",
-    "better-sqlite3": "^12.10.0",
-    "drizzle-orm": "^0.45.2",
-    "next": "16.2.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "zod": "^4.4.3"
-  },
   "devDependencies": {
-    "@playwright/test": "^1.60.0",
-    "@tailwindcss/postcss": "^4",
     "@tauri-apps/cli": "^2.12.4",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "concurrently": "^9.1.2",
-    "cross-env": "^7.0.3",
-    "drizzle-kit": "^0.31.10",
-    "electron": "^33.3.1",
-    "electron-builder": "^25.1.8",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.6",
-    "prebuild-install": "^7.1.3",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  },
-  "build": {
-    "appId": "com.jiraworklog.ng",
-    "productName": "JiraWorklog",
-    "directories": {
-      "output": "release"
-    },
-    "asar": true,
-    "npmRebuild": false,
-    "files": [
-      "dist-electron/**/*",
-      "!**/node_modules/**",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": ".next/standalone",
-        "to": "standalone"
-      },
-      {
-        "from": "drizzle",
-        "to": "drizzle"
-      },
-      {
-        "from": "assets",
-        "to": "assets"
-      }
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "assets/icon.png"
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "artifactName": "JiraWorklog-${version}-setup.exe"
-    }
+    "better-sqlite3": "^12.10.0"
   }
 }

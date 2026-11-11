@@ -1,12 +1,6 @@
 /node_modules
-/.next
-/out
-/build
 /data
-/release
-/dist-electron
 *.tsbuildinfo
-next-env.d.ts
 .env*
 .DS_Store
 
@@ -19,15 +13,22 @@ next-env.d.ts
 *.log
 npm-debug.log*
 
-# playwright e2e
-/tests/.tmp/
-/test-results/
-/playwright-report/
-/playwright/.cache/
-
-# tauri rewrite
+# Tauri app
 /target
 /ui/node_modules
 /ui/dist
 /e2e/node_modules
 /src-tauri/gen/schemas
+
+# Build output of the removed Electron/Next app, still on old checkouts.
+# release/ also holds the old installer the sandbox upgrade test maps in.
+/.next
+/out
+/build
+/release
+/dist-electron
+next-env.d.ts
+/tests/.tmp/
+/test-results/
+/playwright-report/
+/playwright/.cache/
