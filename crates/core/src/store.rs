@@ -71,17 +71,58 @@ pub fn finished_durations(conn: &Connection) -> Result<Vec<DurationRow>> {
 }
 
 /// Finished, non-Allgemeines entries that can go to Jira; in force mode the
-/// already submitted ones count again.
-pub fn count_bookable(conn: &Connection, include_submitted: bool) -> Result<i32> {
-    let submitted = if include_submitted {
-        ""
+/// already submitted ones count again. One predicate for the list and the
+/// count, so the header button's number always matches what gets booked.
+fn bookable_filter(include_submitted: bool) -> &'static str {
+    if include_submitted {
+        "ended_at IS NOT NULL AND is_allgemeines = 0"
     } else {
-        "AND submitted_at IS NULL"
-    };
+        "ended_at IS NOT NULL AND is_allgemeines = 0 AND submitted_at IS NULL"
+    }
+}
+
+pub fn count_bookable(conn: &Connection, include_submitted: bool) -> Result<i32> {
     let sql = format!(
-        "SELECT COUNT(*) FROM time_entries WHERE ended_at IS NOT NULL AND is_allgemeines = 0 {submitted}"
+        "SELECT COUNT(*) FROM time_entries WHERE {}",
+        bookable_filter(include_submitted)
     );
     Ok(conn.query_row(&sql, [], |r| r.get(0))?)
+}
+
+/// Every bookable entry, newest first.
+pub fn bookable_entries(conn: &Connection, include_submitted: bool) -> Result<Vec<TimeEntry>> {
+    let filter = format!("WHERE {}", bookable_filter(include_submitted));
+    entries(conn, &filter, [])
+}
+
+/// Bookable entries starting in `[from_iso, to_iso_exclusive)`, newest first.
+pub fn bookable_entries_between(
+    conn: &Connection,
+    from_iso: &str,
+    to_iso_exclusive: &str,
+    include_submitted: bool,
+) -> Result<Vec<TimeEntry>> {
+    let filter = format!(
+        "WHERE {} AND started_at >= ?1 AND started_at < ?2",
+        bookable_filter(include_submitted)
+    );
+    entries(conn, &filter, [from_iso, to_iso_exclusive])
+}
+
+/// Finished entries starting strictly before `before_iso` (lean projection).
+pub fn finished_durations_before(conn: &Connection, before_iso: &str) -> Result<Vec<DurationRow>> {
+    let mut stmt = conn.prepare(
+        "SELECT started_at, ended_at, is_allgemeines FROM time_entries
+         WHERE ended_at IS NOT NULL AND started_at < ?1",
+    )?;
+    let rows = stmt.query_map([before_iso], |r| {
+        Ok(DurationRow {
+            started_at: r.get(0)?,
+            ended_at: r.get(1)?,
+            is_allgemeines: r.get(2)?,
+        })
+    })?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
 /// How many entries start strictly before `before_iso`.

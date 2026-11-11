@@ -6,12 +6,15 @@
 
 pub mod auswertung;
 pub mod away;
+pub mod booking;
 pub mod buchen;
+pub mod cleanup;
 pub mod days;
 pub mod db;
 pub mod description;
 pub mod entries;
 pub mod error;
+pub mod jira;
 pub mod kalender;
 pub mod migrations;
 pub mod report_range;

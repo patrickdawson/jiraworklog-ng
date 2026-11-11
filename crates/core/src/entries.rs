@@ -158,7 +158,7 @@ pub fn desc_group_key(
 }
 
 /// Effective seconds of a finished entry; 0 for a running or broken one.
-fn finished_seconds<Tz: TimeZone>(
+pub(crate) fn finished_seconds<Tz: TimeZone>(
     started_at: &str,
     ended_at: Option<&str>,
     breaks: &[BreakWindow],
