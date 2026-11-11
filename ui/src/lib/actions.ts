@@ -5,10 +5,12 @@ import {
   commands,
   type AllgemeinesCategory,
   type AwayCheck,
+  type BookingPlan,
   type GroupColor,
   type GroupEntriesPage,
   type StartTimerResult,
   type StopTimerResult,
+  type SubmitResult_Serialize,
 } from "@/bindings";
 import { orThrow, queryClient } from "@/lib/query";
 
@@ -130,44 +132,75 @@ export async function setGroupColor(groupKey: string, color: GroupColor | null):
   await unwrap(commands.setGroupColor(groupKey, color));
 }
 
-// ── Jira booking (milestone 6) ──────────────────────────────────────────────
+// ── Jira ────────────────────────────────────────────────────────────────────
 
-export type PlannedWorklog = {
-  issueKey: string;
-  timeSpent: string;
-  minutes: number;
-  comment: string;
-  entryCount: number;
-};
-export type SkippedEntry = { description: string; reason: string };
-export type DayBookingPlan = { worklogs: PlannedWorklog[]; skipped: SkippedEntry[] };
-export type SubmitResult = {
-  ok: boolean;
-  bookedWorklogs: number;
-  bookedEntries: number;
-  errors: string[];
-  skipped: SkippedEntry[];
-  message?: string;
-};
+export type { PlannedWorklog, SkippedEntry } from "@/bindings";
+export type DayBookingPlan = BookingPlan;
+export type SubmitResult = Omit<SubmitResult_Serialize, "message"> & { message?: string };
 
-const NOT_YET = "Die Jira-Buchung ist in der neuen App noch nicht verfügbar.";
-
-export async function previewDayBooking(dayKey: string): Promise<DayBookingPlan> {
-  void dayKey;
-  return { worklogs: [], skipped: [{ description: "Jira", reason: NOT_YET }] };
+function toSubmitResult(r: SubmitResult_Serialize): SubmitResult {
+  const { message, ...rest } = r;
+  return message == null ? rest : { ...rest, message };
 }
 
+/** Returns what would be booked for a day, without sending anything. */
+export function previewDayBooking(dayKey: string): Promise<DayBookingPlan> {
+  return orThrow(commands.previewDayBooking(dayKey));
+}
+
+/** Same as previewDayBooking, but across all days with open entries. */
 export function previewAllOpenBooking(): Promise<DayBookingPlan> {
-  return previewDayBooking("");
+  return orThrow(commands.previewAllOpenBooking());
 }
 
+/** Books all not-yet-submitted entries of a day to Jira. */
 export async function submitDayToJira(dayKey: string): Promise<SubmitResult> {
-  void dayKey;
-  return { ok: false, bookedWorklogs: 0, bookedEntries: 0, errors: [], skipped: [], message: NOT_YET };
+  return toSubmitResult(await unwrap(commands.submitDayToJira(dayKey)));
 }
 
-export function submitAllOpenToJira(): Promise<SubmitResult> {
-  return submitDayToJira("");
+/** Books all not-yet-submitted entries across every day. */
+export async function submitAllOpenToJira(): Promise<SubmitResult> {
+  return toSubmitResult(await unwrap(commands.submitAllOpenToJira()));
+}
+
+/** Tests Jira credentials without persisting them. */
+export async function testJiraConnection(input: {
+  jiraUrl: string;
+  jiraToken: string | null;
+  jiraUser: string | null;
+  jiraPassword?: string | null;
+}): Promise<ActionResult> {
+  const r = await commands.testJiraConnection({ ...input, jiraPassword: input.jiraPassword ?? null });
+  return r.status === "ok" ? r.data : { ok: false, message: r.error };
+}
+
+/** Reads the runtime-only force-booking switch (not persisted). */
+export function getForceBooking(): Promise<boolean> {
+  return commands.getForceBooking();
+}
+
+/** Toggles force booking: also re-book submitted entries. Off again after a restart. */
+export async function setForceBooking(enabled: boolean): Promise<void> {
+  await commands.setForceBooking(enabled);
+  revalidateAll();
+}
+
+// ── Cleanup ─────────────────────────────────────────────────────────────────
+
+/** Deletes finished entries older than `days`, rolling their overtime into the baseline. */
+export async function cleanupOldEntries(days: number): Promise<{
+  ok: boolean;
+  deleted: number;
+  overtimeRolledMinutes: number;
+  message?: string;
+}> {
+  if (!Number.isFinite(days) || days < 1) {
+    return { ok: false, deleted: 0, overtimeRolledMinutes: 0, message: "Ungültige Tagesangabe." };
+  }
+  // Whole days; anything beyond ~270 years deletes nothing anyway.
+  const r = await unwrap(commands.cleanupOldEntries(Math.min(Math.ceil(days), 100_000)));
+  const { message, ...rest } = r;
+  return message == null ? rest : { ...rest, message };
 }
 
 // ── Auswertung ──────────────────────────────────────────────────────────────
