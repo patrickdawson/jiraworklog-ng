@@ -1,7 +1,8 @@
 # Tauri migration: plan and state
 
 Branch `tauri-rewrite` (not pushed). Last updated 2026-11-11, after milestone 11
-(cut-over): the repository holds only the Tauri app, version 0.9.0.
+(cut-over): the repository holds only the Tauri app, now at version
+1.0.0-beta.1 (0.9.0 at the cut-over; bumped for the first test install).
 
 ## Goal
 
@@ -1024,7 +1025,7 @@ Then:
 Need the user (nothing here can be done safely by an agent on this machine):
 
 - **Sandbox upgrade test** (milestone 10, "Manual test" above): enable
-  Windows Sandbox (admin + reboot), then run it before publishing 0.9.0.
+  Windows Sandbox (admin + reboot), then run it before publishing a release.
   Nothing of the installer logic has run yet.
 - **First real Jira booking** after the switch, especially TLS through the
   corporate proxy/CA (milestone 6).
