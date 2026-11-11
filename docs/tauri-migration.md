@@ -1,6 +1,6 @@
 # Tauri migration: plan and state
 
-Branch `tauri-rewrite` (not pushed). Last updated 2026-11-11, after milestone 7.
+Branch `tauri-rewrite` (not pushed). Last updated 2026-11-11, after milestone 8.
 
 ## Goal
 
@@ -94,8 +94,8 @@ they ignore `ui/`, `src-tauri/`, `crates/`.
 | 5 | Kalender + Auswertung | ✅ done (PDF buttons wait for 7) |
 | 6 | Jira: connection test, booking preview, submit, force booking, cleanup | ✅ done (settings UI for test/force/cleanup comes with 8) |
 | 7 | PDF reports ("Als PDF", "Axapta-Bericht") | ✅ done (`pdf-writer`, not typst; see Decisions) |
-| 8 | Einstellungen, Hilfe, Was ist neu | ⏭ next |
-| 9 | E2E port to WebdriverIO + tauri-driver | open |
+| 8 | Einstellungen, Hilfe, Was ist neu, parity audit | ✅ done (see parity checklist) |
+| 9 | E2E port to WebdriverIO + tauri-driver | ⏭ next |
 | 10 | Installer + upgrade path from Electron | open |
 | 11 | Cut-over: delete Next/Electron, docs, version bump | open |
 
@@ -123,6 +123,10 @@ ff0d760 feat(ui): Replace the Jira stubs with the real commands
 33ce558 feat(core): Port the timesheet and Axapta report data and render both PDFs
 c7a7f95 feat(tauri): Add the PDF export commands with a native save dialog
 0c001df feat(ui): Bring back the "Als PDF" and "Axapta-Bericht" buttons
+cd426f3 feat(ui): Port the Einstellungen page
+266dbca feat(ui): Port the Hilfe and "Was ist neu" pages
+0e21456 feat(tauri): Title the window "JiraWorklog Tracker" and test the About text
+a40ede3 docs: Describe the user-visible changes of the Tauri app
 ```
 
 ## What exists, by area
@@ -181,8 +185,16 @@ c7a7f95 feat(tauri): Add the PDF export commands with a native save dialog
 ### ui
 
 - `App.tsx`: hash router, layout (sidebar, confirm dialog, Jira URL, theme),
-  `DesktopBridge`, `AwayDialog`. Buchen, Kalender and Auswertung are ported;
-  Einstellungen and Hilfe show "Noch nicht portiert".
+  `DesktopBridge`, `AwayDialog`. Every route of the Next app is ported:
+  `/`, `/kalender`, `/auswertung`, `/einstellungen`, `/hilfe`, `/hilfe/neu`.
+- `pages/einstellungen.tsx` + `components/einstellungen-form.tsx`: the form
+  with three changes (desktop bridge for autostart, the unsaved-changes guard
+  compares hash routes, no `beforeunload` guard, as in Electron).
+- `pages/hilfe.tsx`: the static guide; the table of contents scrolls with
+  `scrollIntoView` (a `#id` link would replace the hash route).
+- `pages/hilfe-neu.tsx`: `CHANGELOG.md` imported with `?raw` at build time,
+  parsed by `lib/changelog.ts` (copied unchanged). `vite.config.ts` lets the
+  dev server read that one file outside `ui/`.
 - `pages/*.tsx` load one command's view model each via TanStack Query.
 - `lib/timeline.ts` (calendar lanes, gaps, overlaps) stays TypeScript: it is
   view geometry and re-runs every second while a timer runs.
@@ -200,8 +212,10 @@ Copy the component from `src/components/` and change as little as possible:
   `router.refresh()` = invalidate all queries.
 - `ui/src/lib/actions.ts` keeps the old server-action names and signatures but
   calls Tauri commands, then invalidates all queries (= `revalidatePath`).
-  It already has the settings-page actions `testJiraConnection`,
-  `get/setForceBooking` and `cleanupOldEntries` for milestone 8.
+  It has all 23 server actions of `src/lib/actions.ts`. `updateSettings`
+  answers non-i32 numbers itself with "Ungültige Einstellungen.", because
+  Tauri would reject them while reading the arguments, with a technical
+  text.
 - `ui/src/db/schema.ts` and `ui/src/lib/entries.ts` re-export generated types
   (use the `_Serialize` variants for data coming from Rust).
 - `window.electron` → `desktop` from `ui/src/lib/desktop.ts` (same API).
@@ -213,7 +227,7 @@ Copy the component from `src/components/` and change as little as possible:
 
 ## Verification done
 
-- 80 Rust tests in the core crate green (after milestone 7); clippy, lint and tsc clean at every commit.
+- 80 Rust tests in the core crate and 5 in the shell green (after milestone 8); clippy, lint and tsc clean at every commit.
 - Migrations on real data: the live-DB copy needs nothing; the stale July DB
   migrated 0004 → 0008 with a backup, and reopening it is a no-op.
 - Buchen view model: old TS (`dump-buchen-ts.mts` via `tsx`) and new Rust
@@ -276,6 +290,153 @@ Copy the component from `src/components/` and change as little as possible:
   "Rules learned the hard way": those two saves landed in the real
   Downloads folder.
 
+- Milestone 8 in the running app, over CDP only, on a fresh temp copy of
+  `data/real-copy` (scratchpad), with a node mock Jira on 127.0.0.1:18080.
+  One Playwright script, 70 checks, green twice in a row after a clean
+  restart (no console errors):
+  - Einstellungen: every client validation message (hh:mm ×2, ±hh:mm, sprint
+    anchor, sprint length, percent, corridor centre and range), the Rust
+    message for a bad break and for retention 5000, the wrapper message for
+    retention 1.5; "Verwerfen" restores fields and breaks.
+  - Every field changed at once (both times, baseline, URL, e-mail, token,
+    sprint anchor/length, percent, corridor centre/range, retention, booking
+    mode, theme, auto-pause, away check, breaks added/edited/removed, a
+    project key added in lower case and one removed), saved ("Einstellungen
+    gespeichert."), page reloaded: every value came back from Rust, the key
+    upper-cased.
+  - Theme: the select previews at once, "Verwerfen" and leaving with
+    "Verwerfen" drop the preview, a saved theme survives the reload.
+  - Unsaved-changes guard: a sidebar link and a menu `navigate` event both
+    ask first; "Abbrechen" stays, "Verwerfen" goes on.
+  - Jira test against the mock: "Verbunden als Mock User.", wrong token →
+    "E-Mail / API-Token ist falsch.", refused port → "Keine Verbindung zum
+    Server. Bitte Jira-URL prüfen. (…)", empty URL → "Bitte zuerst eine
+    Jira-URL angeben.".
+  - Force booking on → `get_force_booking` true, Buchen shows the warning,
+    the checkbox reloads as on; off again. The toggle does not dirty the form.
+  - Cleanup: 0 days is rejected inline, 60 days asks (in-app confirm) and
+    shows "n Eintrag/Einträge gelöscht. … in den Startsaldo übernommen.".
+  - Autostart: the Desktop section shows the state read by
+    `get_auto_launch` (off; the Run key has no `JiraWorklog` value, read
+    only). Not clicked.
+  - Hilfe: 11 sections, version line, the table of contents scrolls and the
+    route stays `#/hilfe`; "Was ist neu" lists 8 releases plus the
+    "In Arbeit" card with the new [Unreleased] entries, dates as dd.mm.yyyy;
+    "Zur Anleitung" goes back.
+  - Menu routes: the `navigate` event (what "Anleitung" and "Was ist neu"
+    emit) reaches `/hilfe` and `/hilfe/neu`, also as the first action after a
+    clean start. Window title "JiraWorklog Tracker".
+- Rust: 3 new tests in `src-tauri/src/menu.rs` (About text, About version =
+  package.json version, zoom default 100 %).
+
+## Parity checklist (old feature → new location → verified how)
+
+"CDP 8" = the milestone-8 script above; "CDP 5/6/7" = earlier milestones'
+checks; "diff" = Rust output compared with the old TS on the real copy;
+"open" = see the open checks.
+
+### Pages and their data
+
+| Old | New | Verified |
+|---|---|---|
+| `src/app/page.tsx` (Buchen) | `pages/buchen.tsx` → `buchen_data` | diff (M3), by hand |
+| `src/app/kalender/page.tsx` | `pages/kalender.tsx` → `kalender_data` | diff + CDP 5 |
+| `src/app/auswertung/page.tsx` | `pages/auswertung.tsx` → `auswertung_data`, `group_entries` | diff + CDP 5 |
+| `src/app/einstellungen/page.tsx` | `pages/einstellungen.tsx` → `get_settings`, `get_force_booking` | CDP 8 |
+| `src/app/hilfe/page.tsx` | `pages/hilfe.tsx` | CDP 8 |
+| `src/app/hilfe/neu/page.tsx` (reads CHANGELOG.md) | `pages/hilfe-neu.tsx` (`?raw`) | CDP 8 |
+| `src/app/layout.tsx` (theme, Jira URL, sidebar, title) | `App.tsx` `Layout`, `index.html` | CDP 8 (theme, title) |
+
+### Server actions (`src/lib/actions.ts`, all 23)
+
+| Old | New command | Verified |
+|---|---|---|
+| `startTimer`, `stopTimer` | `start_timer`, `stop_timer` | by hand (M3), core tests |
+| `updateRunningDescription` / `Allgemeines` / `Category` / `StartedAt` | `update_running_*` | core tests, by hand (M3) |
+| `checkAwayTime`, `resolveAwayTime` | `check_away_time`, `resolve_away_time` | simulated lock (M4), core tests |
+| `createManualEntry`, `updateEntry`, `updateEntries`, `deleteEntry` | same names, snake case | core tests, by hand (M3) |
+| `setGroupColor` | `set_group_color` | core tests |
+| `updateSettings` | `update_settings` | CDP 8, core tests |
+| `testJiraConnection` | `test_jira_connection` | CDP 6 + CDP 8 (mock) |
+| `cleanupOldEntries` | `cleanup_old_entries` | diff + CDP 6 + CDP 8 |
+| `previewDayBooking`, `previewAllOpenBooking` | `preview_*_booking` | diff (M6) |
+| `submitDayToJira`, `submitAllOpenToJira` | `submit_*_to_jira` | CDP 6 (mock) |
+| `getForceBooking`, `setForceBooking` | `get/set_force_booking` | CDP 6 + CDP 8 |
+| `getGroupEntries` | `group_entries` | diff + CDP 5 |
+
+### API routes
+
+| Old | New | Verified |
+|---|---|---|
+| `GET /api/timer/status` (tray poll) | `timer::running_status`, tray thread every 1 s | open (tray not clicked, M4) |
+| `POST /api/timer/stop` (tray) | tray menu `tray-stop` + `TimerStopped` event | open (tray not clicked, M4) |
+| `GET /api/report/pdf` | `export_worklog_pdf` | diff + CDP 7 |
+| `GET /api/report/category-pdf` | `export_category_pdf` | diff + CDP 7 |
+| shared-secret header (`electron-ipc.ts`) | not needed: no HTTP server | — |
+
+### `window.electron` (preload) → `desktop` (`ui/src/lib/desktop.ts`)
+
+| Old | New | Verified |
+|---|---|---|
+| `isElectron` (shows Einstellungen → Desktop) | section appears once `get_auto_launch` answered | CDP 8 |
+| `onTimerStopped` | `events.timerStopped` | open (tray stop not clicked) |
+| `onAwayEnded` | `events.awayEnded` (power watcher) | simulated lock (M4) |
+| `onNavigate` | `events.navigate` | CDP 8 (event emitted from the WebView) |
+| `showWindow` | `show_window` | by hand (M4, away dialog) |
+| `getAutoLaunch` | `get_auto_launch` | CDP 8 (read only) |
+| `setAutoLaunch` | `set_auto_launch` (autostart plugin, Run key `JiraWorklog`) | open (registry, never toggled) |
+
+### Electron main process (`electron/main.ts`)
+
+| Old | New | Verified |
+|---|---|---|
+| single-instance lock, second start shows window | single-instance plugin → `window::show` | by hand (M4) |
+| window 1280×860, min 940×640, hidden until ready | `tauri.conf.json`, shown in `on_page_load` | by hand |
+| title from the page ("JiraWorklog Tracker") | `tauri.conf.json` title | CDP 8 (page title); window title by config |
+| external links → default browser | `DesktopBridge` click handler → opener | by hand (M4) |
+| renderer warnings/errors → `main.log` | `lib/log.ts` → `tauri-main.log` | by hand (M4) |
+| `did-fail-load` logged | no equivalent; load errors reach `tauri-main.log` via `window.onerror` only | deviation, harmless |
+| close → hide to tray | `on_window_event` `CloseRequested` | by hand (M4) |
+| tray: status label, "Timer stoppen", show/hide label, "Beenden", tooltip, idle/running icon, left click shows | `tray.rs` | unit test (format); open (not clicked) |
+| menu Datei: "Fenster schließen" (Ctrl+W), "Beenden" (Ctrl+Q) | `menu.rs` | open (native menu) |
+| menu Bearbeiten: undo, redo, cut, copy, paste, select all | `PredefinedMenuItem`s | open (native menu) |
+| menu Ansicht: reload, devtools (dev only), zoom reset/in/out, fullscreen | `menu.rs` custom items, `Zoom` state | open (native menu); zoom steps unit test |
+| menu Hilfe: "Anleitung" (F1), "Was ist neu" | `open_route` → `Navigate` event | CDP 8 for the UI side; native click open |
+| menu Hilfe: "Datenordner öffnen" | opener `open_path(data_dir())` (follows `JWL_DB_PATH`) | open (opens Explorer) |
+| menu Hilfe: "Über JiraWorklog" | `show_about` message dialog | unit test of the text; dialog open |
+| away detection: lock/unlock, suspend/resume | `power.rs` hidden window | simulated (M4); real Win+L/sleep open |
+| autostart via `setLoginItemSettings` (`electron.app.JiraWorklog`) | autostart plugin (`JiraWorklog`) | open; migration of the Run value is milestone 10 |
+| `backgroundThrottling: false` | not needed: tray and away detection run in Rust; the UI recomputes from timestamps when shown | — |
+| embedded Next server, port, `server.log` | gone (no server) | — |
+| `src/instrumentation.ts` (TLS off) | certificate check on (deviation, M6) | CHANGELOG |
+| `src/proxy.ts` (scanner/flood guard) | gone: no port is opened | CHANGELOG |
+| update checks, notifications, deep links, protocol handlers | none in the old app | — |
+
+### Deviations from the Electron app (milestone 8)
+
+- No `beforeunload` guard on unsaved settings. Electron skipped it too
+  (`inElectron`), so the desktop behaviour is the same; only the browser
+  mode had it, and that mode is gone.
+- Settings numbers that are no 32-bit integers get "Ungültige
+  Einstellungen." from the UI wrapper instead of zod. Same text.
+- Hilfe: "nur Desktop-App" dropped; a paragraph on the certificate check,
+  the connection error text and the 60 s timeout added. README and
+  CHANGELOG [Unreleased] carry the same (prepared now; version bump,
+  tech stack and quick start follow in milestone 11).
+- Pre-existing in both apps: the texts say autostart starts "minimiert im
+  System-Tray", but neither app passes a hidden flag; the window shows at
+  login. Not changed (parity); decide at the cut-over.
+
+### Open checks from milestone 8
+
+- Not clicked on purpose: the autostart checkbox (registry), "Über
+  JiraWorklog" and "Datenordner öffnen" (native windows), the native menu
+  itself (the UI side of its `navigate` event is checked), the
+  "id.atlassian.com" link (would open the real browser).
+- First load after changing `vite.config.ts` came up blank once; a reload
+  fixed it, a clean restart loaded fine. Same symptom as the milestone-4
+  note (Vite re-optimising); dev only.
+
 ### Deviations from the Electron app (milestone 7)
 
 - Font: embedded Arimo instead of the non-embedded standard Helvetica. Same
@@ -326,40 +487,84 @@ Copy the component from `src/components/` and change as little as possible:
 - The tray icon itself (menu, tooltip, "Timer stoppen" from the tray) has not
   been clicked yet; automation could not reach it.
 - Real Win+L and real sleep (Modern Standby) are untested; only simulated.
-- Autostart toggle untested on purpose (registry). Comes with Einstellungen.
-- About dialog and "Datenordner öffnen" not opened.
-- Navigation from the menu once failed on the first dev load after
-  `npm install` (Vite dependency re-optimisation). It worked after a restart;
-  recheck on a clean start.
+- Autostart toggle untested on purpose (registry). The checkbox exists
+  since milestone 8 and reads the state; clicking it stays a manual check
+  (on a throwaway Windows user, or remove the `JiraWorklog` Run value
+  afterwards).
+- About dialog and "Datenordner öffnen" not opened (native windows; see
+  milestone 8).
+- Menu navigation on a clean start: rechecked in milestone 8 (the
+  `navigate` event works as the first action after a restart).
 
-## Next: milestone 8 (Einstellungen, Hilfe, Was ist neu)
+## Next: milestone 9 (E2E port to WebdriverIO + tauri-driver)
 
-The sidebar entries "Einstellungen" and "Hilfe" still show "Noch nicht
-portiert"; the menu items "Hilfe → Anleitung / Was ist neu" navigate there.
+Port the 15 Playwright specs in `tests/e2e/` (59 tests) so they drive the
+Tauri exe instead of `next start`:
 
-1. Einstellungen: `src/app/einstellungen/page.tsx` (38 lines, loads settings,
-   force booking, parsed project keys and breaks) and
-   `src/components/einstellungen-form.tsx` (981 lines). Copy the form with
-   the port recipe; the page becomes a client page on `get_settings` +
-   `get_force_booking`. The actions already exist in `ui/src/lib/actions.ts`
-   (`updateSettings`, `testJiraConnection`, `get/setForceBooking`,
-   `cleanupOldEntries`); check the form's remaining calls against
-   `commands` and add what is missing (autostart: `get/set_auto_launch`).
-   Compare the zod validation messages of `updateSettings` with
-   `settings.rs` for each field.
-2. Hilfe: `src/app/hilfe/page.tsx` (536 lines, static guide) as a plain
-   page. Remove the browser-mode parts only at the cut-over (README too).
-3. Was ist neu: `src/app/hilfe/neu/page.tsx` reads `CHANGELOG.md` with
-   `node:fs` and parses it with `src/lib/changelog.ts`. In the SPA import the
-   file at build time (`import changelog from "../../../CHANGELOG.md?raw"`)
-   and reuse `lib/changelog.ts` unchanged.
-4. Close the open milestone-4 checks: autostart toggle from Einstellungen
-   (on a throwaway Windows user or by reading the Run key only; do not
-   leave a `JiraWorklog` Run value behind), "Über JiraWorklog" and
-   "Datenordner öffnen" from the menu, menu navigation on a clean start.
-5. Verify in the running app over CDP (save settings on a copy, connection
-   test against the mock Jira, cleanup on a temp copy), then update this
-   file.
+| Spec | Tests | Notes for the port |
+|---|---|---|
+| `smoke.spec.ts` | 2 | start here |
+| `settings.spec.ts` | 3 | |
+| `jira-connection.spec.ts` | 2 | Jira mock on 127.0.0.1:4570 |
+| `booking-plan.spec.ts` | 4 | Jira mock |
+| `retention.spec.ts` | 3 | |
+| `running-start.spec.ts` | 2 | |
+| `history-window.spec.ts` | 5 | `?days=` becomes `#/?days=` |
+| `recent-entries.spec.ts` | 7 | |
+| `edit-combobox.spec.ts` | 4 | |
+| `group-colors.spec.ts` | 1 | |
+| `ticket-time.spec.ts` | 4 | |
+| `saldo-line.spec.ts` | 5 | |
+| `kalender.spec.ts` | 10 | Ctrl + wheel zoom |
+| `live-overtime.spec.ts` | 2 | uses Playwright's `page.clock`; WebdriverIO has no fake clock, so seed entries relative to the real `now` or add a test-only time override |
+| `away-check.spec.ts` | 5 | stubs `window.electron` with `addInitScript`; in Tauri fire the real `away-ended` event from the WebView (`__TAURI_INTERNALS__.invoke("plugin:event\|emit", …)`, as the milestone-8 CDP script did for `navigate`) |
+
+First steps:
+
+1. Tools (nothing global, nothing in the user's folders):
+   - `tauri-driver`: `cargo install tauri-driver --locked --version 2.1.0
+     --registry crates-io --root <repo>/target/tools`. 2.1.0 needs rustc
+     ≥ 1.90 (we pin 1.94); the newest, 3.0.0-alpha.1, needs 1.95, so stay
+     on 2.1.0.
+   - `msedgedriver` must match the WebView2 runtime exactly. Installed here:
+     157.0.4341.42 (`C:\Program Files (x86)\Microsoft\EdgeWebView\Application`,
+     also shown by CDP `/json/version`). Download
+     `https://msedgedriver.microsoft.com/<version>/edgedriver_win64.zip`
+     into `target/tools/` and pass it with
+     `tauri-driver --native-driver <path>`. Read the version at run time in
+     the setup script, since WebView2 updates itself.
+   - WebdriverIO: `@wdio/cli`, `@wdio/local-runner`, `@wdio/mocha-framework`,
+     `@wdio/spec-reporter`, `webdriverio` (10.2.0 resolves through the
+     corporate npm mirror). Put them into a new `e2e/` package (own
+     `package.json`) or the root devDependencies; keep Playwright until
+     the cut-over deletes the old specs.
+2. `wdio.conf.ts`: `capabilities: [{ "tauri:options": { application:
+   "target/debug/jiraworklog.exe" } }]` (or the release exe),
+   `hostname: "127.0.0.1"`, `port: 4444`; `onPrepare` builds the exe
+   (`cargo build -p jiraworklog` with `ui` built first, i.e. `npm run
+   tauri:build -- --debug --no-bundle`) and spawns `tauri-driver`;
+   `onComplete` kills that one child by PID (never by name).
+3. Fresh database: `tauri-driver` starts the app with its own environment,
+   so set `JWL_DB_PATH` to `tests/.tmp/e2e.db` (absolute path) in the
+   process that spawns `tauri-driver`. The app migrates the file itself on
+   start (Rust migrations), so the drizzle migration in
+   `mocks/global-setup.ts` can go; `helpers/db.ts` (`resetDb`,
+   `seedSettings`, `seedEntries`) keeps writing the same file with
+   better-sqlite3 (WAL, busy timeout). After seeding, reload the page
+   (`browser.refresh()`): the UI has no server render any more, and TanStack
+   Query only reloads on focus or after a mutation. Force booking is in
+   memory, so a spec that turns it on must turn it off again (or restart the
+   session).
+4. Rewrite selectors from Playwright (`getByRole`, `getByText`) to
+   WebdriverIO (`$("button=Speichern")`, `$("*=Text")`, aria selectors).
+   Routes are hash routes and the built app's origin is
+   `http://tauri.localhost`, so `page.goto("/einstellungen")` becomes a
+   click on the sidebar link, or `browser.execute(() => location.hash =
+   "#/einstellungen")` when no navigation is in flight (see "Rules learned
+   the hard way").
+5. The Jira mock (`mocks/jira-server.ts`, port 4570) stays as it is.
+6. Add `npm run test:e2e:tauri`; when all 15 pass, note it here and plan to
+   drop Playwright in milestone 11.
 
 Later milestones: see the table. Milestone 10 must remove the old Run key
 `electron.app.JiraWorklog` and carry its state over to `JiraWorklog`, and
