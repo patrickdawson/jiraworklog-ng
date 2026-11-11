@@ -102,52 +102,72 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 
 ## Tech Stack
 
-| Layer       | Technologie                                 |
+| Schicht     | Technologie                                 |
 |-------------|---------------------------------------------|
-| Framework   | [Next.js 16](https://nextjs.org) (App Router, Server Actions) |
-| Sprache     | TypeScript                                  |
-| Styling     | Tailwind CSS v4                             |
-| Datenbank   | SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) |
-| ORM         | [Drizzle ORM](https://orm.drizzle.team)     |
-| Validierung | [Zod](https://zod.dev)                      |
-| PDF         | [@react-pdf/renderer](https://react-pdf.org) |
-| Desktop     | [Electron](https://www.electronjs.org) + electron-builder (NSIS) |
-| Tests       | [Playwright](https://playwright.dev) (E2E)  |
+| Desktop     | [Tauri 2](https://tauri.app) mit WebView2, NSIS-Installer pro Benutzer |
+| Backend     | Rust (`crates/core`): Datenbank, Fachlogik, Jira-Client, PDF |
+| Datenbank   | SQLite via [rusqlite](https://github.com/rusqlite/rusqlite) (gebündelt), Migrationen aus `drizzle/` |
+| Jira        | [ureq](https://github.com/algesten/ureq) mit native-tls (Windows-Zertifikatspeicher) |
+| PDF         | [pdf-writer](https://github.com/typst/pdf-writer) mit eingebetteter Schrift (Arimo) |
+| Oberfläche  | [Vite](https://vite.dev) + [React 19](https://react.dev) + [Tailwind CSS 4](https://tailwindcss.com), TypeScript (`ui/`) |
+| Typen       | [tauri-specta](https://github.com/specta-rs/tauri-specta) erzeugt `ui/src/bindings.ts` aus den Rust-Befehlen |
+| Tests       | Rust-Unit-Tests, E2E mit [WebdriverIO](https://webdriver.io) + [tauri-driver](https://v2.tauri.app/develop/tests/webdriver/) (`e2e/`) |
 
-Alles läuft **lokal** — kein Server, keine Cloud, keine externen Dienste außer deiner Jira-Instanz.
+Alles läuft **lokal** — kein Server, keine Cloud, keine externen Dienste außer deiner Jira-Instanz. Die App öffnet keinen Port und läuft nur als Desktop-App, nicht im Browser.
+
+Daten: `%APPDATA%\jiraworklog-ng\jiraworklog.db` (derselbe Ordner wie bei der Electron-Version bis 0.8.0), Log `tauri-main.log` daneben.
 
 ---
 
 ## Schnellstart
 
+Voraussetzungen (Windows):
+
+- [Rust](https://rustup.rs) über rustup. Die Version ist in `rust-toolchain.toml` festgelegt (1.94.0), rustup lädt sie beim ersten Build selbst. Dazu die MSVC-Build-Tools („Desktop development with C++“).
+- Node.js 24 (siehe `.node-version`)
+- WebView2-Runtime (bei Windows 10/11 vorinstalliert)
+
 ```bash
 # Abhängigkeiten installieren
 npm install
+npm --prefix ui install
 
-# Datenbank migrieren
-npm run db:migrate
-
-# Dev-Server starten
-npm run dev
+# App im Entwicklungsmodus starten (Vite auf :1420 + App)
+npm run tauri:dev
 ```
 
-App läuft dann unter [http://localhost:3877](http://localhost:3877).
-
-### Desktop-App
+Ohne `JWL_DB_PATH` arbeitet die Dev-App auf der echten Datenbank in `%APPDATA%\jiraworklog-ng`. Zum Ausprobieren eine Kopie nehmen:
 
 ```bash
-# Entwickeln: Next-Dev-Server und Electron zusammen starten
-npm run electron:dev
+# Schreibgeschützter Schnappschuss der echten DB nach data/real-copy/ (Jira-Zugangsdaten geleert)
+npm run db:realcopy
 
-# Installer bauen (Ergebnis in release/JiraWorklog-<version>-setup.exe)
-npm run electron:build
+JWL_DB_PATH="$PWD/data/real-copy/jiraworklog.db" npm run tauri:dev
 ```
+
+### Befehle
+
+| Befehl | Zweck |
+|---|---|
+| `npm run tauri:dev` | Entwicklungsmodus (Vite + App, lädt bei Änderungen neu) |
+| `npm run tauri:build` | Release-Build und Installer in `target/release/bundle/nsis/JiraWorklog_<version>_x64-setup.exe` |
+| `npm run tauri:check` | Clippy (`-D warnings`), Rust-Tests, Lint und Typprüfung von UI und E2E |
+| `npm run tauri:e2e` | E2E-Suite (vorher einmal `npm --prefix e2e install`); `JWL_E2E_RELEASE=1` testet einen Release-Build |
+| `npm run tauri:bindings` | `ui/src/bindings.ts` nach Änderungen an Befehlen oder Typen neu erzeugen |
+| `npm run db:realcopy` | Kopie der echten DB nach `data/real-copy/` |
+| `npm run db:seed` / `db:unseed` | Beispieleinträge in `JWL_DB_PATH` (Standard `data/jiraworklog.db`) anlegen / entfernen |
+| `npm run icons` | Tray-Icons (`assets/tray-*.png`) und `assets/icon.png` neu erzeugen |
 
 ### E2E-Tests
 
 ```bash
-npm run test:e2e
+npm --prefix e2e install
+npm run tauri:e2e
 ```
+
+Die Suite baut eine eigene App-Variante (`target/e2e`, Cargo-Feature `e2e`), lädt `tauri-driver` und den passenden `msedgedriver` nach `target/tools` und startet die App pro Spec-Datei mit einer frischen Datenbank. Die Fenster erscheinen dabei kurz auf dem Bildschirm. Jira wird lokal gemockt.
+
+Mehr zum Aufbau: [docs/tauri-migration.md](docs/tauri-migration.md).
 
 ### Jira Cloud
 
@@ -155,7 +175,7 @@ In den Einstellungen die Cloud-URL eintragen (z. B. `https://yourorg.atlassian.n
 
 ### TLS
 
-Jira Cloud nutzt öffentliche Zertifikate. Die App prüft das Zertifikat immer gegen den Windows-Zertifikatspeicher. Für ein On-Prem-Jira mit firmeneigener CA muss diese CA in Windows als vertrauenswürdig installiert sein (bei Firmenrechnern meist schon über die IT verteilt). `JIRA_TLS_STRICT` gibt es nicht mehr.
+Jira Cloud nutzt öffentliche Zertifikate. Die App prüft das Zertifikat immer gegen den Windows-Zertifikatspeicher. Für ein On-Prem-Jira mit firmeneigener CA muss diese CA in Windows als vertrauenswürdig installiert sein (bei Firmenrechnern meist schon über die IT verteilt). `JIRA_TLS_STRICT` gibt es nicht mehr. Ein Proxy wird aus den üblichen Umgebungsvariablen übernommen.
 
 ---
 

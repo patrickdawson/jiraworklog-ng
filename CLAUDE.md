@@ -2,19 +2,19 @@
 
 ## Code Quality
 
-All changes must be free of lint and compile errors before being considered complete.
+All changes must be free of lint, compile and test errors before being considered complete.
 
-- **Lint:** `npm run lint`
-- **Type check:** `npx tsc --noEmit`
+- **Check:** `npm run tauri:check` (clippy `-D warnings`, Rust tests, UI lint, UI and E2E type check)
+- **E2E:** `npm run tauri:e2e` (WebdriverIO + tauri-driver; run it for UI or command changes)
 
-Run both after every change and fix any errors before finishing.
+Run the check after every change and fix any errors before finishing. When Tauri commands or their types change, regenerate `ui/src/bindings.ts` with `npm run tauri:bindings` and commit it.
 
 ## User Docs
 
 User-facing features are described in two places. Keep both in sync.
 
 - `README.md`, section "Features"
-- `src/app/hilfe/page.tsx`, the in-app guide (sidebar "Hilfe", Electron menu "Hilfe → Anleitung")
+- `ui/src/pages/hilfe.tsx`, the in-app guide (sidebar "Hilfe", menu "Hilfe → Anleitung")
 
 When you add, change or remove a user-facing feature:
 

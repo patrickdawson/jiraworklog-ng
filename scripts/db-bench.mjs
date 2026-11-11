@@ -14,7 +14,7 @@
 //   node scripts/db-bench.mjs clean
 //
 // Point it at a scratch database, never your real one:
-//   JWL_DB_PATH=./tests/.tmp/bench.db node scripts/db-bench.mjs seed --days 365
+//   JWL_DB_PATH=./data/bench.db node scripts/db-bench.mjs seed --days 365
 
 import Database from "better-sqlite3";
 
