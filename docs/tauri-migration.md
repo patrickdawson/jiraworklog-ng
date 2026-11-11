@@ -970,7 +970,7 @@ Then:
 - **Root package:** devDependencies `@tauri-apps/cli` and `better-sqlite3`
   only; scripts `tauri*`, `lint` (UI), `typecheck` (UI + E2E), `icons`,
   `db:seed`, `db:unseed`, `db:realcopy`. No `dependencies`, no
-  electron-builder block. Lockfile 13,689 → 492 lines.
+  electron-builder block. Lockfile 13,491 → 738 lines.
 - **ui:** declares `@types/node` itself; its type check had borrowed it
   from the root's `node_modules` (TS2307 on `node:url` after the trim).
 - **Lockfiles:** `ui/` and `e2e/` (since milestones 1/9) and the new root
