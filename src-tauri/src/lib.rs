@@ -81,7 +81,19 @@ fn log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
         .build()
 }
 
+/// Writes every panic to the app log before the default hook runs. Release
+/// builds use `panic = "abort"`, so this line is all that is left of a panic.
+fn log_panics() {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        log::error!("panic: {info}");
+        log::logger().flush();
+        default_hook(info);
+    }));
+}
+
 pub fn run() {
+    log_panics();
     let builder = specta_builder();
 
     let app = tauri::Builder::default();
