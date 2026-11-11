@@ -78,7 +78,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Umstieg von der Electron-Version** — Der Installer beendet und deinstalliert die alte Version (bis 0.8.0) selbst. Daten und Einstellungen bleiben, die Datenbank wird vorher gesichert (`jiraworklog.db.backup-electron-…`). War Autostart an, bleibt er an. Startmenü- und Desktop-Verknüpfung heißen wie vorher.
 - **System-Tray** — Tray-Icon mit laufendem Timer. Timer stoppen, Fenster zeigen oder beenden direkt aus dem Tray.
 - **Schließen = Minimieren** — Das Fenster geht in den Tray, der Timer läuft weiter
-- **Autostart** — Optional beim Windows-Anmelden minimiert im Tray starten
+- **Autostart** — Optional beim Windows-Anmelden starten, mit geöffnetem Fenster
 - **Nur eine Instanz** — Ein zweiter Start holt das vorhandene Fenster nach vorne
 - **Deutsches Menü** — Datei, Bearbeiten, Ansicht, Hilfe. Unter „Hilfe“: Anleitung (F1), Was ist neu, Datenordner öffnen, Über JiraWorklog
 

@@ -544,7 +544,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
             </span>
           </label>
           <div className="text-[12px]" style={{ color: "var(--text-3)" }}>
-            Die App startet minimiert im System-Tray. Diese Einstellung wird
+            Die App öffnet sich mit ihrem Fenster. Diese Einstellung wird
             sofort übernommen.
           </div>
         </Section>

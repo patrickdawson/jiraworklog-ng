@@ -400,8 +400,8 @@ export function HilfePage() {
               <Ui>Datei</Ui> → <Ui>Beenden</Ui>.
             </li>
             <li>
-              <b>Autostart</b> — Startet die App beim Anmelden in Windows,
-              minimiert im Tray. Einschalten unter <Ui>Einstellungen</Ui> →{" "}
+              <b>Autostart</b> — Startet die App beim Anmelden in Windows
+              und öffnet ihr Fenster. Einschalten unter <Ui>Einstellungen</Ui> →{" "}
               <Ui>Desktop</Ui>.
             </li>
             <li>
