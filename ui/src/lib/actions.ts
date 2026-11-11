@@ -6,6 +6,7 @@ import {
   type AllgemeinesCategory,
   type AwayCheck,
   type GroupColor,
+  type GroupEntriesPage,
   type StartTimerResult,
   type StopTimerResult,
 } from "@/bindings";
@@ -167,4 +168,18 @@ export async function submitDayToJira(dayKey: string): Promise<SubmitResult> {
 
 export function submitAllOpenToJira(): Promise<SubmitResult> {
   return submitDayToJira("");
+}
+
+// ── Auswertung ──────────────────────────────────────────────────────────────
+
+export type { GroupEntriesPage, GroupEntry } from "@/bindings";
+
+/** One page of the finished entries of a "Zeit pro Ticket" bar, newest first. */
+export function getGroupEntries(input: {
+  fromIso: string;
+  toIso: string;
+  groupId: string;
+  offset: number;
+}): Promise<GroupEntriesPage> {
+  return orThrow(commands.groupEntries(input));
 }

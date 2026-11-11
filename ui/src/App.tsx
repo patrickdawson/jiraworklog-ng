@@ -8,7 +8,9 @@ import { DesktopBridge } from "@/components/desktop-bridge";
 import { JiraUrlProvider } from "@/components/issue-key-link";
 import { Sidebar } from "@/components/sidebar";
 import { orThrow, queryClient } from "@/lib/query";
+import { AuswertungPage } from "@/pages/auswertung";
 import { BuchenPage } from "@/pages/buchen";
+import { KalenderPage } from "@/pages/kalender";
 import { NotPortedYet } from "@/pages/status";
 
 /** The app frame: what the Next app's root layout rendered around each page. */
@@ -36,8 +38,8 @@ function Layout() {
           <div className="overflow-x-clip">
             <Routes>
               <Route path="/" element={<BuchenPage />} />
-              <Route path="/kalender" element={<NotPortedYet title="Kalender" />} />
-              <Route path="/auswertung" element={<NotPortedYet title="Auswertung" />} />
+              <Route path="/kalender" element={<KalenderPage />} />
+              <Route path="/auswertung" element={<AuswertungPage />} />
               <Route path="/einstellungen" element={<NotPortedYet title="Einstellungen" />} />
               <Route path="/hilfe/*" element={<NotPortedYet title="Hilfe" />} />
             </Routes>
