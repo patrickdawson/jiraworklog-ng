@@ -52,6 +52,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::get_force_booking,
             commands::set_force_booking,
             commands::cleanup_old_entries,
+            commands::export_worklog_pdf,
+            commands::export_category_pdf,
         ])
         .events(collect_events![
             events::TimerStopped,

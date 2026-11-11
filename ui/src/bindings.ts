@@ -63,6 +63,16 @@ export const commands = {
 	setForceBooking: (enabled: boolean) => __TAURI_INVOKE<void>("set_force_booking", { enabled }),
 	/**  Deletes finished entries older than `days` days, keeping the balance. */
 	cleanupOldEntries: (days: number) => typedError<CleanupResult_Serialize, CommandError>(__TAURI_INVOKE("cleanup_old_entries", { days })),
+	/**
+	 *  "Als PDF": the timesheet of the Auswertung period, saved where the user
+	 *  picks. Returns the path, or `None` if the dialog was cancelled.
+	 */
+	exportWorklogPdf: (range: string | null, anchor: string | null) => typedError<string | null, CommandError>(__TAURI_INVOKE("export_worklog_pdf", { range, anchor })),
+	/**
+	 *  "Axapta-Bericht": the category report of the month around `anchor`, saved
+	 *  where the user picks. Returns the path, or `None` if cancelled.
+	 */
+	exportCategoryPdf: (anchor: string | null) => typedError<string | null, CommandError>(__TAURI_INVOKE("export_category_pdf", { anchor })),
 };
 
 /** Events */

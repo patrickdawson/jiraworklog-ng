@@ -17,12 +17,14 @@ use jwl_core::settings::{self, Settings, SettingsInput};
 use jwl_core::store::{self, GroupColor};
 use jwl_core::time::now_iso;
 use jwl_core::timer::{self, EntriesTextInput, EntryInput, StartTimerResult, StopTimerResult};
-use jwl_core::AppInfo;
+use jwl_core::{category_report, pdf, worklog_report, AppInfo};
 use rusqlite::Connection;
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_dialog::DialogExt;
 
 use crate::state::{CommandError, CommandResult, Db, ForceBooking};
+use crate::window;
 
 #[tauri::command]
 #[specta::specta]
@@ -378,4 +380,85 @@ pub fn cleanup_old_entries(db: State<'_, Db>, days: i32) -> CommandResult<Cleanu
         Utc::now(),
         &Local,
     )?)
+}
+
+// ── PDF reports ─────────────────────────────────────────────────────────────
+
+/// Asks where to save `bytes` (native "Speichern unter", in Downloads with
+/// `file_name` filled in, like the Electron app's download) and writes the
+/// file. `None`: the user cancelled.
+fn save_pdf(app: &AppHandle, file_name: &str, bytes: &[u8]) -> CommandResult<Option<String>> {
+    let mut dialog = app
+        .dialog()
+        .file()
+        .set_file_name(file_name)
+        .add_filter("PDF-Dokument", &["pdf"]);
+    if let Ok(dir) = app.path().download_dir() {
+        dialog = dialog.set_directory(dir);
+    }
+    if let Some(window) = window::main_window(app) {
+        dialog = dialog.set_parent(&window);
+    }
+    let Some(path) = dialog.blocking_save_file() else {
+        return Ok(None);
+    };
+    let path = path
+        .into_path()
+        .map_err(|e| CommandError::from(e.to_string()))?;
+    std::fs::write(&path, bytes)
+        .map_err(|e| CommandError::from(format!("PDF konnte nicht gespeichert werden: {e}")))?;
+    log::info!("PDF gespeichert: {}", path.display());
+    Ok(Some(path.display().to_string()))
+}
+
+/// "Als PDF": the timesheet of the Auswertung period, saved where the user
+/// picks. Returns the path, or `None` if the dialog was cancelled.
+#[tauri::command]
+#[specta::specta]
+pub async fn export_worklog_pdf(
+    app: AppHandle,
+    range: Option<String>,
+    anchor: Option<String>,
+) -> CommandResult<Option<String>> {
+    blocking(move || {
+        let (bytes, file_name) = {
+            let db = app.state::<Db>();
+            let (report, range) = worklog_report::load(
+                &db.lock(),
+                RangeKind::parse(range.as_deref()),
+                anchor.as_deref(),
+                Utc::now(),
+                &Local,
+            )?;
+            (
+                pdf::worklog_pdf(&report, &Local),
+                format!("stundenzettel-{}.pdf", range.slug),
+            )
+        };
+        save_pdf(&app, &file_name, &bytes)
+    })
+    .await?
+}
+
+/// "Axapta-Bericht": the category report of the month around `anchor`, saved
+/// where the user picks. Returns the path, or `None` if cancelled.
+#[tauri::command]
+#[specta::specta]
+pub async fn export_category_pdf(
+    app: AppHandle,
+    anchor: Option<String>,
+) -> CommandResult<Option<String>> {
+    blocking(move || {
+        let (bytes, file_name) = {
+            let db = app.state::<Db>();
+            let (report, month) =
+                category_report::load(&db.lock(), anchor.as_deref(), Utc::now(), &Local)?;
+            (
+                pdf::category_pdf(&report),
+                format!("axapta-bericht-{}.pdf", month.slug),
+            )
+        };
+        save_pdf(&app, &file_name, &bytes)
+    })
+    .await?
 }
