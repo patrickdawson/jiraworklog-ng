@@ -4,9 +4,12 @@
 use std::sync::atomic::Ordering;
 
 use chrono::{Local, Utc};
+use jwl_core::auswertung::{self, AuswertungData, GroupEntriesInput, GroupEntriesPage};
 use jwl_core::away::{self, AwayCheck, AwayPeriod, ResolveAwayInput};
 use jwl_core::buchen::{self, BuchenData};
 use jwl_core::entries::AllgemeinesCategory;
+use jwl_core::kalender::{self, KalenderData};
+use jwl_core::report_range::RangeKind;
 use jwl_core::settings::{self, Settings, SettingsInput};
 use jwl_core::store::{self, GroupColor};
 use jwl_core::timer::{self, EntriesTextInput, EntryInput, StartTimerResult, StopTimerResult};
@@ -57,6 +60,48 @@ pub fn buchen_data(
         Utc::now(),
         &Local,
     )?)
+}
+
+// ── Kalender and Auswertung ─────────────────────────────────────────────────
+
+/// The Kalender week containing `anchor` (`YYYY-MM-DD`); `null` = this week.
+#[tauri::command]
+#[specta::specta]
+pub fn kalender_data(db: State<'_, Db>, anchor: Option<String>) -> CommandResult<KalenderData> {
+    Ok(kalender::load(
+        &db.lock(),
+        anchor.as_deref(),
+        Utc::now(),
+        &Local,
+    )?)
+}
+
+/// The Auswertung page. `range` is the `?range=` value (unknown → month),
+/// `anchor` the `?anchor=` value.
+#[tauri::command]
+#[specta::specta]
+pub fn auswertung_data(
+    db: State<'_, Db>,
+    range: Option<String>,
+    anchor: Option<String>,
+) -> CommandResult<AuswertungData> {
+    Ok(auswertung::load(
+        &db.lock(),
+        RangeKind::parse(range.as_deref()),
+        anchor.as_deref(),
+        Utc::now(),
+        &Local,
+    )?)
+}
+
+/// One page of the entries behind a "Zeit pro Ticket" bar.
+#[tauri::command]
+#[specta::specta]
+pub fn group_entries(
+    db: State<'_, Db>,
+    input: GroupEntriesInput,
+) -> CommandResult<GroupEntriesPage> {
+    Ok(auswertung::group_entries(&db.lock(), &input, &Local)?)
 }
 
 // ── Timer ───────────────────────────────────────────────────────────────────

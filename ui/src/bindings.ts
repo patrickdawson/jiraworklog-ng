@@ -14,6 +14,15 @@ export const commands = {
 	updateSettings: (input: SettingsInput_Deserialize) => typedError<Settings_Serialize, CommandError>(__TAURI_INVOKE("update_settings", { input })),
 	/**  Everything the Buchen page shows. `days = null` loads the whole history. */
 	buchenData: (days: number | null) => typedError<BuchenData_Serialize, CommandError>(__TAURI_INVOKE("buchen_data", { days })),
+	/**  The Kalender week containing `anchor` (`YYYY-MM-DD`); `null` = this week. */
+	kalenderData: (anchor: string | null) => typedError<KalenderData_Serialize, CommandError>(__TAURI_INVOKE("kalender_data", { anchor })),
+	/**
+	 *  The Auswertung page. `range` is the `?range=` value (unknown → month),
+	 *  `anchor` the `?anchor=` value.
+	 */
+	auswertungData: (range: string | null, anchor: string | null) => typedError<AuswertungData_Serialize, CommandError>(__TAURI_INVOKE("auswertung_data", { range, anchor })),
+	/**  One page of the entries behind a "Zeit pro Ticket" bar. */
+	groupEntries: (input: GroupEntriesInput) => typedError<GroupEntriesPage, CommandError>(__TAURI_INVOKE("group_entries", { input })),
 	/**  Stops any running timer, then starts a new one. */
 	startTimer: (description: string, isAllgemeines: boolean, category: AllgemeinesCategory | null) => typedError<StartTimerResult, CommandError>(__TAURI_INVOKE("start_timer", { description, isAllgemeines, category })),
 	stopTimer: () => typedError<StopTimerResult, CommandError>(__TAURI_INVOKE("stop_timer")),
@@ -57,6 +66,56 @@ export type AppInfo = {
 	version: string,
 };
 
+export type AuswertungData = AuswertungData_Serialize | AuswertungData_Deserialize;
+
+export type AuswertungData_Deserialize = {
+	range: ResolvedRange_Deserialize,
+	regularWorkMinutes: number,
+	avgPerWeekMinutes: number,
+	avgPerWorkedDayMinutes: number,
+	/**  Over every tracked day, plus the baseline. */
+	totalOvertimeMinutes: number,
+	/**  The current calendar week, whatever the selected period. */
+	thisWeekSeconds: number,
+	weekRemainingMinutes: number,
+	concreteQuotePercent: number,
+	/**  Worked seconds on the days with concrete work; 0 = no quote. */
+	quoteSeconds: number,
+	quoteMet: boolean,
+	targetPercent: number,
+	dailyBars: DailyBar[],
+	quoteBars: QuoteBar[],
+	balance: BalancePoint[],
+	corridorCenterMinutes: number,
+	corridorRangeMinutes: number,
+	groupTotals: GroupTotal_Deserialize[],
+	groupColors: { [key in string]: GroupColor },
+};
+
+export type AuswertungData_Serialize = {
+	range: ResolvedRange_Serialize,
+	regularWorkMinutes: number,
+	avgPerWeekMinutes: number,
+	avgPerWorkedDayMinutes: number,
+	/**  Over every tracked day, plus the baseline. */
+	totalOvertimeMinutes: number,
+	/**  The current calendar week, whatever the selected period. */
+	thisWeekSeconds: number,
+	weekRemainingMinutes: number,
+	concreteQuotePercent: number,
+	/**  Worked seconds on the days with concrete work; 0 = no quote. */
+	quoteSeconds: number,
+	quoteMet: boolean,
+	targetPercent: number,
+	dailyBars: DailyBar[],
+	quoteBars: QuoteBar[],
+	balance: BalancePoint[],
+	corridorCenterMinutes: number,
+	corridorRangeMinutes: number,
+	groupTotals: GroupTotal_Serialize[],
+	groupColors: { [key in string]: GroupColor },
+};
+
 /**  An away span that overlaps the running timer and is worth asking about. */
 export type AwayCheck = {
 	entryId: number,
@@ -82,6 +141,11 @@ export type AwayMode =
 export type AwayPeriod = {
 	from: string,
 	to: string,
+};
+
+export type BalancePoint = {
+	key: string,
+	minutes: number,
 };
 
 /**  How finished entries are turned into Jira worklogs. */
@@ -144,6 +208,11 @@ export type BuchenData_Serialize = {
 
 /**  Error type of every command. It reaches the UI as a plain string. */
 export type CommandError = string;
+
+export type DailyBar = {
+	key: string,
+	seconds: number,
+};
 
 export type DayGroup = DayGroup_Serialize | DayGroup_Deserialize;
 
@@ -258,6 +327,54 @@ export type EntryView_Serialize = {
 /**  Palette a group can be colored with; the theme decides the shade. */
 export type GroupColor = "indigo" | "teal" | "pink" | "orange" | "green" | "sky" | "purple" | "slate";
 
+export type GroupEntriesInput = {
+	fromIso: string,
+	toIso: string,
+	groupId: string,
+	offset: number,
+};
+
+export type GroupEntriesPage = {
+	entries: GroupEntry[],
+	/**  All entries of the bar, not only this page. */
+	total: number,
+};
+
+export type GroupEntry = {
+	id: number,
+	startedAt: string,
+	endedAt: string,
+	seconds: number,
+	description: string,
+};
+
+/**  Worked time of one ticket (concrete) or category (Allgemeines). */
+export type GroupTotal = GroupTotal_Serialize | GroupTotal_Deserialize;
+
+/**  Worked time of one ticket (concrete) or category (Allgemeines). */
+export type GroupTotal_Deserialize = {
+	id: string,
+	/**  Group color key; `None` for concrete entries without an issue key. */
+	key?: string | null,
+	/**  The ticket of a concrete group. */
+	issueKey?: string | null,
+	label: string,
+	isAllgemeines: boolean,
+	seconds: number,
+};
+
+/**  Worked time of one ticket (concrete) or category (Allgemeines). */
+export type GroupTotal_Serialize = {
+	id: string,
+	/**  Group color key; `None` for concrete entries without an issue key. */
+	key: string | null,
+	/**  The ticket of a concrete group. */
+	issueKey?: string,
+	label: string,
+	isAllgemeines: boolean,
+	seconds: number,
+};
+
 export type HistoryWindow = HistoryWindow_Serialize | HistoryWindow_Deserialize;
 
 export type HistoryWindow_Deserialize = {
@@ -277,8 +394,68 @@ export type HistoryWindow_Serialize = {
 /**  Which Jira credentials the user entered. */
 export type JiraAuthMode = "token" | "basic";
 
+export type KalenderData = KalenderData_Serialize | KalenderData_Deserialize;
+
+export type KalenderData_Deserialize = {
+	weekLabel: string,
+	dayKeys: string[],
+	prevAnchor: string,
+	nextAnchor: string,
+	isCurrentWeek: boolean,
+	hasRunning: boolean,
+	entries: EntryView_Deserialize[],
+	groupColors: { [key in string]: GroupColor },
+	/**  Suggestions for the description field of the entry dialog. */
+	recents: RecentEntry_Deserialize[],
+	breaks: BreakWindow[],
+	autoPauseEnabled: boolean,
+	/**  Overtime of this week's days, from finished entries only. */
+	weekOvertimeMinutes: number,
+	/**  Worked minutes per day key, from finished entries only. */
+	workedMinutesByDay: { [key in string]: number },
+	/**  Weekday target, for the tooltip of the day's worked time. */
+	regularWorkMinutes: number,
+	/**  Whether the running timer started on a day of this week. */
+	runningInWeek: boolean,
+	/**  Target of the running entry's day if it is not yet in the overtime. */
+	runningDayTargetMinutes: number,
+};
+
+export type KalenderData_Serialize = {
+	weekLabel: string,
+	dayKeys: string[],
+	prevAnchor: string,
+	nextAnchor: string,
+	isCurrentWeek: boolean,
+	hasRunning: boolean,
+	entries: EntryView_Serialize[],
+	groupColors: { [key in string]: GroupColor },
+	/**  Suggestions for the description field of the entry dialog. */
+	recents: RecentEntry_Serialize[],
+	breaks: BreakWindow[],
+	autoPauseEnabled: boolean,
+	/**  Overtime of this week's days, from finished entries only. */
+	weekOvertimeMinutes: number,
+	/**  Worked minutes per day key, from finished entries only. */
+	workedMinutesByDay: { [key in string]: number },
+	/**  Weekday target, for the tooltip of the day's worked time. */
+	regularWorkMinutes: number,
+	/**  Whether the running timer started on a day of this week. */
+	runningInWeek: boolean,
+	/**  Target of the running entry's day if it is not yet in the overtime. */
+	runningDayTargetMinutes: number,
+};
+
 /**  The app menu asks the UI to open a route, e.g. `/hilfe`. */
 export type Navigate = string;
+
+export type QuoteBar = {
+	key: string,
+	percent: number,
+	hasData: boolean,
+};
+
+export type RangeKind = "week" | "sprint" | "month" | "ytd" | "all";
 
 /**  One distinct piece of work the user can pick up again, merged across days. */
 export type RecentEntry = RecentEntry_Serialize | RecentEntry_Deserialize;
@@ -312,6 +489,52 @@ export type ResolveAwayInput = {
 	awayFrom: string,
 	awayTo: string,
 	mode: AwayMode,
+};
+
+export type ResolvedRange = ResolvedRange_Serialize | ResolvedRange_Deserialize;
+
+export type ResolvedRange_Deserialize = {
+	kind: RangeKind,
+	/**  Canonical anchor `YYYY-MM-DD`; empty for `All`. */
+	anchor: string,
+	/**  UTC ISO of local 00:00 of the first day. */
+	from: string,
+	/**  UTC ISO of local 23:59:59.999 of the last day. */
+	to: string,
+	/**  Short label for the UI ("Mai 2026"). */
+	label: string,
+	/**  File name slug ("2026-05"). */
+	slug: string,
+	/**  Whether previous/next make sense for this kind. */
+	navigable: boolean,
+	/**  Set only for `Sprint`. */
+	sprintLengthDays?: number | null,
+	/**  Anchor of the previous period; `None` when not navigable. */
+	prevAnchor?: string | null,
+	/**  Anchor of the next period; `None` when not navigable. */
+	nextAnchor?: string | null,
+};
+
+export type ResolvedRange_Serialize = {
+	kind: RangeKind,
+	/**  Canonical anchor `YYYY-MM-DD`; empty for `All`. */
+	anchor: string,
+	/**  UTC ISO of local 00:00 of the first day. */
+	from: string,
+	/**  UTC ISO of local 23:59:59.999 of the last day. */
+	to: string,
+	/**  Short label for the UI ("Mai 2026"). */
+	label: string,
+	/**  File name slug ("2026-05"). */
+	slug: string,
+	/**  Whether previous/next make sense for this kind. */
+	navigable: boolean,
+	/**  Set only for `Sprint`. */
+	sprintLengthDays: number | null,
+	/**  Anchor of the previous period; `None` when not navigable. */
+	prevAnchor: string | null,
+	/**  Anchor of the next period; `None` when not navigable. */
+	nextAnchor: string | null,
 };
 
 export type RunningEntry = RunningEntry_Serialize | RunningEntry_Deserialize;
