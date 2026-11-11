@@ -1,5 +1,5 @@
-//! `jiraworklog.exe --upgrade-from-electron`: the installer's one-off step
-//! after it removed the Electron app (see `windows/installer-hooks.nsh`).
+//! `jiraworklog.exe --post-install [--from-electron]`: the installer's step
+//! after it copied the files (see `windows/installer-hooks.nsh`).
 //!
 //! Handled in `main` before Tauri starts: no window, no single-instance lock,
 //! no tray. The logic is `jwl_core::electron_upgrade`; this file only adds the
@@ -13,10 +13,12 @@ use jwl_core::electron_upgrade::{migrate_autostart, AutostartOutcome, StartupReg
 
 use crate::state;
 
-/// The command-line flag the installer passes.
-pub const FLAG: &str = "--upgrade-from-electron";
+/// The flag the installer always passes after copying the files.
+pub const FLAG: &str = "--post-install";
+/// Added when the installer has just removed the Electron app.
+pub const FROM_ELECTRON: &str = "--from-electron";
 
-/// Whether this process was started for the upgrade step.
+/// Whether this process was started for the post-install step.
 pub fn requested() -> bool {
     std::env::args_os().skip(1).any(|a| a == FLAG)
 }
@@ -26,6 +28,7 @@ pub fn requested() -> bool {
 /// (0 = everything worked). The installer only logs a failure; it never
 /// undoes the install for it.
 pub fn run() -> i32 {
+    let from_electron = std::env::args_os().skip(1).any(|a| a == FROM_ELECTRON);
     let exe = match std::env::current_exe() {
         Ok(p) => p.display().to_string(),
         Err(e) => {
@@ -37,7 +40,7 @@ pub fn run() -> i32 {
     let mut reg = registry::CurrentUser;
     #[cfg(not(windows))]
     let mut reg = jwl_core::electron_upgrade::FakeStartupRegistry::default();
-    let report = run_with(&mut reg, &state::db_path(), &exe);
+    let report = run_with(&mut reg, &state::db_path(), &exe, from_electron);
     append_log(&report.lines);
     i32::from(!report.ok)
 }
@@ -48,33 +51,52 @@ pub struct Report {
     pub lines: Vec<String>,
 }
 
-/// The step itself: back up the database, then move the autostart entry.
-/// A failed backup does not stop the autostart move (the app makes its own
-/// copy before any schema migration anyway).
-pub fn run_with(reg: &mut impl StartupRegistry, db: &Path, exe: &str) -> Report {
+/// The step itself: after removing Electron, back up the database; always
+/// bring the autostart entry in line with `exe`. A failed backup does not
+/// stop the autostart step (the app makes its own copy before any schema
+/// migration anyway).
+pub fn run_with(
+    reg: &mut impl StartupRegistry,
+    db: &Path,
+    exe: &str,
+    from_electron: bool,
+) -> Report {
     let mut ok = true;
-    let mut lines = vec![format!("upgrade from Electron, exe {exe}")];
-    match jwl_core::db::backup_existing(db, "electron") {
-        Ok(Some(p)) => lines.push(format!("db backup: {}", p.display())),
-        Ok(None) => lines.push(format!("db backup: no database at {}", db.display())),
-        Err(e) => {
-            ok = false;
-            lines.push(format!("db backup failed: {e}"));
+    let mut lines = vec![format!(
+        "post-install{}, exe {exe}",
+        if from_electron {
+            " after removing the Electron app"
+        } else {
+            ""
+        }
+    )];
+    if from_electron {
+        match jwl_core::db::backup_existing(db, "electron") {
+            Ok(Some(p)) => lines.push(format!("db backup: {}", p.display())),
+            Ok(None) => lines.push(format!("db backup: no database at {}", db.display())),
+            Err(e) => {
+                ok = false;
+                lines.push(format!("db backup failed: {e}"));
+            }
         }
     }
-    match migrate_autostart(reg, exe) {
-        Ok(AutostartOutcome::NotSet) => lines.push("autostart: was off, nothing set".into()),
+    lines.push(match migrate_autostart(reg, exe) {
+        Ok(AutostartOutcome::NotSet) => "autostart: off, nothing set".into(),
         Ok(AutostartOutcome::WasDisabled) => {
-            lines.push("autostart: was disabled in Task Manager, old entry removed".into())
+            "autostart: Electron's was disabled in Task Manager, removed, nothing set".into()
         }
         Ok(AutostartOutcome::Carried { value }) => {
-            lines.push(format!("autostart: carried over as {value:?}"))
+            format!("autostart: carried over from Electron as {value:?}")
+        }
+        Ok(AutostartOutcome::Kept) => "autostart: on, already points here".into(),
+        Ok(AutostartOutcome::Repointed { from, value }) => {
+            format!("autostart: re-pointed from {from:?} to {value:?}")
         }
         Err(e) => {
             ok = false;
-            lines.push(format!("autostart failed: {e}"));
+            format!("autostart failed: {e}")
         }
-    }
+    });
     Report { ok, lines }
 }
 
@@ -185,7 +207,7 @@ mod tests {
         reg.run
             .insert(ELECTRON_RUN_VALUE.into(), r"C:\old\JiraWorklog.exe".into());
 
-        let report = run_with(&mut reg, &db, r"C:\new\jiraworklog.exe");
+        let report = run_with(&mut reg, &db, r"C:\new\jiraworklog.exe", true);
 
         assert!(report.ok, "{:?}", report.lines);
         assert_eq!(
@@ -213,8 +235,33 @@ mod tests {
             &mut reg,
             Path::new(r"C:\does-not-exist\jwl\jiraworklog.db"),
             r"C:\new\jiraworklog.exe",
+            true,
         );
         assert!(report.ok);
         assert!(reg.run.is_empty());
+    }
+
+    #[test]
+    fn a_plain_update_makes_no_backup_and_keeps_autostart() {
+        let dir = std::env::temp_dir().join(format!("jwl-update-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let db = dir.join("jiraworklog.db");
+        drop(jwl_core::db::open(&db).unwrap());
+        let mut reg = FakeStartupRegistry::default();
+        reg.run
+            .insert(TAURI_RUN_VALUE.into(), r"C:\new\jiraworklog.exe ".into());
+        let before = reg.clone();
+
+        let report = run_with(&mut reg, &db, r"C:\new\jiraworklog.exe", false);
+
+        assert!(report.ok, "{:?}", report.lines);
+        assert_eq!(reg, before);
+        let backups = std::fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().contains(".backup-"))
+            .count();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert_eq!(backups, 0);
     }
 }
