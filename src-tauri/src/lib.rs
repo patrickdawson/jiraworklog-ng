@@ -44,6 +44,14 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::show_window,
             commands::get_auto_launch,
             commands::set_auto_launch,
+            commands::preview_day_booking,
+            commands::preview_all_open_booking,
+            commands::submit_day_to_jira,
+            commands::submit_all_open_to_jira,
+            commands::test_jira_connection,
+            commands::get_force_booking,
+            commands::set_force_booking,
+            commands::cleanup_old_entries,
         ])
         .events(collect_events![
             events::TimerStopped,

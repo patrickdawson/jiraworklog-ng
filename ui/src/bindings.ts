@@ -48,6 +48,21 @@ export const commands = {
 	getAutoLaunch: () => typedError<boolean, CommandError>(__TAURI_INVOKE("get_auto_launch")),
 	/**  Turns start at login on or off; returns the state that applies now. */
 	setAutoLaunch: (enabled: boolean) => typedError<boolean, CommandError>(__TAURI_INVOKE("set_auto_launch", { enabled })),
+	/**  What booking one day would send, without sending anything. */
+	previewDayBooking: (dayKey: string) => typedError<BookingPlan, CommandError>(__TAURI_INVOKE("preview_day_booking", { dayKey })),
+	/**  What booking every open day would send, without sending anything. */
+	previewAllOpenBooking: () => typedError<BookingPlan, CommandError>(__TAURI_INVOKE("preview_all_open_booking")),
+	/**  Books the not yet submitted entries of a day to Jira. */
+	submitDayToJira: (dayKey: string) => typedError<SubmitResult_Serialize, CommandError>(__TAURI_INVOKE("submit_day_to_jira", { dayKey })),
+	/**  Books every not yet submitted entry to Jira. */
+	submitAllOpenToJira: () => typedError<SubmitResult_Serialize, CommandError>(__TAURI_INVOKE("submit_all_open_to_jira")),
+	/**  Tests the settings form's Jira credentials without saving them. */
+	testJiraConnection: (input: ConnectionTestInput_Deserialize) => typedError<ConnectionTestResult, CommandError>(__TAURI_INVOKE("test_jira_connection", { input })),
+	/**  Whether force booking (re-book submitted entries) is on. In memory only. */
+	getForceBooking: () => __TAURI_INVOKE<boolean>("get_force_booking"),
+	setForceBooking: (enabled: boolean) => __TAURI_INVOKE<void>("set_force_booking", { enabled }),
+	/**  Deletes finished entries older than `days` days, keeping the balance. */
+	cleanupOldEntries: (days: number) => typedError<CleanupResult_Serialize, CommandError>(__TAURI_INVOKE("cleanup_old_entries", { days })),
 };
 
 /** Events */
@@ -151,6 +166,12 @@ export type BalancePoint = {
 /**  How finished entries are turned into Jira worklogs. */
 export type BookingMode = "grouped" | "individual";
 
+/**  What a booking would send (the preview dialog). */
+export type BookingPlan = {
+	worklogs: PlannedWorklog[],
+	skipped: SkippedEntry[],
+};
+
 /**  A fixed daily break, e.g. lunch from `12:00` to `12:30`. */
 export type BreakWindow = {
 	start: string,
@@ -206,8 +227,48 @@ export type BuchenData_Serialize = {
 	config: BuchenConfig,
 };
 
+export type CleanupResult = CleanupResult_Serialize | CleanupResult_Deserialize;
+
+export type CleanupResult_Deserialize = {
+	ok: boolean,
+	deleted: number,
+	overtimeRolledMinutes: number,
+	message?: string | null,
+};
+
+export type CleanupResult_Serialize = {
+	ok: boolean,
+	deleted: number,
+	overtimeRolledMinutes: number,
+	message: string | null,
+};
+
 /**  Error type of every command. It reaches the UI as a plain string. */
 export type CommandError = string;
+
+/**  The unsaved values of the settings form for "Verbindung testen". */
+export type ConnectionTestInput = ConnectionTestInput_Serialize | ConnectionTestInput_Deserialize;
+
+/**  The unsaved values of the settings form for "Verbindung testen". */
+export type ConnectionTestInput_Deserialize = {
+	jiraUrl: string,
+	jiraToken?: string | null,
+	jiraUser?: string | null,
+	jiraPassword?: string | null,
+};
+
+/**  The unsaved values of the settings form for "Verbindung testen". */
+export type ConnectionTestInput_Serialize = {
+	jiraUrl: string,
+	jiraToken: string | null,
+	jiraUser: string | null,
+	jiraPassword: string | null,
+};
+
+export type ConnectionTestResult = {
+	ok: boolean,
+	message: string,
+};
 
 export type DailyBar = {
 	key: string,
@@ -449,6 +510,16 @@ export type KalenderData_Serialize = {
 /**  The app menu asks the UI to open a route, e.g. `/hilfe`. */
 export type Navigate = string;
 
+/**  One worklog as the preview shows it. */
+export type PlannedWorklog = {
+	issueKey: string,
+	/**  Jira `timeSpent`, e.g. `1h 30m`. */
+	timeSpent: string,
+	minutes: number,
+	comment: string,
+	entryCount: number,
+};
+
 export type QuoteBar = {
 	key: string,
 	percent: number,
@@ -619,6 +690,11 @@ export type Settings_Serialize = {
 	updatedAt: string,
 } & SettingsInput_Serialize;
 
+export type SkippedEntry = {
+	description: string,
+	reason: string,
+};
+
 export type StartTimerResult = {
 	previousDiscarded: boolean,
 	previousSecondsTracked: number,
@@ -628,6 +704,26 @@ export type StopTimerResult = {
 	stopped: boolean,
 	discarded: boolean,
 	secondsTracked: number,
+};
+
+export type SubmitResult = SubmitResult_Serialize | SubmitResult_Deserialize;
+
+export type SubmitResult_Deserialize = {
+	ok: boolean,
+	bookedWorklogs: number,
+	bookedEntries: number,
+	errors: string[],
+	skipped: SkippedEntry[],
+	message?: string | null,
+};
+
+export type SubmitResult_Serialize = {
+	ok: boolean,
+	bookedWorklogs: number,
+	bookedEntries: number,
+	errors: string[],
+	skipped: SkippedEntry[],
+	message: string | null,
 };
 
 /**  UI theme: follow the OS or force one. */

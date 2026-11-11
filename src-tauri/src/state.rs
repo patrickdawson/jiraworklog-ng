@@ -68,4 +68,10 @@ impl From<tauri_plugin_autostart::Error> for CommandError {
     }
 }
 
+impl From<String> for CommandError {
+    fn from(e: String) -> Self {
+        Self(e)
+    }
+}
+
 pub type CommandResult<T> = Result<T, CommandError>;
