@@ -184,11 +184,23 @@ mod tests {
 
     #[test]
     fn about_shows_the_workspace_version() {
-        // package_info().version comes from the crate version, which the
-        // workspace shares with package.json.
-        let pkg: serde_json::Value =
-            serde_json::from_str(include_str!("../../package.json")).unwrap();
-        assert_eq!(pkg["version"], env!("CARGO_PKG_VERSION"));
+        // package_info().version comes from tauri.conf.json (the crate
+        // version if it had none). The sidebar and "Was ist neu" show the
+        // ui package's version, CI tags releases by the root package's.
+        // All must match the workspace version.
+        let manifests = [
+            ("package.json", include_str!("../../package.json")),
+            ("ui/package.json", include_str!("../../ui/package.json")),
+            ("e2e/package.json", include_str!("../../e2e/package.json")),
+            (
+                "src-tauri/tauri.conf.json",
+                include_str!("../tauri.conf.json"),
+            ),
+        ];
+        for (name, text) in manifests {
+            let json: serde_json::Value = serde_json::from_str(text).unwrap();
+            assert_eq!(json["version"], env!("CARGO_PKG_VERSION"), "{name}");
+        }
     }
 
     #[test]
