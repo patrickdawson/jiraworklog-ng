@@ -7,8 +7,18 @@ export const REPO_ROOT = path.resolve(import.meta.dirname, "../..");
 /** Cargo target folder of the E2E build, apart from the dev build's target/debug. */
 export const E2E_TARGET_DIR = path.join(REPO_ROOT, "target", "e2e");
 
-/** The app under test: debug build with the bundled UI and the `e2e` feature. */
-export const APP_EXE = path.join(E2E_TARGET_DIR, "debug", "jiraworklog.exe");
+/**
+ * `JWL_E2E_RELEASE=1`: test a release build instead (the workspace's release
+ * profile, e.g. `panic = "abort"`), still with the `e2e` feature.
+ */
+export const E2E_RELEASE = process.env.JWL_E2E_RELEASE === "1";
+
+/** The app under test: debug (or release) build with the bundled UI and the `e2e` feature. */
+export const APP_EXE = path.join(
+  E2E_TARGET_DIR,
+  E2E_RELEASE ? "release" : "debug",
+  "jiraworklog.exe",
+);
 
 /** Wiped at the start of every run: the fresh database and the app's log. */
 export const RUN_DIR = path.join(E2E_TARGET_DIR, "run");

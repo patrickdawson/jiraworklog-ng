@@ -2,6 +2,8 @@
 //
 //   npm run tauri:e2e                       build, then run every spec
 //   JWL_E2E_SKIP_BUILD=1 npm run tauri:e2e  reuse target/e2e/debug/jiraworklog.exe
+//   JWL_E2E_RELEASE=1 npm run tauri:e2e     same suite against a release build
+//                                           (target/e2e/release, release profile)
 //   npm run tauri:e2e -- --spec specs/kalender.e2e.ts
 //
 // The app runs on a fresh database in target/e2e/run (JWL_DB_PATH), never on
@@ -13,6 +15,7 @@ import { startJiraMock, type JiraMockHandle } from "./support/jira-server.ts";
 import {
   APP_EXE,
   DRIVER_PORT,
+  E2E_RELEASE,
   E2E_TARGET_DIR,
   MOCK_JIRA_PORT,
   REPO_ROOT,
@@ -28,12 +31,20 @@ let msedgedriverExe = "";
 
 function buildApp(): void {
   if (process.env.JWL_E2E_SKIP_BUILD === "1" && existsSync(APP_EXE)) return;
-  console.log("[e2e] building the app (debug, bundled UI, feature e2e)…");
+  const profile = E2E_RELEASE ? "release" : "debug";
+  console.log(`[e2e] building the app (${profile}, bundled UI, feature e2e)…`);
   // `tauri build --debug` embeds ui/dist (custom protocol) instead of pointing
   // at the Vite dev server, as a plain `cargo build` would.
   execFileSync(
     "npx",
-    ["tauri", "build", "--debug", "--no-bundle", "--features", "e2e"],
+    [
+      "tauri",
+      "build",
+      ...(E2E_RELEASE ? [] : ["--debug"]),
+      "--no-bundle",
+      "--features",
+      "e2e",
+    ],
     {
       cwd: REPO_ROOT,
       stdio: "inherit",
