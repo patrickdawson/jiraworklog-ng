@@ -20,15 +20,5 @@ npm-debug.log*
 /e2e/node_modules
 /src-tauri/gen/schemas
 
-# Build output of the removed Electron/Next app, still on old checkouts.
-# release/ also holds the old installer the sandbox upgrade test maps in.
-/.next
-/out
-/build
+# Old Electron installers, mapped into the sandbox upgrade test.
 /release
-/dist-electron
-next-env.d.ts
-/tests/.tmp/
-/test-results/
-/playwright-report/
-/playwright/.cache/

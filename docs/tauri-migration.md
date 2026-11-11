@@ -966,7 +966,8 @@ Then:
 - **Kept:** `drizzle/`, `assets/`, `CHANGELOG.md`, `scripts/real-db-copy.mjs`,
   `db-sample.mjs`, `db-bench.mjs` (cited by `docs/concept-scaling-history.md`),
   `gen-icons.mjs` (makes `assets/*.png`; all plain Node + better-sqlite3),
-  `scripts/sandbox/`, `docs/`, `mockups/` and `hand-off.md` (see open items).
+  `scripts/sandbox/`, `docs/`. `mockups/` and `hand-off.md` were deleted after
+  the cut-over.
 - **Root package:** devDependencies `@tauri-apps/cli` and `better-sqlite3`
   only; scripts `tauri*`, `lint` (UI), `typecheck` (UI + E2E), `icons`,
   `db:seed`, `db:unseed`, `db:realcopy`. No `dependencies`, no
@@ -1034,12 +1035,8 @@ Need the user (nothing here can be done safely by an agent on this machine):
 - **Autostart toggle** in Einstellungen → Desktop (writes the Run key; on a
   throwaway user or remove the `JiraWorklog` value afterwards).
 - **Real Win+L and real sleep** for the away dialog (only simulated so far).
-- **"minimiert im System-Tray"** (README, Hilfe, autostart texts): neither
-  app starts hidden at login. Decide: start hidden (`--minimized` through
-  the autostart plugin, and `electron_upgrade::migrate_autostart` writes the
-  same args) or fix the texts. Left as is, as asked.
-- **`mockups/` and `hand-off.md`**: kept. `hand-off.md` describes the
-  deleted Playwright suite; delete both if they are no longer wanted.
+- **Autostart text**: fixed. The app opens its window at login, and the
+  texts now say so (decided after the cut-over: no hidden start).
 - **CI** has not run (branch not pushed). Watch the first run: the E2E job
   needs a desktop session and WebView2 on `windows-latest` and downloads
   msedgedriver and builds tauri-driver; if it is flaky there, keep E2E
