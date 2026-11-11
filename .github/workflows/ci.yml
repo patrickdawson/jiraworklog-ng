@@ -129,7 +129,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # A version with a suffix (1.0.0-beta.1) is a pre-release.
+          prerelease=()
+          case "$VERSION" in *-*) prerelease=(--prerelease) ;; esac
           gh release create "v$VERSION" "target/release/bundle/nsis/JiraWorklog_${VERSION}_x64-setup.exe" \
             --target "$GITHUB_SHA" \
             --title "v$VERSION" \
-            --notes-file release-notes.md
+            --notes-file release-notes.md \
+            "${prerelease[@]}"
