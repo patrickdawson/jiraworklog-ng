@@ -13,6 +13,7 @@ pub mod cleanup;
 pub mod days;
 pub mod db;
 pub mod description;
+pub mod electron_upgrade;
 pub mod entries;
 pub mod error;
 pub mod jira;

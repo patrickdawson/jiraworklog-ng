@@ -29,7 +29,7 @@ pub fn open(path: &Path) -> Result<(Connection, OpenReport)> {
 
     let mut report = OpenReport::default();
     if existed && !migrations::pending(&conn, migrations::MIGRATIONS)?.is_empty() {
-        report.backup = Some(backup(&conn, path)?);
+        report.backup = Some(backup(&conn, path, "")?);
     }
     report.migrated = migrations::migrate(&mut conn)?;
     Ok((conn, report))
@@ -52,12 +52,26 @@ fn configure(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Copies an existing database without migrating it, named
+/// `jiraworklog.db.backup-<label>-<stamp>`. `None` if there is no file.
+/// The installer's upgrade step uses it (label `electron`) before the new app
+/// opens the old app's data for the first time.
+pub fn backup_existing(path: &Path, label: &str) -> Result<Option<PathBuf>> {
+    if !path.is_file() {
+        return Ok(None);
+    }
+    let conn = Connection::open(path)?;
+    conn.busy_timeout(std::time::Duration::from_secs(10))?;
+    Ok(Some(backup(&conn, path, &format!("{label}-"))?))
+}
+
 /// Writes a consistent snapshot next to the database, named like the backups
-/// the Electron app made: `jiraworklog.db.backup-2026-08-31T11-40-04`.
-fn backup(conn: &Connection, path: &Path) -> Result<PathBuf> {
+/// the Electron app made: `jiraworklog.db.backup-2026-08-31T11-40-04`
+/// (`prefix` goes between `backup-` and the time stamp).
+fn backup(conn: &Connection, path: &Path, prefix: &str) -> Result<PathBuf> {
     let stamp = Utc::now().format("%Y-%m-%dT%H-%M-%S");
     let mut name = path.file_name().unwrap_or_default().to_os_string();
-    name.push(format!(".backup-{stamp}"));
+    name.push(format!(".backup-{prefix}{stamp}"));
     let target = path.with_file_name(name);
     // VACUUM INTO reads one snapshot, including what still sits in the WAL.
     conn.execute("VACUUM INTO ?1", [target.to_string_lossy()])?;
@@ -94,6 +108,40 @@ mod tests {
             .unwrap()
             .to_string_lossy()
             .starts_with("jiraworklog.db.backup-"));
+    }
+
+    #[test]
+    fn backup_existing_copies_without_migrating() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("jiraworklog.db");
+        assert!(backup_existing(&path, "electron").unwrap().is_none());
+        {
+            let mut conn = Connection::open(&path).unwrap();
+            migrations::migrate_with(&mut conn, &migrations::MIGRATIONS[..3]).unwrap();
+            // Rows that still sit in the WAL must reach the copy.
+            conn.pragma_update(None, "journal_mode", "WAL").unwrap();
+            conn.execute("CREATE TABLE probe (x)", []).unwrap();
+            conn.execute("INSERT INTO probe VALUES (42)", []).unwrap();
+            let copy = backup_existing(&path, "electron").unwrap().expect("a copy");
+            let name = copy.file_name().unwrap().to_string_lossy().into_owned();
+            assert!(
+                name.starts_with("jiraworklog.db.backup-electron-"),
+                "{name}"
+            );
+            let c = Connection::open(&copy).unwrap();
+            let x: i64 = c
+                .query_row("SELECT x FROM probe", [], |r| r.get(0))
+                .unwrap();
+            assert_eq!(x, 42);
+        }
+        // The original is not migrated.
+        let conn = Connection::open(&path).unwrap();
+        assert_eq!(
+            migrations::pending(&conn, migrations::MIGRATIONS)
+                .unwrap()
+                .len(),
+            migrations::MIGRATIONS.len() - 3
+        );
     }
 
     #[test]
