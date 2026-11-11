@@ -2202,6 +2202,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-single-instance",
  "tauri-specta",
+ "windows-registry",
  "windows-sys 0.59.0",
 ]
 

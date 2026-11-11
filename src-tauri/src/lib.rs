@@ -6,6 +6,7 @@ mod menu;
 mod power;
 mod state;
 mod tray;
+pub mod upgrade;
 mod window;
 
 use tauri::webview::PageLoadEvent;

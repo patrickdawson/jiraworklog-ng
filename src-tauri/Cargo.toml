@@ -35,4 +35,6 @@ tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
 specta-typescript = "=0.0.13"
 
 [target.'cfg(windows)'.dependencies]
+# Same crate and version auto-launch (tauri-plugin-autostart) uses for the Run key.
+windows-registry = "0.6"
 windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_System_RemoteDesktop", "Win32_System_Power", "Win32_System_LibraryLoader"] }
