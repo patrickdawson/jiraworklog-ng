@@ -7,6 +7,8 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-11
+
 ### Geändert
 - Desktop-App: Die App ist neu gebaut, mit Tauri statt Electron. Der Installer ist rund 3 MB statt 96 MB groß, die installierte App rund 8 MB statt 328 MB. Daten und Einstellungen bleiben im selben Ordner und gehen nicht verloren.
 - Installation: Der neue Installer ersetzt die alte Version. Er beendet und deinstalliert sie selbst und sichert vorher die Datenbank (`jiraworklog.db.backup-electron-…`). War Autostart an, bleibt er an. Startmenü- und Desktop-Verknüpfung heißen wie vorher. Die App liegt jetzt unter `%LOCALAPPDATA%\JiraWorklog`, der Installer ist auf Deutsch.
