@@ -1,13 +1,17 @@
 # Tauri migration: plan and state
 
-Branch `tauri-rewrite` (not pushed). Last updated 2026-11-11, after milestone 10.
+Branch `tauri-rewrite` (not pushed). Last updated 2026-11-11, after milestone 11
+(cut-over): the repository holds only the Tauri app, version 0.9.0.
 
 ## Goal
 
 Replace Electron + embedded Next.js server with Tauri 2: a Rust backend and a
 React SPA in WebView2. The goals are a smaller download, less RAM and a faster
-start. The Electron app on `main` keeps working and is the reference
-implementation until the cut-over.
+start. The Electron app (0.8.0, still on `main` until this branch is
+merged, and in the history before `10434ed`) was the reference
+implementation until the cut-over in milestone 11. Comments of the form
+"Port of src/…" or "electron/main.ts" in the Rust and UI code name files of
+that app.
 
 | | Electron 0.8.0 | Tauri (skeleton, milestone 1) | Tauri (milestone 7) | Tauri (milestone 10, size pass) |
 |---|---|---|---|---|
@@ -69,9 +73,14 @@ e2e/                    WebdriverIO + tauri-driver suite, own package.json (mile
   specs/*.e2e.ts        the 15 ported specs
   support/              locators/assertions (page.ts), DB seeding (db.ts), Jira mock, driver lookup
 scripts/sandbox/        Windows Sandbox config + read-only check script for the installer test
-src/, electron/         old Next/Electron app, reference until cut-over
-tests/e2e/              old Playwright suite (against `next start`), deleted in milestone 11
+scripts/*.mjs           real-db-copy, db-sample (seed), db-bench, gen-icons (plain Node)
+drizzle/                migration SQL + journal, embedded by crates/core/src/migrations.rs
+assets/                 tray icons (include_bytes! in src-tauri/src/tray.rs), icon.png
+CHANGELOG.md            imported by ui/src/pages/hilfe-neu.tsx ("Was ist neu")
 ```
+
+The root `package.json` only carries `@tauri-apps/cli` and `better-sqlite3`
+(for the scripts); `ui/` and `e2e/` have their own packages and lockfiles.
 
 ## Commands
 
@@ -82,11 +91,11 @@ tests/e2e/              old Playwright suite (against `next start`), deleted in 
 | `npm run tauri:check` | clippy `-D warnings` (also with `--features e2e`), `cargo test`, UI lint, UI tsc, e2e tsc |
 | `npm run tauri:e2e` | build the E2E exe, run the WebdriverIO suite (see "E2E suite"); `JWL_E2E_RELEASE=1` tests a release build |
 | `npm run tauri:bindings` | regenerate `ui/src/bindings.ts` |
-| `node scripts/real-db-copy.mjs` | read-only snapshot of the live DB into `data/real-copy/` (Jira credentials cleared) |
+| `npm run db:realcopy` | read-only snapshot of the live DB into `data/real-copy/` (Jira credentials cleared) |
+| `npm run lint` / `npm run typecheck` | UI lint / UI and E2E type check (both part of `tauri:check`) |
 
 Work on the copy: `JWL_DB_PATH="$PWD/data/real-copy/jiraworklog.db" npm run tauri:dev`.
-The root `npm run lint` / `npx tsc --noEmit` (Next app) still have to pass;
-they ignore `ui/`, `src-tauri/`, `crates/`.
+Without `JWL_DB_PATH` the dev app opens the live DB.
 
 ## Milestones
 
@@ -102,7 +111,7 @@ they ignore `ui/`, `src-tauri/`, `crates/`.
 | 8 | Einstellungen, Hilfe, Was ist neu, parity audit | ✅ done (see parity checklist) |
 | 9 | E2E port to WebdriverIO + tauri-driver | ✅ done (15 specs, 61 tests, green) |
 | 10 | Installer + upgrade path from Electron, size pass | ✅ done (installer never run: sandbox test open) |
-| 11 | Cut-over: delete Next/Electron, docs, version bump | ⏭ next |
+| 11 | Cut-over: delete Next/Electron, docs, CI, version bump 0.9.0 | ✅ done (see milestone 11) |
 
 ### Commits so far
 
@@ -146,6 +155,15 @@ ea48830 fix(tauri): Keep autostart when an update uninstalls the old version fir
 58aa18d build: Shrink the release build with LTO, opt-level s and panic abort
 c0caee7 test: Add a Windows Sandbox setup for the installer upgrade test
 850f5cd docs: Describe the upgrade from the Electron version
+afd6bf3 docs: Record milestone 10 in the Tauri migration plan
+10434ed refactor!: Remove the Electron and Next.js app
+b3f332b build: Trim the root package to the Tauri tooling
+6d5cf6e ci: Build, test and release the Tauri app on Windows
+52e6e3f docs: Describe the Tauri app in the README and CLAUDE.md
+1b289a7 build(ui): Declare @types/node instead of borrowing it from the root
+a0eaf04 chore(release): Bump the version to 0.9.0
+3815093 test(tauri): Check that every manifest carries the workspace version
+a0e22cc build: Resolve npm packages from registry.npmjs.org in the lockfiles
 ```
 
 ## What exists, by area
@@ -928,84 +946,113 @@ Then:
   milestone 9) is still open; it matters once the app is installed on this
   machine.
 
-## Next: milestone 11 (cut-over)
+## Milestone 11: cut-over (done)
 
-Goal: the Tauri app becomes the only app. Do it on `tauri-rewrite`, in
-separate commits, each with the quality gate.
+### What changed
 
-1. **Delete the old app:** `src/` (Next app), `electron/`,
-   `tsconfig.electron.json`, `dist-electron/` (ignored), `next.config.ts`,
-   `next-env.d.ts`, `postcss.config.mjs`, root `eslint.config.mjs`, root
-   `tsconfig.json`, `drizzle.config.ts`, `tests/` (Playwright),
-   `playwright.config.ts`, `test-results/` / `playwright-report/`
-   (ignored), `scripts/prepare-standalone.mjs`,
-   `scripts/rebuild-electron.mjs`; `scripts/db-bench.mjs` /
-   `db-sample.mjs` only if they import from `src/` (check). Ask the user
-   about `mockups/` and `hand-off.md`.
-2. **Keep, and check what references them:**
-   - `drizzle/*.sql` and `drizzle/meta/_journal.json`:
-     `crates/core/src/migrations.rs` embeds them with
-     `include_str!(concat!("../../../drizzle/", $tag, ".sql"))` and a test
-     reads `../../../drizzle/meta/_journal.json`. Keep the folder where it
-     is, or move it to `crates/core/migrations/` and fix both paths in one
-     commit. Without drizzle-kit, new migrations are hand-written: SQL file
-     + journal entry with `when` > 1779340767574 + `migration!` line.
-   - `assets/` (tray icons via `include_bytes!` in `src-tauri/src/tray.rs`;
-     `icon.png` is the source for `scripts/gen-icons.mjs`).
-   - `CHANGELOG.md` (imported by `ui/src/pages/hilfe-neu.tsx`, allowed in
-     `ui/vite.config.ts`), `README.md`.
-   - Root `package.json` `version`: the About test in
-     `src-tauri/src/menu.rs` reads `../../package.json`; `ui/vite.config.ts`
-     reads `ui/package.json`.
-   - `scripts/real-db-copy.mjs` needs `better-sqlite3` (keep it as a root
-     devDependency, or move the script to `e2e/`, which has it).
-   - `scripts/sandbox/` (milestone 10 test).
-3. **Root `package.json`:** remove the Next/Electron/Playwright/drizzle
-   dependencies (`next`, `react`, `react-dom`, `@react-pdf/renderer`,
-   `drizzle-orm`, `zod`, `electron`, `electron-builder`, `@playwright/test`,
-   `eslint`, `eslint-config-next`, `@tailwindcss/postcss`, `tailwindcss`,
-   `concurrently`, `cross-env`, `prebuild-install`, `drizzle-kit`,
-   `typescript` and `@types/*` if nothing at the root needs them) and the
-   `build` (electron-builder) block; remove the scripts `dev`, `build`,
-   `start`, `lint`, `icons` (if gen-icons goes), `electron:*`, `db:*`
-   (except `db:realcopy`), `dev:realdb`, `test:e2e*`. Keep
-   `@tauri-apps/cli` and `tauri*`. Optionally add `lint` / `typecheck`
-   that call the UI's. `npm install` to refresh `package-lock.json`.
-4. **CI (`.github/workflows/ci.yml`)**: the quality job becomes `npm ci`,
-   `npm ci --prefix ui`, `npm ci --prefix e2e`, `npm run tauri:check` on
-   `windows-latest` (clippy and tests need Windows: `windows-sys`,
-   `windows-registry`); E2E job on Windows with WebView2 (`npm run
-   tauri:e2e`) or local only (decide); the release job runs `npm run
-   tauri:build` and uploads
-   `target/release/bundle/nsis/JiraWorklog_<version>_x64-setup.exe` (the
-   name changes from `release/JiraWorklog-<version>-setup.exe`; adjust the
-   `gh release create` line). Drop `ELECTRON_SKIP_BINARY_DOWNLOAD`.
-5. **Version bump** to `1.0.0` (or the next minor, `0.9.0`; ask the user)
-   in `package.json`, `ui/package.json`, `e2e/package.json` (if it has a
-   version), `Cargo.toml` `[workspace.package]` (then `Cargo.lock` via a
-   build) and `src-tauri/tauri.conf.json` (has no `version` today, so Tauri
-   takes the Cargo version; add it or leave it, but say which). The About
-   test checks package.json against Cargo.
-6. **CHANGELOG:** `[Unreleased]` → `## [1.0.0] - <date>` (keep an empty
-   `[Unreleased]` above it). "Was ist neu" shows it.
-7. **README:** tech stack (Tauri 2, Rust core with rusqlite, ureq,
-   pdf-writer; Vite + React 19 + Tailwind 4 UI; WebdriverIO +
-   tauri-driver), Schnellstart (`npm install`, `npm --prefix ui install`,
-   `npm run tauri:dev`, `JWL_DB_PATH` for a copy), Desktop-App (`npm run
-   tauri:build`, output path), E2E (`npm --prefix e2e ci`, `npm run
-   tauri:e2e`); drop `localhost:3877`, `db:migrate`, `electron:*`.
-8. **CLAUDE.md:** commands → `npm run tauri:check` (+ `npm run tauri:e2e`
-   for UI changes) instead of `npm run lint` / `npx tsc --noEmit`; user
-   docs → `README.md` + `ui/src/pages/hilfe.tsx` instead of
-   `src/app/hilfe/page.tsx`; CHANGELOG rule unchanged. Keep this file as
-   history or shorten it into `docs/architecture.md`.
-9. Decide the "minimiert im System-Tray" text (milestone 8 deviations):
-   either start hidden on autostart (pass e.g. `--minimized` through the
-   autostart plugin; then the Run value becomes `<exe> --minimized`, and
-   `electron_upgrade::migrate_autostart` must write the same args; the
-   `Repointed` case then also fixes existing values on the next install)
-   or fix the texts.
-10. Run the manual sandbox test of milestone 10 before the first release.
+- **Parity re-checked before deleting:** every row of the parity checklist
+  above has a Tauri counterpart. Re-checked by diffing each of the 15 old
+  components against `ui/src/components/` (only the documented changes:
+  `"use client"`, `window.electron` → `desktop`, hash routes, the PDF
+  download → Rust export, `shiftRange` → `prevAnchor`/`nextAnchor`) and the
+  menu labels, accelerators, `app.*` and `powerMonitor` uses of
+  `electron/main.ts` against `menu.rs`, `tray.rs` and `power.rs`. No gap,
+  nothing ported in this milestone.
+- **Removed:** `src/`, `electron/`, `tests/` (Playwright), `playwright.config.ts`,
+  `next.config.ts`, `postcss.config.mjs`, root `eslint.config.mjs`,
+  `tsconfig.json`, `tsconfig.electron.json`, `drizzle.config.ts`,
+  `scripts/prepare-standalone.mjs`, `scripts/rebuild-electron.mjs` and
+  `.claude/launch.json` (it started `next dev`).
+- **Kept:** `drizzle/`, `assets/`, `CHANGELOG.md`, `scripts/real-db-copy.mjs`,
+  `db-sample.mjs`, `db-bench.mjs` (cited by `docs/concept-scaling-history.md`),
+  `gen-icons.mjs` (makes `assets/*.png`; all plain Node + better-sqlite3),
+  `scripts/sandbox/`, `docs/`, `mockups/` and `hand-off.md` (see open items).
+- **Root package:** devDependencies `@tauri-apps/cli` and `better-sqlite3`
+  only; scripts `tauri*`, `lint` (UI), `typecheck` (UI + E2E), `icons`,
+  `db:seed`, `db:unseed`, `db:realcopy`. No `dependencies`, no
+  electron-builder block. Lockfile 13,689 → 492 lines.
+- **ui:** declares `@types/node` itself; its type check had borrowed it
+  from the root's `node_modules` (TS2307 on `node:url` after the trim).
+- **Lockfiles:** `ui/` and `e2e/` (since milestones 1/9) and the new root
+  entries recorded the local npm mirror as `resolved` URL. npm only swaps
+  `registry.npmjs.org` URLs for the configured registry, so a GitHub
+  runner could not have installed them. All three now name
+  `registry.npmjs.org` (same integrity hashes); a local `npm ci` still goes
+  through the mirror.
+- **CI** (`.github/workflows/ci.yml`): `quality` (`npm ci` ×3, `npm run
+  tauri:check`) and `e2e` (`npm run tauri:e2e`, uploads `target/e2e/run/`
+  on failure) on `windows-latest` with `Swatinem/rust-cache@v2`;
+  `detect-release` unchanged; `release` runs `npm run tauri:build` and
+  attaches `target/release/bundle/nsis/JiraWorklog_<version>_x64-setup.exe`.
+  Never run on GitHub (not pushed).
+- **Version 0.9.0** in `package.json`, `ui/`, `e2e/` (+ lockfiles), the
+  Cargo workspace (+ `Cargo.lock`) and `tauri.conf.json`, which now has its
+  own `version` (the About box reads it). A shell test compares all four
+  JSON manifests with the crate version. CHANGELOG `[0.9.0] - 2026-11-11`,
+  empty `[Unreleased]` above it.
+- **Docs:** README (tech stack, prerequisites, commands, E2E, TLS, no
+  browser mode, dev app uses the live DB without `JWL_DB_PATH`) and
+  CLAUDE.md (`npm run tauri:check` + `npm run tauri:e2e`, Hilfe in
+  `ui/src/pages/hilfe.tsx`).
+
+### Verification done (milestone 11)
+
+- `git clean -ndx` reviewed (dry run only): besides `node_modules`,
+  `target/`, `data/`, `release/`, `ui/dist/`, `src-tauri/gen/`, `.claude/`
+  and `.vscode/`, only ignored leftovers of the old app (see open items).
+- From fresh installs (`npm ci` at the root, `npm --prefix ui ci`,
+  `npm --prefix e2e ci`; better-sqlite3 loads under Node 24,
+  `npm run db:realcopy` works): `npm run tauri:check` green (91 core + 8
+  shell tests), `npm run tauri:e2e` green in debug (15 spec files, 61
+  tests) and with `JWL_E2E_RELEASE=1` (61 tests), `npm run tauri:build`
+  green: exe 7,492,096 B, `JiraWorklog_0.9.0_x64-setup.exe` 2,878,809 B.
+  The installer was not run.
+- Dev app on a temp copy of `data/real-copy` over CDP (Playwright
+  `connectOverCDP`, `playwright-core` installed in the scratchpad since the
+  root no longer has it), 15 checks green: window title, sidebar
+  "JiraWorklog v0.9.0", each sidebar page (Buchen, Kalender, Auswertung,
+  Einstellungen, Hilfe) renders its heading without a load error, Kalender
+  previous week, Auswertung "Woche", "Was ist neu" shows "Version 0.9.0"
+  dated 11.11.2026, no "In Arbeit" card, 9 releases, subtitle "aktuell
+  v0.9.0", "Zur Anleitung" back; no console errors, no ERROR line in the
+  app log. Processes stopped by full path / command line afterwards.
+- No processes left after the E2E runs (checked by full path).
+
+### Open items
+
+Need the user (nothing here can be done safely by an agent on this machine):
+
+- **Sandbox upgrade test** (milestone 10, "Manual test" above): enable
+  Windows Sandbox (admin + reboot), then run it before publishing 0.9.0.
+  Nothing of the installer logic has run yet.
+- **First real Jira booking** after the switch, especially TLS through the
+  corporate proxy/CA (milestone 6).
+- **Native UI, by hand:** tray icon (menu, tooltip, "Timer stoppen" from
+  the tray, left click), the app menu itself (Datei/Bearbeiten/Ansicht),
+  "Über JiraWorklog" (should say Version 0.9.0), "Datenordner öffnen", the
+  PDF save dialog incl. cancel.
+- **Autostart toggle** in Einstellungen → Desktop (writes the Run key; on a
+  throwaway user or remove the `JiraWorklog` value afterwards).
+- **Real Win+L and real sleep** for the away dialog (only simulated so far).
+- **"minimiert im System-Tray"** (README, Hilfe, autostart texts): neither
+  app starts hidden at login. Decide: start hidden (`--minimized` through
+  the autostart plugin, and `electron_upgrade::migrate_autostart` writes the
+  same args) or fix the texts. Left as is, as asked.
+- **`mockups/` and `hand-off.md`**: kept. `hand-off.md` describes the
+  deleted Playwright suite; delete both if they are no longer wanted.
+- **CI** has not run (branch not pushed). Watch the first run: the E2E job
+  needs a desktop session and WebView2 on `windows-latest` and downloads
+  msedgedriver and builds tauri-driver; if it is flaky there, keep E2E
+  local and drop the job.
+- **Ignored leftovers of the old app** in this working copy (not deleted,
+  dry run only): `.next/`, `dist-electron/`, `next-env.d.ts`,
+  `playwright-report/`, `test-results/`, `tests/.tmp/`,
+  `tsconfig.tsbuildinfo`. Safe to delete. Keep `release/` (old installer
+  for the sandbox test), `data/`, `target/`.
+- Earlier open checks still stand: the long force preview pushes the dialog
+  buttons out of view (milestone 6), the E2E build shares the WebView2 data
+  folder with an installed Tauri app (milestones 9/10), a panic ends the
+  app (milestone 10).
 
 ## Rules learned the hard way
 
