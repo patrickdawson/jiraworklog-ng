@@ -8,7 +8,8 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Geändert
-- Desktop-App: Die App ist neu gebaut, mit Tauri statt Electron. Der Installer ist rund 4 MB statt 96 MB groß, die installierte App rund 17 MB statt 328 MB. Daten und Einstellungen bleiben im selben Ordner und gehen nicht verloren.
+- Desktop-App: Die App ist neu gebaut, mit Tauri statt Electron. Der Installer ist rund 3 MB statt 96 MB groß, die installierte App rund 8 MB statt 328 MB. Daten und Einstellungen bleiben im selben Ordner und gehen nicht verloren.
+- Installation: Der neue Installer ersetzt die alte Version. Er beendet und deinstalliert sie selbst und sichert vorher die Datenbank (`jiraworklog.db.backup-electron-…`). War Autostart an, bleibt er an. Startmenü- und Desktop-Verknüpfung heißen wie vorher. Die App liegt jetzt unter `%LOCALAPPDATA%\JiraWorklog`, der Installer ist auf Deutsch.
 - Jira: Die App prüft jetzt das Zertifikat des Jira-Servers. Ein Jira mit firmeneigenem Zertifikat funktioniert nur, wenn Windows diesem Zertifikat vertraut. Die Umgebungsvariable `JIRA_TLS_STRICT` gibt es nicht mehr.
 - Jira: Fehlermeldungen sind genauer. Nur ein Zertifikatsproblem nennt noch das Zertifikat. Erreicht die App den Server nicht, steht dort „Keine Verbindung zum Server. Bitte Jira-URL prüfen.“
 - Jira: Eine Anfrage an Jira bricht nach 60 Sekunden ab. Vorher wartete die App unbegrenzt.

@@ -409,6 +409,13 @@ export function HilfePage() {
               nach vorne.
             </li>
             <li>
+              <b>Installieren und aktualisieren</b> — Eine neue Version
+              installierst du einfach über die alte. Eine ältere
+              Electron-Version (bis 0.8.0) beendet und entfernt der Installer
+              selbst. Daten und Einstellungen bleiben, die Datenbank wird
+              vorher gesichert. War Autostart an, bleibt er an.
+            </li>
+            <li>
               <b>Menü Hilfe</b> — öffnet diese Seite (<Kbd>F1</Kbd>), „Was ist
               neu“ und den Datenordner mit Datenbank und Logs.
             </li>

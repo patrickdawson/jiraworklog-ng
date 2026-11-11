@@ -74,7 +74,8 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Kurze Einträge verwerfen** — Timer-Einträge kürzer als 1 Minute werden automatisch verworfen (zu kurz für Jira)
 
 ### Desktop-App (Windows)
-- **Installer** — Ein Klick installiert die App pro Benutzer (NSIS, kein Admin nötig)
+- **Installer** — Installiert die App pro Benutzer nach `%LOCALAPPDATA%\JiraWorklog` (NSIS, kein Admin nötig). Eine neue Version installierst du einfach über die alte.
+- **Umstieg von der Electron-Version** — Der Installer beendet und deinstalliert die alte Version (bis 0.8.0) selbst. Daten und Einstellungen bleiben, die Datenbank wird vorher gesichert (`jiraworklog.db.backup-electron-…`). War Autostart an, bleibt er an. Startmenü- und Desktop-Verknüpfung heißen wie vorher.
 - **System-Tray** — Tray-Icon mit laufendem Timer. Timer stoppen, Fenster zeigen oder beenden direkt aus dem Tray.
 - **Schließen = Minimieren** — Das Fenster geht in den Tray, der Timer läuft weiter
 - **Autostart** — Optional beim Windows-Anmelden minimiert im Tray starten
