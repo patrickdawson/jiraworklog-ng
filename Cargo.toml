@@ -10,3 +10,17 @@ publish = false
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 specta = { version = "=2.0.0-rc.26", features = ["derive"] }
+
+# Size pass (milestone 10, numbers in docs/tauri-migration.md): 17.1 MB → 7.5 MB
+# exe, 4.4 MB → 2.9 MB installer. "s" over "z": z saves another 0.7 MB but
+# makes the heaviest work (all-history PDF, Auswertung "Alle") ~20 % slower
+# than "s". panic = "abort" alone saves ~4 MB of unwind tables; most panics
+# ended the app already (main-thread code runs inside tao's catch_unwind,
+# which resumes the panic after the event loop), and `run` logs every panic
+# before the process ends.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
