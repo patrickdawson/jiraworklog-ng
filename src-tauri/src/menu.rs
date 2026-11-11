@@ -146,12 +146,18 @@ fn open_route(app: &AppHandle, path: &str) {
     let _ = Navigate(path.into()).emit(app);
 }
 
+/// The About box text: name, version, then the runtime versions, laid out
+/// like the Electron app's (which listed Electron, Chromium and Node).
+fn about_text(version: &str, tauri: &str, webview: &str) -> String {
+    format!("JiraWorklog Tracker\n\nVersion {version}\n\nTauri {tauri}\nWebView2 {webview}")
+}
+
 fn show_about(app: &AppHandle) {
     let webview = tauri::webview_version().unwrap_or_else(|_| "?".into());
-    let detail = format!(
-        "JiraWorklog Tracker\n\nVersion {}\n\nTauri {}\nWebView2 {webview}",
-        app.package_info().version,
+    let detail = about_text(
+        &app.package_info().version.to_string(),
         tauri::VERSION,
+        &webview,
     );
     let mut dialog = app
         .dialog()
@@ -162,4 +168,31 @@ fn show_about(app: &AppHandle) {
         dialog = dialog.parent(&w);
     }
     dialog.show(|_| {});
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn about_text_names_app_version_and_runtime() {
+        assert_eq!(
+            about_text("0.8.0", "2.12.0", "142.0.1"),
+            "JiraWorklog Tracker\n\nVersion 0.8.0\n\nTauri 2.12.0\nWebView2 142.0.1"
+        );
+    }
+
+    #[test]
+    fn about_shows_the_workspace_version() {
+        // package_info().version comes from the crate version, which the
+        // workspace shares with package.json.
+        let pkg: serde_json::Value =
+            serde_json::from_str(include_str!("../../package.json")).unwrap();
+        assert_eq!(pkg["version"], env!("CARGO_PKG_VERSION"));
+    }
+
+    #[test]
+    fn zoom_steps_start_at_100_percent() {
+        assert_eq!(ZOOM_STEPS[DEFAULT_ZOOM], 1.0);
+    }
 }

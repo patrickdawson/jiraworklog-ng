@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "JiraWorklog",
+        "title": "JiraWorklog Tracker",
         "width": 1280,
         "height": 860,
         "minWidth": 940,
