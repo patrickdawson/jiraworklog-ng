@@ -10,46 +10,62 @@ concurrency:
   # Never cancel a run on main: it may be halfway through a release.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Everything runs on Windows: the app is Windows-only, and clippy and the
+# tests need the Windows APIs (windows-sys, windows-registry, WebView2).
+# The Rust toolchain comes from rust-toolchain.toml; rustup installs it on
+# the first cargo call.
+
 jobs:
   quality:
-    name: Lint and type check
-    runs-on: ubuntu-24.04
-    env:
-      # The Electron binary is not needed for lint or type checks.
-      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    name: Clippy, Rust tests, lint and type check
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+            e2e/package-lock.json
+      - uses: Swatinem/rust-cache@v2
       - run: npm ci
-      - run: npm run lint
-      - run: npx tsc --noEmit
-      - run: npx tsc -p tsconfig.electron.json --noEmit
+      - run: npm ci --prefix ui
+      - run: npm ci --prefix e2e
+      - run: npm run tauri:check
 
   e2e:
     name: E2E tests
-    # Pinned: Playwright 1.60 cannot install Chromium on Ubuntu 26.04, which
-    # ubuntu-latest became in October 2026.
-    runs-on: ubuntu-24.04
-    env:
-      # The web E2E tests do not start Electron.
-      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+            e2e/package-lock.json
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # The suite builds into target/e2e (debug + e2e feature) and
+          # installs tauri-driver into target/tools.
+          workspaces: ". -> target/e2e"
+          cache-directories: target/tools
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: npm ci --prefix ui
+      - run: npm ci --prefix e2e
+      # Builds the E2E exe, fetches tauri-driver and the msedgedriver that
+      # matches the runner's WebView2, then runs every spec.
+      - run: npm run tauri:e2e
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-results
-          path: test-results/
+          name: e2e-run
+          # App log, tauri-driver log and the test database.
+          path: target/e2e/run/
           retention-days: 7
 
   # A release is due when the version in package.json has no matching v<version> tag yet.
@@ -89,9 +105,15 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
       - run: npm ci
-      # --publish never: the release is created by the gh step below, not by electron-builder.
-      - run: npm run electron:build -- --publish never
+      - run: npm ci --prefix ui
+      # Release profile (LTO, opt-level "s", panic = "abort") plus the NSIS
+      # installer in target/release/bundle/nsis/. No cache: a release builds
+      # from scratch.
+      - run: npm run tauri:build
       - name: Extract release notes from CHANGELOG.md
         shell: bash
         run: |
@@ -107,7 +129,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v$VERSION" "release/JiraWorklog-$VERSION-setup.exe" \
+          gh release create "v$VERSION" "target/release/bundle/nsis/JiraWorklog_${VERSION}_x64-setup.exe" \
             --target "$GITHUB_SHA" \
             --title "v$VERSION" \
             --notes-file release-notes.md
