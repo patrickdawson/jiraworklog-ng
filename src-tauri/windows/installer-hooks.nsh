@@ -1,4 +1,4 @@
-﻿﻿; Installer hooks (tauri.conf.json → bundle.windows.nsis.installerHooks).
+﻿; Installer hooks (tauri.conf.json → bundle.windows.nsis.installerHooks).
 ;
 ; Upgrade path from the Electron app (electron-builder, one-click, per user,
 ; appId com.jiraworklog.ng, installed to %LOCALAPPDATA%\Programs\jiraworklog-ng):
