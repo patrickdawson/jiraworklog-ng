@@ -7,6 +7,16 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Geändert
+- Desktop-App: Die App ist neu gebaut, mit Tauri statt Electron. Der Installer ist rund 4 MB statt 96 MB groß, die installierte App rund 17 MB statt 328 MB. Daten und Einstellungen bleiben im selben Ordner und gehen nicht verloren.
+- Jira: Die App prüft jetzt das Zertifikat des Jira-Servers. Ein Jira mit firmeneigenem Zertifikat funktioniert nur, wenn Windows diesem Zertifikat vertraut. Die Umgebungsvariable `JIRA_TLS_STRICT` gibt es nicht mehr.
+- Jira: Fehlermeldungen sind genauer. Nur ein Zertifikatsproblem nennt noch das Zertifikat. Erreicht die App den Server nicht, steht dort „Keine Verbindung zum Server. Bitte Jira-URL prüfen.“
+- Jira: Eine Anfrage an Jira bricht nach 60 Sekunden ab. Vorher wartete die App unbegrenzt.
+- PDF: Stundenzettel und Axapta-Bericht bringen ihre Schrift mit. Text lässt sich sauber kopieren. Sehr lange Wörter werden an anderer Stelle getrennt als vorher.
+
+### Entfernt
+- Browser-Modus: JiraWorklog läuft nur noch als Desktop-App für Windows. Den Webserver unter `localhost:3877` und den Schutz gegen Scanner-Anfragen gibt es nicht mehr, weil die App keinen Port mehr öffnet.
+
 ## [0.8.0] - 2026-10-30
 
 ### Hinzugefügt

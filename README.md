@@ -1,6 +1,6 @@
 # JiraWorklog Tracker
 
-Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs in Jira — ohne Cloud, ohne Account, ohne Abo. Läuft im Browser oder als Windows-Desktop-App mit Tray-Icon.
+Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs in Jira — ohne Cloud, ohne Account, ohne Abo. Läuft als Windows-Desktop-App mit Tray-Icon.
 
 ![JiraWorklog Tracker Screenshot](docs/readme-booking.png)
 
@@ -44,6 +44,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Tagesweise oder alles auf einmal buchen** — Pro Tag oder alle offenen Einträge in einem Schritt nach Jira übertragen
 - **Buchungsmodi** — Einträge gleicher Beschreibung bündeln (gruppiert) oder jeden Eintrag einzeln buchen
 - **Jira Cloud (Basic Auth)** — Atlassian-Konto-E-Mail und [API-Token](https://id.atlassian.com/manage-profile/security/api-tokens) (kein Bearer-PAT, kein Kontopasswort)
+- **Zertifikatsprüfung** — Die App prüft das TLS-Zertifikat des Jira-Servers gegen den Windows-Zertifikatspeicher. Ein firmeneigenes Zertifikat muss dort als vertrauenswürdig hinterlegt sein. Fehlermeldungen unterscheiden zwischen Zertifikatsproblem und fehlender Verbindung. Eine Anfrage bricht nach 60 Sekunden ab.
 - **Issue-Keys als Link** — Ein Klick auf einen Issue-Key öffnet das Issue in Jira im Browser
 - **Status-Badges** — Jeder Eintrag zeigt deutlich ob er bereits gebucht (`gebucht`) oder noch offen (`offen`) ist
 - **Force-Buchung** — Schalter in den Einstellungen, um bereits gebuchte Einträge erneut nach Jira zu senden. Er gilt nur bis zum nächsten App-Neustart. Solange er aktiv ist, zeigt „Buchen“ ein Warnbanner.
@@ -92,12 +93,9 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - Sprint-Ankerdatum, Sprint-Länge und Ziel für die Quote konkreter Issues
 - Saldo-Korridor für den Saldo-Verlauf: Mitte und Spanne ± in ganzen Stunden (Standard 100 ± 40)
 - Farbschema: System, Hell oder Dunkel
-- Desktop: Autostart (nur in der Desktop-App)
+- Desktop: Autostart
 - Datenpflege: alte Einträge löschen (Aufbewahrungsdauer in Tagen). Der Überstundensaldo bleibt dabei erhalten, weil die gelöschten Tage in den Startwert wandern.
 - Gefahrenzone: Force-Buchung (gilt nur bis zum Neustart)
-
-### Schutz
-- **Scanner- und Flood-Schutz** — Ein Proxy beantwortet typische Angriffs-Anfragen (PHP, CGI, Path Traversal, SQLi …) sofort mit 404, sperrt wiederholende IPs zeitweise und begrenzt Anfrage-Fluten
 
 ---
 
@@ -154,9 +152,9 @@ npm run test:e2e
 
 In den Einstellungen die Cloud-URL eintragen (z. B. `https://yourorg.atlassian.net`, ohne Pfad am Ende), Atlassian-E-Mail und API-Token hinterlegen, dann „Verbindung testen“.
 
-### TLS (optional)
+### TLS
 
-Jira Cloud nutzt öffentliche Zertifikate. Für Legacy-On-Prem mit internem CA akzeptiert die App standardmäßig auch nicht vertrauenswürdige Zertifikate (`src/instrumentation.ts`). Zum Erzwingen echter Prüfung: `JIRA_TLS_STRICT=1` setzen und den Server neu starten.
+Jira Cloud nutzt öffentliche Zertifikate. Die App prüft das Zertifikat immer gegen den Windows-Zertifikatspeicher. Für ein On-Prem-Jira mit firmeneigener CA muss diese CA in Windows als vertrauenswürdig installiert sein (bei Firmenrechnern meist schon über die IT verteilt). `JIRA_TLS_STRICT` gibt es nicht mehr.
 
 ---
 
