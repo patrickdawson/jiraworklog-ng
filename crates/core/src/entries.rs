@@ -1,5 +1,4 @@
-//! Time entries and the views built from them. Port of src/lib/entries.ts
-//! (the Buchen parts; the Auswertung aggregates follow in milestone 5).
+//! Time entries and the views built from them. Port of src/lib/entries.ts.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -382,6 +381,127 @@ pub fn overtime_balance_minutes(
     js_round(balance) as i32
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct BalancePoint {
+    pub key: String,
+    pub minutes: i32,
+}
+
+/// The overtime balance at the end of each day in `day_keys`, by the rule of
+/// [`overtime_balance_minutes`]. Days before the first key still count, so the
+/// last point matches the KPI. Days before the first tracked day and after
+/// `today_key` are left out.
+pub fn overtime_balance_series(
+    worked_by_day: &BTreeMap<String, f64>,
+    regular_minutes: i32,
+    day_keys: &[String],
+    today_key: &str,
+    baseline: i32,
+) -> Vec<BalancePoint> {
+    let Some(first_tracked) = worked_by_day.keys().next() else {
+        return Vec::new();
+    };
+    let visible: Vec<&String> = day_keys
+        .iter()
+        .filter(|k| *k >= first_tracked && k.as_str() <= today_key)
+        .collect();
+    let Some(first_visible) = visible.first() else {
+        return Vec::new();
+    };
+
+    let delta = |key: &str| match worked_by_day.get(key) {
+        Some(seconds) if is_weekend_key(key) => seconds / 60.0,
+        Some(seconds) => seconds / 60.0 - f64::from(regular_minutes),
+        None => 0.0,
+    };
+
+    let mut balance = f64::from(baseline);
+    for key in worked_by_day.keys().take_while(|k| k < first_visible) {
+        balance += delta(key);
+    }
+    visible
+        .into_iter()
+        .map(|key| {
+            balance += delta(key);
+            BalancePoint {
+                key: key.clone(),
+                minutes: js_round(balance) as i32,
+            }
+        })
+        .collect()
+}
+
+/// The key a group color is stored under: `issue:<KEY>` for concrete entries,
+/// `cat:<category>` for Allgemeines. Concrete entries without a key have none.
+pub fn group_color_key(
+    is_allgemeines: bool,
+    category: Option<AllgemeinesCategory>,
+    issue_key: Option<&str>,
+) -> Option<String> {
+    if is_allgemeines {
+        category.map(|c| format!("cat:{}", c.as_str()))
+    } else {
+        issue_key.map(|k| format!("issue:{}", k.to_uppercase()))
+    }
+}
+
+/// The "Zeit pro Ticket" bucket of an entry; stable across requests.
+pub fn group_total_id(e: &EntryView) -> String {
+    group_color_key(e.is_allgemeines, e.category, e.issue_key.as_deref())
+        .unwrap_or_else(|| "none".into())
+}
+
+/// Worked time of one ticket (concrete) or category (Allgemeines).
+#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct GroupTotal {
+    pub id: String,
+    /// Group color key; `None` for concrete entries without an issue key.
+    pub key: Option<String>,
+    /// The ticket of a concrete group.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issue_key: Option<String>,
+    pub label: String,
+    pub is_allgemeines: bool,
+    #[specta(type = crate::JsNumber)]
+    pub seconds: f64,
+}
+
+/// Worked time per ticket or category, largest first (stable for ties).
+/// Concrete entries without an issue key share one bucket.
+pub fn seconds_by_group(entries: &[EntryView]) -> Vec<GroupTotal> {
+    let mut totals: Vec<GroupTotal> = Vec::new();
+    let mut index: HashMap<String, usize> = HashMap::new();
+    for e in entries.iter().filter(|e| e.effective_seconds > 0.0) {
+        let id = group_total_id(e);
+        let i = *index.entry(id.clone()).or_insert_with(|| {
+            totals.push(GroupTotal {
+                key: group_color_key(e.is_allgemeines, e.category, e.issue_key.as_deref()),
+                issue_key: if e.is_allgemeines {
+                    None
+                } else {
+                    e.issue_key.clone()
+                },
+                label: if e.is_allgemeines {
+                    format!("Allgemein · {}", e.category.map_or("—", |c| c.as_str()))
+                } else {
+                    e.issue_key
+                        .clone()
+                        .unwrap_or_else(|| "kein Issue-Key".into())
+                },
+                is_allgemeines: e.is_allgemeines,
+                seconds: 0.0,
+                id,
+            });
+            totals.len() - 1
+        });
+        totals[i].seconds += e.effective_seconds;
+    }
+    totals.sort_by(|a, b| b.seconds.total_cmp(&a.seconds));
+    totals
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -546,6 +666,77 @@ mod tests {
         let mut minus = BTreeMap::new();
         minus.insert("2026-11-10".to_string(), 30.0); // -419.5
         assert_eq!(overtime_balance_minutes(&minus, 420, 0), -419);
+    }
+
+    #[test]
+    fn balance_series_starts_at_the_first_tracked_day_and_stops_today() {
+        let mut worked = BTreeMap::new();
+        worked.insert("2026-11-02".to_string(), 8.0 * 3600.0); // Mon: +60
+        worked.insert("2026-11-04".to_string(), 6.0 * 3600.0); // Wed: -60
+        worked.insert("2026-11-07".to_string(), 3600.0); // Sat: +60
+        worked.insert("2026-11-09".to_string(), 7.0 * 3600.0 + 30.0); // Mon: +0.5
+        let keys: Vec<String> = (3..=12).map(|d| format!("2026-11-{d:02}")).collect();
+        let series = overtime_balance_series(&worked, 420, &keys, "2026-11-10", 5);
+        let got: Vec<(&str, i32)> = series.iter().map(|p| (p.key.as_str(), p.minutes)).collect();
+        // The 2nd lies before the shown days but still counts: 5 + 60.
+        assert_eq!(
+            got,
+            [
+                ("2026-11-03", 65),
+                ("2026-11-04", 5),
+                ("2026-11-05", 5),
+                ("2026-11-06", 5),
+                ("2026-11-07", 65),
+                ("2026-11-08", 65),
+                ("2026-11-09", 66), // 65.5 rounds up like JS
+                ("2026-11-10", 66),
+            ]
+        );
+        // The last point matches the KPI over the same history.
+        assert_eq!(overtime_balance_minutes(&worked, 420, 5), 66);
+        assert!(overtime_balance_series(&BTreeMap::new(), 420, &keys, "2026-11-10", 0).is_empty());
+        let early: Vec<String> = vec!["2026-10-01".into()];
+        assert!(overtime_balance_series(&worked, 420, &early, "2026-11-10", 0).is_empty());
+    }
+
+    #[test]
+    fn group_totals_bucket_by_ticket_and_category() {
+        let mut views: Vec<EntryView> = [
+            (1, "Fix TXR-1 a", "08:00", "09:00"),
+            (2, "TXR-1 b", "09:00", "09:30"),
+            (3, "no key", "10:00", "12:00"),
+            (4, "Meeting", "12:00", "12:30"),
+            (5, "zero", "13:00", "13:00"),
+        ]
+        .iter()
+        .map(|(id, desc, from, to)| {
+            let e = entry(
+                *id,
+                desc,
+                &format!("2026-11-10T{from}:00.000Z"),
+                Some(&format!("2026-11-10T{to}:00.000Z")),
+            );
+            to_entry_view(&e, &cfg(), &Berlin)
+        })
+        .collect();
+        views[3].is_allgemeines = true;
+        views[3].category = Some(AllgemeinesCategory::Qa);
+
+        let totals = seconds_by_group(&views);
+        let got: Vec<(&str, Option<&str>, &str, f64)> = totals
+            .iter()
+            .map(|t| (t.id.as_str(), t.key.as_deref(), t.label.as_str(), t.seconds))
+            .collect();
+        assert_eq!(
+            got,
+            [
+                ("none", None, "kein Issue-Key", 7200.0),
+                ("issue:TXR-1", Some("issue:TXR-1"), "TXR-1", 5400.0),
+                ("cat:QA", Some("cat:QA"), "Allgemein · QA", 1800.0),
+            ]
+        );
+        assert_eq!(totals[1].issue_key.as_deref(), Some("TXR-1"));
+        assert_eq!(totals[2].issue_key, None);
     }
 
     #[test]

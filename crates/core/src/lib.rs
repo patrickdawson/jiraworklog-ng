@@ -4,6 +4,7 @@
 //! events, the tray and the window. Keeping them here makes them testable with
 //! a plain `cargo test`.
 
+pub mod auswertung;
 pub mod away;
 pub mod buchen;
 pub mod days;
@@ -11,7 +12,9 @@ pub mod db;
 pub mod description;
 pub mod entries;
 pub mod error;
+pub mod kalender;
 pub mod migrations;
+pub mod report_range;
 pub mod settings;
 pub mod store;
 pub mod time;

@@ -46,6 +46,15 @@ pub fn entries_from(conn: &Connection, from_iso: &str) -> Result<Vec<TimeEntry>>
     entries(conn, "WHERE started_at >= ?1", [from_iso])
 }
 
+/// Entries with `from_iso <= started_at <= to_iso`, newest first.
+pub fn entries_between(conn: &Connection, from_iso: &str, to_iso: &str) -> Result<Vec<TimeEntry>> {
+    entries(
+        conn,
+        "WHERE started_at >= ?1 AND started_at <= ?2",
+        [from_iso, to_iso],
+    )
+}
+
 /// Lean projection over every finished entry, for per-day aggregates.
 pub fn finished_durations(conn: &Connection) -> Result<Vec<DurationRow>> {
     let mut stmt = conn.prepare(
