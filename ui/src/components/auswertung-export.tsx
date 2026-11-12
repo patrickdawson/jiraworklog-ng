@@ -1,6 +1,5 @@
 // The period controls and the PDF exports of the Auswertung page.
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Link, useNavigate } from "react-router";
 import { useState, type CSSProperties } from "react";
 import { commands } from "@/bindings";
 import { rangeQuery, type ResolvedRange } from "@/lib/report-range";
@@ -78,7 +77,7 @@ function ArrowLink({
   }
   return (
     <Link
-      href={href}
+      to={href}
       className={className}
       style={buttonBase}
       aria-label={ariaLabel}
@@ -89,7 +88,7 @@ function ArrowLink({
 }
 
 function AnchorPicker({ resolved }: { resolved: ResolvedRange }) {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   if (resolved.kind === "all") return null;
 
@@ -112,7 +111,7 @@ function AnchorPicker({ resolved }: { resolved: ResolvedRange }) {
         onChange={(e) => {
           const y = Number(e.target.value);
           if (!Number.isFinite(y) || y < 2000 || y > 2100) return;
-          router.push(`/auswertung${rangeQuery("ytd", `${y}-01-01`)}`);
+          void navigate(`/auswertung${rangeQuery("ytd", `${y}-01-01`)}`);
         }}
         className={`${inputClassName} sm:w-[88px]`}
         style={inputStyle}
@@ -129,7 +128,7 @@ function AnchorPicker({ resolved }: { resolved: ResolvedRange }) {
         onChange={(e) => {
           const value = e.target.value;
           if (!/^\d{4}-\d{2}$/.test(value)) return;
-          router.push(
+          void navigate(
             `/auswertung${rangeQuery("month", `${value}-01`)}`,
           );
         }}
@@ -148,7 +147,7 @@ function AnchorPicker({ resolved }: { resolved: ResolvedRange }) {
         onChange={(e) => {
           const value = e.target.value;
           if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
-          router.push(`/auswertung${rangeQuery("sprint", value)}`);
+          void navigate(`/auswertung${rangeQuery("sprint", value)}`);
         }}
         className={inputClassName}
         style={inputStyle}
@@ -165,7 +164,7 @@ function AnchorPicker({ resolved }: { resolved: ResolvedRange }) {
       onChange={(e) => {
         const value = e.target.value;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
-        router.push(`/auswertung${rangeQuery("week", value)}`);
+        void navigate(`/auswertung${rangeQuery("week", value)}`);
       }}
       className={inputClassName}
       style={inputStyle}
@@ -256,7 +255,7 @@ export function RangeControls({ resolved }: { resolved: ResolvedRange }) {
       </div>
       {todayHref !== null ? (
         <Link
-          href={todayHref}
+          to={todayHref}
           className="rounded-lg border px-3 py-1.5 text-[13px] font-semibold flex-shrink-0"
           style={buttonBase}
         >

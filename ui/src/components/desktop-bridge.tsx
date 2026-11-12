@@ -1,20 +1,20 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router";
 import { desktop } from "@/lib/desktop";
+import { reloadAll } from "@/lib/query";
 
 /**
- * Bridges shell events into the UI (port of electron-bridge.tsx): reloads the
- * data when the timer is stopped from the tray, opens the routes picked in
- * the app menu, and sends external links to the default browser instead of
- * navigating the app window away.
+ * Bridges shell events into the UI: reloads the data when the timer is stopped
+ * from the tray, opens the routes picked in the app menu, and sends external
+ * links to the default browser instead of navigating the app window away.
  */
 export function DesktopBridge() {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const offTimer = desktop.onTimerStopped(() => {
-      router.refresh();
+      reloadAll();
     });
     const offNavigate = desktop.onNavigate((path) => {
       // Go through a real link click so page guards (unsaved settings) can
@@ -24,7 +24,7 @@ export function DesktopBridge() {
       link.hidden = true;
       link.addEventListener("click", (e) => {
         e.preventDefault();
-        router.push(path);
+        void navigate(path);
       });
       document.body.appendChild(link);
       link.click();
@@ -49,7 +49,7 @@ export function DesktopBridge() {
       offNavigate();
       document.removeEventListener("click", onClick, true);
     };
-  }, [router]);
+  }, [navigate]);
 
   return null;
 }

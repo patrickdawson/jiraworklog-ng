@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router";
 import { Card, PageHeader } from "@/components/ui";
 import { useConfirm } from "@/components/confirm-dialog";
 import {
@@ -185,7 +185,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
   const [cleanupStatus, setCleanupStatus] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const confirm = useConfirm();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   // The success note only confirms the click; it leaves the save bar on its own.
   useEffect(() => {
@@ -222,7 +222,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         if (!leave) return;
         // Drop the unsaved theme preview before the next page shows.
         document.documentElement.dataset.theme = savedTheme;
-        router.push(target);
+        void navigate(target);
       });
     }
 
@@ -230,7 +230,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
     return () => {
       document.removeEventListener("click", onClick, true);
     };
-  }, [dirty, confirm, router, savedTheme]);
+  }, [dirty, confirm, navigate, savedTheme]);
 
   async function onSave() {
     const regularMin = hmToMinutes(regular);

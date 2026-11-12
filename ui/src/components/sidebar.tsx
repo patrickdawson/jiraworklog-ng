@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, useLocation } from "react-router";
 
 type NavItem = {
   href: string;
@@ -94,14 +93,14 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export function Sidebar() {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
 
   return (
     <aside
       className="sticky top-0 h-screen flex flex-col px-3 py-5 border-r"
       style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
-      <Link href="/" className="flex items-center gap-2.5 px-3 pb-5">
+      <Link to="/" className="flex items-center gap-2.5 px-3 pb-5">
         <div
           className="flex h-[30px] w-[30px] items-center justify-center rounded-lg text-white font-bold text-[13px]"
           style={{
@@ -112,7 +111,7 @@ export function Sidebar() {
         </div>
         <div>
           <div className="font-semibold text-[14px]">
-            JiraWorklog v{process.env.NEXT_PUBLIC_APP_VERSION}
+            JiraWorklog v{__APP_VERSION__}
           </div>
           <div className="text-[11px]" style={{ color: "var(--text-2)" }}>
             Tracker
@@ -166,7 +165,7 @@ function NavSection({
         return (
           <Link
             key={item.href}
-            href={item.href}
+            to={item.href}
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13.5px] font-medium mb-px transition-colors"
             style={
               active

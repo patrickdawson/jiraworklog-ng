@@ -14,9 +14,7 @@
     "noUnusedParameters": true,
     "types": ["vite/client"],
     "paths": {
-      "@/*": ["./src/*"],
-      "next/link": ["./src/next/link.tsx"],
-      "next/navigation": ["./src/next/navigation.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src", "vite.config.ts"]

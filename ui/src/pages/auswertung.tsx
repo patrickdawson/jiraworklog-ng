@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { commands, type AuswertungData_Serialize as AuswertungData } from "@/bindings";
 import { RangeControls } from "@/components/auswertung-export";
 import { TicketTime } from "@/components/ticket-time";
@@ -62,7 +61,7 @@ function AuswertungView({ data }: { data: AuswertungData }) {
               {RANGES.map((r) => (
                 <Link
                   key={r.key}
-                  href={`/auswertung${rangeQuery(r.key, r.key === resolved.kind ? resolved.anchor : "")}`}
+                  to={`/auswertung${rangeQuery(r.key, r.key === resolved.kind ? resolved.anchor : "")}`}
                   className="rounded-lg border px-3 py-1.5 text-[13px] font-semibold flex-1 text-center sm:flex-none"
                   style={
                     r.key === resolved.kind

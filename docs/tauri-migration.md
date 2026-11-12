@@ -349,6 +349,11 @@ assertion is kept. Where the meaning shifted:
 
 Copy the component from `src/components/` and change as little as possible:
 
+> After the port the shims below were removed: components import `Link`,
+> `useNavigate` and `useLocation` from react-router, `router.refresh()` is
+> `reloadAll()` from `ui/src/lib/query.ts`, `ui/src/db/schema.ts` is
+> `ui/src/lib/categories.ts`, and the version is `__APP_VERSION__`.
+
 - `next/link` and `next/navigation` are aliased (vite.config.ts, tsconfig
   paths) to shims in `ui/src/next/` on top of react-router.
   `router.refresh()` = invalidate all queries.

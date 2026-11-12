@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
+import { Link } from "react-router";
 import { Badge, Card, EmptyState, KpiCard, PageHeader } from "@/components/ui";
 import {
   createManualEntry,
@@ -333,7 +333,7 @@ function HistoryWindowControls({
   return (
     <div className="mt-4 flex items-center justify-center gap-4 text-[13px]">
       <Link
-        href={`/?days=${nextWindow}`}
+        to={`/?days=${nextWindow}`}
         className="rounded-md border px-3 py-1.5 transition-colors"
         style={{
           borderColor: "var(--border-strong)",
@@ -343,7 +343,7 @@ function HistoryWindowControls({
         Weitere 90 Tage laden
       </Link>
       <Link
-        href="/?days=all"
+        to="/?days=all"
         style={{ color: "var(--text-2)" }}
         className="underline underline-offset-2"
       >

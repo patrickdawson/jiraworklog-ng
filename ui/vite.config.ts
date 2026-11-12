@@ -12,16 +12,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   clearScreen: false,
   resolve: {
-    alias: [
-      // The components were ported from the Next.js app unchanged. These shims
-      // give them the few Next APIs they use, on top of react-router.
-      { find: "next/link", replacement: src("next/link.tsx") },
-      { find: "next/navigation", replacement: src("next/navigation.ts") },
-      { find: /^@\//, replacement: src("") },
-    ],
+    alias: [{ find: /^@\//, replacement: src("") }],
   },
   define: {
-    "process.env.NEXT_PUBLIC_APP_VERSION": JSON.stringify(pkg.version),
+    __APP_VERSION__: JSON.stringify(pkg.version),
   },
   server: {
     port: 1420,

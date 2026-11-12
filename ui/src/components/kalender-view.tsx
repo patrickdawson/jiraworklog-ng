@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EditEntryDialog, type EntryDraft } from "@/components/entry-dialogs";
 import { GroupColorsProvider, useGroupColors } from "@/components/group-colors-context";
@@ -429,7 +429,7 @@ function NavLink({
 }) {
   return (
     <Link
-      href={href}
+      to={href}
       aria-label={label}
       title={label}
       className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border px-3 text-[13px] font-medium"

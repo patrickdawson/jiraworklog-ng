@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   checkAwayTime,
   resolveAwayTime,
@@ -14,7 +13,6 @@ import { desktop } from "@/lib/desktop";
  * decides whether it is worth a question.
  */
 export function AwayDialog() {
-  const router = useRouter();
   const [away, setAway] = useState<AwayCheck | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -55,7 +53,6 @@ export function AwayDialog() {
         return;
       }
       setAway(null);
-      router.refresh();
     } finally {
       setPending(false);
     }

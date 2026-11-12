@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router";
 import changelogMarkdown from "../../../CHANGELOG.md?raw";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { parseChangelog, parseInline } from "@/lib/changelog";
@@ -17,10 +17,10 @@ export function WasIstNeuPage() {
     <main className="px-4 py-5 sm:px-8 sm:py-7 max-w-[920px]">
       <PageHeader
         title="Was ist neu"
-        subtitle={`Änderungen pro Version · aktuell v${process.env.NEXT_PUBLIC_APP_VERSION}`}
+        subtitle={`Änderungen pro Version · aktuell v${__APP_VERSION__}`}
         actions={
           <Link
-            href="/hilfe"
+            to="/hilfe"
             className="px-3 py-1.5 rounded-lg text-[13px] font-medium border"
             style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
           >

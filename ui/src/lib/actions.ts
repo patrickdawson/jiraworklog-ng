@@ -12,21 +12,17 @@ import {
   type StopTimerResult,
   type SubmitResult_Serialize,
 } from "@/bindings";
-import { orThrow, queryClient } from "@/lib/query";
+import { orThrow, reloadAll } from "@/lib/query";
 
 export type { StartTimerResult, StopTimerResult };
 export type ActionResult = { ok: boolean; message?: string };
 
 type Result<T> = { status: "ok"; data: T } | { status: "error"; error: string };
 
-function revalidateAll(): void {
-  void queryClient.invalidateQueries();
-}
-
 /** For actions whose old version threw on failure. */
 async function unwrap<T>(p: Promise<Result<T>>): Promise<T> {
   const r = await p;
-  revalidateAll();
+  reloadAll();
   if (r.status === "error") throw new Error(r.error);
   return r.data;
 }
@@ -34,7 +30,7 @@ async function unwrap<T>(p: Promise<Result<T>>): Promise<T> {
 /** For actions whose old version returned `{ ok, message }`. */
 async function toActionResult(p: Promise<Result<unknown>>): Promise<ActionResult> {
   const r = await p;
-  revalidateAll();
+  reloadAll();
   return r.status === "ok" ? { ok: true } : { ok: false, message: r.error };
 }
 
@@ -210,7 +206,7 @@ export function getForceBooking(): Promise<boolean> {
 /** Toggles force booking: also re-book submitted entries. Off again after a restart. */
 export async function setForceBooking(enabled: boolean): Promise<void> {
   await commands.setForceBooking(enabled);
-  revalidateAll();
+  reloadAll();
 }
 
 // ── Cleanup ─────────────────────────────────────────────────────────────────

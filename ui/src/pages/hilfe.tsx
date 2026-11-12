@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router";
 import type { ReactNode } from "react";
 import { Card, PageHeader } from "@/components/ui";
 
@@ -30,7 +30,7 @@ export function HilfePage() {
         subtitle="Anleitung zu den wichtigsten Funktionen"
         actions={
           <Link
-            href="/hilfe/neu"
+            to="/hilfe/neu"
             className="px-3 py-1.5 rounded-lg text-[13px] font-medium border"
             style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
           >
@@ -461,8 +461,8 @@ export function HilfePage() {
         className="mt-6 text-[12px] flex gap-3"
         style={{ color: "var(--text-3)" }}
       >
-        <span>JiraWorklog v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
-        <Link href="/hilfe/neu" style={{ color: "var(--accent)" }}>
+        <span>JiraWorklog v{__APP_VERSION__}</span>
+        <Link to="/hilfe/neu" style={{ color: "var(--accent)" }}>
           Was ist neu
         </Link>
       </div>

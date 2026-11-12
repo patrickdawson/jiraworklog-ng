@@ -15,6 +15,11 @@ export const queryClient = new QueryClient({
   },
 });
 
+/** Reloads every query, after a mutation or a change made outside the UI. */
+export function reloadAll(): void {
+  void queryClient.invalidateQueries();
+}
+
 type Result<T> = { status: "ok"; data: T } | { status: "error"; error: string };
 
 /** Turns a typed command result into a value or a thrown error, for `useQuery`. */
