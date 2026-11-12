@@ -7,35 +7,7 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-## [0.9.0-beta.6] - 2026-11-12
-
-### Behoben
-- Tastenkürzel: F1, Strg+W, Strg+Q, Strg+Plus/Minus/0 und F11 funktionieren wieder. Bisher wirkten sie nur über das Menü, nicht über die Tastatur.
-
-## [0.9.0-beta.5] - 2026-11-12
-
-### Behoben
-- Autostart: Der Schalter gilt immer nur für den eigenen Windows-Benutzer. Lief die App mit Administratorrechten, galt er bisher für alle Benutzer des PCs und blieb nach einer Deinstallation bestehen.
-
-## [0.9.0-beta.4] - 2026-11-12
-
-### Geändert
-- Version: Die erste Tauri-Version heißt 0.9.0 statt 0.10.0. Wer eine Testversion 0.10.0-beta.x installiert hat, wählt beim Installieren einmal „Vor der Installation deinstallieren“. Daten und Autostart bleiben erhalten.
-
-### Behoben
-- Tray: Das Menü nach einem Rechtsklick auf das Symbol bleibt offen, auch wenn ein Timer läuft. Bisher schloss es sich nach spätestens einer Sekunde wieder.
-
-## [0.9.0-beta.3] - 2026-11-12
-
-### Geändert
-- Vorschläge im Beschreibungsfeld: Die Auswahl zeigt jetzt 15 statt 8 zuletzt genutzte Einträge. Die Anzahl lässt sich unter Einstellungen → Darstellung von 1 bis 50 einstellen.
-
-## [0.9.0-beta.2] - 2026-11-12
-
-### Behoben
-- Issue-Keys: Ein Klick öffnet das Issue wieder im Browser. Seit der Umstellung auf Tauri passierte dabei nichts.
-
-## [0.9.0-beta.1] - 2026-11-12
+## [0.9.0] - 2026-11-12
 
 ### Geändert
 - Desktop-App: Die App ist neu gebaut, mit Tauri statt Electron. Der Installer ist rund 3 MB statt 96 MB groß, die installierte App rund 8 MB statt 328 MB. Daten und Einstellungen bleiben im selben Ordner und gehen nicht verloren.
@@ -44,7 +16,8 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 - Jira: Fehlermeldungen sind genauer. Nur ein Zertifikatsproblem nennt noch das Zertifikat. Erreicht die App den Server nicht, steht dort „Keine Verbindung zum Server. Bitte Jira-URL prüfen.“
 - Jira: Eine Anfrage an Jira bricht nach 60 Sekunden ab. Vorher wartete die App unbegrenzt.
 - PDF: Stundenzettel und Axapta-Bericht bringen ihre Schrift mit. Text lässt sich sauber kopieren. Sehr lange Wörter werden an anderer Stelle getrennt als vorher.
-- Autostart: Einstellungen und Anleitung sagen jetzt richtig, dass sich beim Anmelden das Fenster öffnet. Die App startete nie minimiert im Tray.
+- Autostart: Einstellungen und Anleitung sagen jetzt richtig, dass sich beim Anmelden das Fenster öffnet. Die App startete nie minimiert im Tray. Der Schalter gilt immer nur für den eigenen Windows-Benutzer.
+- Vorschläge im Beschreibungsfeld: Die Auswahl zeigt jetzt 15 statt 8 zuletzt genutzte Einträge. Die Anzahl lässt sich unter Einstellungen → Darstellung von 1 bis 50 einstellen.
 
 ### Entfernt
 - Browser-Modus: JiraWorklog läuft nur noch als Desktop-App für Windows. Den Webserver unter `localhost:3877` und den Schutz gegen Scanner-Anfragen gibt es nicht mehr, weil die App keinen Port mehr öffnet.

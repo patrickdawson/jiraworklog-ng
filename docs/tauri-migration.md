@@ -1,10 +1,9 @@
 # Tauri migration: plan and state
 
-Branch `tauri-rewrite` (not pushed). Last updated 2026-11-11, after milestone 11
-(cut-over): the repository holds only the Tauri app, now at version
-0.9.0-beta.6 (0.9.0 at the cut-over; the test builds were 1.0.0-beta.1 and
-0.10.0-beta.1 to beta.3, renamed to 0.9.0-beta.1 to beta.3 on 2026-11-12:
-0.9.0 was never released, so the first Tauri release fills that gap).
+Branch `tauri-rewrite`, merged into `main` for the release of 0.9.0 on
+2026-11-12. The repository holds only the Tauri app. The test builds were
+1.0.0-beta.1, 0.10.0-beta.1 to beta.3 and 0.9.0-beta.1 to beta.6 (0.9.0 was
+never released, so the first Tauri release fills that gap).
 
 ## Goal
 
