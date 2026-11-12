@@ -1,4 +1,4 @@
-import type { AllgemeinesCategory } from "@/db/schema";
+import type { AllgemeinesCategory } from "@/bindings";
 
 /**
  * Palette a group can be colored with. Each name maps to the CSS tokens

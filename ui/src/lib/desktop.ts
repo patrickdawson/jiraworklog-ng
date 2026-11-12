@@ -1,6 +1,5 @@
-// The desktop shell's API, in the shape the Electron preload exposed as
-// `window.electron` (src/types/electron.d.ts), so the ported components only
-// swap `window.electron` for `desktop`.
+// The desktop shell's API: events from the tray and the app menu, and the
+// window and autostart commands, over the generated Tauri bindings.
 import { commands, events, type AwayPeriod } from "@/bindings";
 
 type Unsubscribe = () => void;

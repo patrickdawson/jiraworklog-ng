@@ -5,10 +5,8 @@
 import { useId, useState, type ReactNode } from "react";
 import { useConfirm } from "@/components/confirm-dialog";
 import { DescriptionCombobox } from "@/components/description-combobox";
-import {
-  ALLGEMEINES_CATEGORIES,
-  type AllgemeinesCategory,
-} from "@/db/schema";
+import type { AllgemeinesCategory } from "@/bindings";
+import { ALLGEMEINES_CATEGORIES } from "@/lib/categories";
 import {
   createManualEntry,
   deleteEntry,

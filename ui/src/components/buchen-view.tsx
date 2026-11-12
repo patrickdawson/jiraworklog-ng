@@ -17,7 +17,7 @@ import {
   type DayBookingPlan,
   type SubmitResult,
 } from "@/lib/actions";
-import type { AllgemeinesCategory } from "@/db/schema";
+import type { AllgemeinesCategory } from "@/bindings";
 import {
   Button,
   CategorySelect,
@@ -290,9 +290,10 @@ export function BuchenView({ data }: { data: BuchenData }) {
 }
 
 // ─────────────────────── History window ───────────────────────
-// The window lives in the URL rather than in client state: every mutation runs
-// `revalidatePath("/")`, which would reset or desync an accumulated "I loaded
-// three more pages" counter. A search param survives that for free, matches the
+// The window lives in the URL rather than in client state: every mutation
+// reloads all queries (lib/actions.ts), which would reset or desync an
+// accumulated "I loaded three more pages" counter. A search param survives
+// that for free, matches the
 // `?range=` convention on /auswertung, and keeps the back button working.
 
 /** "Zeigt die letzten 30 Tage · 1.832 ältere Einträge ausgeblendet". */
@@ -517,9 +518,9 @@ function TimerCard({
   /**
    * Continue a recent entry. Same semantics as the repeat button in the
    * history: `startTimer` closes whatever is running and inserts a new row.
-   * The draft, checkbox and category are not set here — the revalidate that
+   * The draft, checkbox and category are not set here — the query reload that
    * follows changes `running.id`, and the sync effect above resets all three
-   * from the server.
+   * from the reloaded data.
    */
   async function pickRecent(entry: RecentEntry) {
     if (pending) return;

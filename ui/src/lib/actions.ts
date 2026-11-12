@@ -1,6 +1,5 @@
-// The server actions of the Next app, with the same names and signatures, now
-// backed by Tauri commands. Every mutation reloads all queries afterwards,
-// which replaces Next's `revalidatePath`.
+// The UI's mutations, backed by Tauri commands. Every mutation reloads all
+// queries afterwards, so every page shows the new state.
 import {
   commands,
   type AllgemeinesCategory,

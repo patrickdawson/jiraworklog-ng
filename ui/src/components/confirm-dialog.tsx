@@ -10,9 +10,8 @@ import {
 /**
  * In-app replacement for `window.confirm`.
  *
- * The native dialog breaks keyboard input in Electron on Windows: after it
- * closes, inputs still take clicks but no longer receive keystrokes until the
- * window loses and regains focus (Alt+Tab). Every confirmation goes through
+ * The native dialog is WebView2's own prompt: it blocks the window, ignores the
+ * app's theme and cannot name its buttons. Every confirmation goes through
  * this provider instead. Most callers confirm a delete, hence the default
  * "Löschen" label.
  */
