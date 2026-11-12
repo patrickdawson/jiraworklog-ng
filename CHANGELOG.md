@@ -7,7 +7,7 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-## [1.0.0-beta.1] - 2026-11-11
+## [0.10.0-beta.1] - 2026-11-12
 
 ### Geändert
 - Desktop-App: Die App ist neu gebaut, mit Tauri statt Electron. Der Installer ist rund 3 MB statt 96 MB groß, die installierte App rund 8 MB statt 328 MB. Daten und Einstellungen bleiben im selben Ordner und gehen nicht verloren.

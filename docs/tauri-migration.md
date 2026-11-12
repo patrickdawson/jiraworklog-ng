@@ -2,7 +2,7 @@
 
 Branch `tauri-rewrite` (not pushed). Last updated 2026-11-11, after milestone 11
 (cut-over): the repository holds only the Tauri app, now at version
-1.0.0-beta.1 (0.9.0 at the cut-over; bumped for the first test install).
+0.10.0-beta.1 (0.9.0 at the cut-over; bumped for the first test install).
 
 ## Goal
 

@@ -1,7 +1,7 @@
 {
   "name": "jiraworklog-e2e",
   "private": true,
-  "version": "1.0.0-beta.1",
+  "version": "0.10.0-beta.1",
   "type": "module",
   "description": "End-to-end tests: WebdriverIO + tauri-driver against the built Tauri app",
   "scripts": {
