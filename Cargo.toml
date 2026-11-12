@@ -9,7 +9,7 @@ publish = false
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
-specta = { version = "=2.0.0-rc.26", features = ["derive"] }
+specta = { version = "=2.0.0-rc.28", features = ["derive"] }
 
 # Size pass (milestone 10, numbers in docs/tauri-migration.md): 17.1 MB → 7.5 MB
 # exe, 4.4 MB → 2.9 MB installer. "s" over "z": z saves another 0.7 MB but
