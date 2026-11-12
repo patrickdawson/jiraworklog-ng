@@ -7,6 +7,8 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.10.0-beta.2] - 2026-11-12
+
 ### Behoben
 - Issue-Keys: Ein Klick öffnet das Issue wieder im Browser. Seit der Umstellung auf Tauri passierte dabei nichts.
 
