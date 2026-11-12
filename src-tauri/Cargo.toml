@@ -1,0 +1,39 @@
+[package]
+name = "jiraworklog"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "JiraWorklog desktop shell"
+
+[lib]
+name = "jiraworklog_lib"
+crate-type = ["rlib"]
+
+[features]
+# Test hooks for the WebdriverIO suite (e2e/): no single-instance lock, a fake
+# UI clock. Only `npm run tauri:e2e` builds with it, into target/e2e.
+e2e = []
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+jwl-core = { path = "../crates/core" }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+rusqlite = "0.41"
+serde.workspace = true
+specta.workspace = true
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-log = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"
+log = "0.4"
+serde_json = "1"
+tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
+specta-typescript = "=0.0.13"
+
+[target.'cfg(windows)'.dependencies]
+# Run key access (autostart, installer step), as the auto-launch crate does it.
+windows-registry = "0.6"
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_System_RemoteDesktop", "Win32_System_Power", "Win32_System_LibraryLoader"] }

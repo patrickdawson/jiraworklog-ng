@@ -1,4 +1,4 @@
-// Generates the PNG assets used by the Electron shell (tray icons + app icon)
+// Generates the PNG assets of the desktop app (tray icons + app icon)
 // without any binary dependencies. Run via `npm run icons`.
 //
 // Produces:

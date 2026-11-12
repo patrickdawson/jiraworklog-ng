@@ -1,0 +1,25 @@
+<!--
+  Windows Sandbox for the installer tests of milestone 10 (docs/tauri-migration.md,
+  "Manual test: upgrade from Electron"). Everything is mapped read-only; the
+  sandbox is thrown away when it closes. Never run these installers on the host.
+  Needs the optional feature "Windows Sandbox" (admin + reboot to enable).
+-->
+<Configuration>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>C:\dev\jiraworklog-ng\target\release\bundle\nsis</HostFolder>
+      <SandboxFolder>C:\jwl\new</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+    <MappedFolder>
+      <HostFolder>C:\dev\jiraworklog-ng\release</HostFolder>
+      <SandboxFolder>C:\jwl\old</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+    <MappedFolder>
+      <HostFolder>C:\dev\jiraworklog-ng\scripts\sandbox</HostFolder>
+      <SandboxFolder>C:\jwl\scripts</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+</Configuration>

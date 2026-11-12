@@ -1,6 +1,6 @@
 # JiraWorklog Tracker
 
-Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs in Jira — ohne Cloud, ohne Account, ohne Abo. Läuft im Browser oder als Windows-Desktop-App mit Tray-Icon.
+Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs in Jira — ohne Cloud, ohne Account, ohne Abo. Läuft als Windows-Desktop-App mit Tray-Icon.
 
 ![JiraWorklog Tracker Screenshot](docs/readme-booking.png)
 
@@ -13,7 +13,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 ### Zeiterfassung
 - **Timer starten/stoppen** — Ein-Klick-Timer mit Live-Anzeige der laufenden Zeit
 - **Beschreibungsformat** `Merksatz  ISSUE-123  Worklogtext` — Jira-Issue-Key wird automatisch aus der Beschreibung extrahiert
-- **Vorschläge im Timer-Feld** — Beim Fokus zeigt das Feld die acht zuletzt genutzten Einträge der letzten 30 Tage (mit Issue-Key bzw. Kategorie, Anzahl und Gesamtzeit). Tippen filtert, Pfeiltasten wählen, Enter startet den Timer.
+- **Vorschläge im Timer-Feld** — Beim Fokus zeigt das Feld die zuletzt genutzten Einträge der letzten 30 Tage, standardmäßig 15 (in den Einstellungen 1 bis 50) (mit Issue-Key bzw. Kategorie, Anzahl und Gesamtzeit). Tippen filtert, Pfeiltasten wählen, Enter startet den Timer.
 - **Startzeit des laufenden Timers korrigieren** — Zu spät auf Start gedrückt? Die Startzeit lässt sich direkt nachträglich vorverlegen. Ein Klick auf „Gestartet“ zeigt zuerst die Uhrzeit, daneben das Datum.
 - **Manuelle Einträge** — Zeiteinträge mit Start- und Endzeit manuell anlegen oder nachträglich bearbeiten. Das Feld „Beschreibung“ im Dialog zeigt dieselben Vorschläge wie das Timer-Feld. Ein Vorschlag übernimmt Beschreibung, Allgemein-Haken und Kategorie; gespeichert wird erst mit „Speichern“.
 - **Gruppen bearbeiten** — Einträge mit gleicher Beschreibung am selben Tag bilden eine Gruppe. „Gruppe bearbeiten“ ändert Beschreibung, Allgemein-Haken und Kategorie aller Einträge der Gruppe auf einmal (auch mit Vorschlägen). Die Zeiten bleiben gleich. Passt die neue Beschreibung zu einer anderen Gruppe des Tages, werden beide zu einer Gruppe.
@@ -44,6 +44,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Tagesweise oder alles auf einmal buchen** — Pro Tag oder alle offenen Einträge in einem Schritt nach Jira übertragen
 - **Buchungsmodi** — Einträge gleicher Beschreibung bündeln (gruppiert) oder jeden Eintrag einzeln buchen
 - **Jira Cloud (Basic Auth)** — Atlassian-Konto-E-Mail und [API-Token](https://id.atlassian.com/manage-profile/security/api-tokens) (kein Bearer-PAT, kein Kontopasswort)
+- **Zertifikatsprüfung** — Die App prüft das TLS-Zertifikat des Jira-Servers gegen den Windows-Zertifikatspeicher. Ein firmeneigenes Zertifikat muss dort als vertrauenswürdig hinterlegt sein. Fehlermeldungen unterscheiden zwischen Zertifikatsproblem und fehlender Verbindung. Eine Anfrage bricht nach 60 Sekunden ab.
 - **Issue-Keys als Link** — Ein Klick auf einen Issue-Key öffnet das Issue in Jira im Browser
 - **Status-Badges** — Jeder Eintrag zeigt deutlich ob er bereits gebucht (`gebucht`) oder noch offen (`offen`) ist
 - **Force-Buchung** — Schalter in den Einstellungen, um bereits gebuchte Einträge erneut nach Jira zu senden. Er gilt nur bis zum nächsten App-Neustart. Solange er aktiv ist, zeigt „Buchen“ ein Warnbanner.
@@ -73,12 +74,13 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Kurze Einträge verwerfen** — Timer-Einträge kürzer als 1 Minute werden automatisch verworfen (zu kurz für Jira)
 
 ### Desktop-App (Windows)
-- **Installer** — Ein Klick installiert die App pro Benutzer (NSIS, kein Admin nötig)
+- **Installer** — Installiert die App pro Benutzer nach `%LOCALAPPDATA%\JiraWorklog` (NSIS, kein Admin nötig). Eine neue Version installierst du einfach über die alte.
+- **Umstieg von der Electron-Version** — Der Installer beendet und deinstalliert die alte Version (bis 0.8.0) selbst. Daten und Einstellungen bleiben, die Datenbank wird vorher gesichert (`jiraworklog.db.backup-electron-…`). War Autostart an, bleibt er an. Startmenü- und Desktop-Verknüpfung heißen wie vorher.
 - **System-Tray** — Tray-Icon mit laufendem Timer. Timer stoppen, Fenster zeigen oder beenden direkt aus dem Tray.
 - **Schließen = Minimieren** — Das Fenster geht in den Tray, der Timer läuft weiter
-- **Autostart** — Optional beim Windows-Anmelden minimiert im Tray starten
+- **Autostart** — Optional beim Windows-Anmelden starten, mit geöffnetem Fenster
 - **Nur eine Instanz** — Ein zweiter Start holt das vorhandene Fenster nach vorne
-- **Deutsches Menü** — Datei, Bearbeiten, Ansicht, Hilfe. Unter „Hilfe“: Anleitung (F1), Was ist neu, Datenordner öffnen, Über JiraWorklog
+- **Deutsches Menü** — Datei, Bearbeiten, Ansicht, Hilfe. Unter „Hilfe“: Anleitung (F1), Was ist neu, Datenordner öffnen, Über JiraWorklog. Tastenkürzel: Strg+W Fenster schließen, Strg+Q Beenden, Strg+Plus/Minus/0 Zoom, F11 Vollbild
 
 ### Hilfe in der App
 - **Anleitung** — Seite „Hilfe“ in der Seitenleiste mit Schritt-für-Schritt-Erklärungen
@@ -91,72 +93,89 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - Jira-URL, Atlassian-E-Mail, API-Token, Projekt-Keys, Buchungsmodus, „Verbindung testen“
 - Sprint-Ankerdatum, Sprint-Länge und Ziel für die Quote konkreter Issues
 - Saldo-Korridor für den Saldo-Verlauf: Mitte und Spanne ± in ganzen Stunden (Standard 100 ± 40)
-- Farbschema: System, Hell oder Dunkel
-- Desktop: Autostart (nur in der Desktop-App)
+- Darstellung: Farbschema (System, Hell oder Dunkel) und Anzahl der Vorschläge im Beschreibungsfeld (Standard 15, höchstens 50)
+- Desktop: Autostart
 - Datenpflege: alte Einträge löschen (Aufbewahrungsdauer in Tagen). Der Überstundensaldo bleibt dabei erhalten, weil die gelöschten Tage in den Startwert wandern.
 - Gefahrenzone: Force-Buchung (gilt nur bis zum Neustart)
-
-### Schutz
-- **Scanner- und Flood-Schutz** — Ein Proxy beantwortet typische Angriffs-Anfragen (PHP, CGI, Path Traversal, SQLi …) sofort mit 404, sperrt wiederholende IPs zeitweise und begrenzt Anfrage-Fluten
 
 ---
 
 ## Tech Stack
 
-| Layer       | Technologie                                 |
+| Schicht     | Technologie                                 |
 |-------------|---------------------------------------------|
-| Framework   | [Next.js 16](https://nextjs.org) (App Router, Server Actions) |
-| Sprache     | TypeScript                                  |
-| Styling     | Tailwind CSS v4                             |
-| Datenbank   | SQLite via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) |
-| ORM         | [Drizzle ORM](https://orm.drizzle.team)     |
-| Validierung | [Zod](https://zod.dev)                      |
-| PDF         | [@react-pdf/renderer](https://react-pdf.org) |
-| Desktop     | [Electron](https://www.electronjs.org) + electron-builder (NSIS) |
-| Tests       | [Playwright](https://playwright.dev) (E2E)  |
+| Desktop     | [Tauri 2](https://tauri.app) mit WebView2, NSIS-Installer pro Benutzer |
+| Backend     | Rust (`crates/core`): Datenbank, Fachlogik, Jira-Client, PDF |
+| Datenbank   | SQLite via [rusqlite](https://github.com/rusqlite/rusqlite) (gebündelt), Migrationen aus `drizzle/` |
+| Jira        | [ureq](https://github.com/algesten/ureq) mit native-tls (Windows-Zertifikatspeicher) |
+| PDF         | [pdf-writer](https://github.com/typst/pdf-writer) mit eingebetteter Schrift (Arimo) |
+| Oberfläche  | [Vite](https://vite.dev) + [React 19](https://react.dev) + [Tailwind CSS 4](https://tailwindcss.com), TypeScript (`ui/`) |
+| Typen       | [tauri-specta](https://github.com/specta-rs/tauri-specta) erzeugt `ui/src/bindings.ts` aus den Rust-Befehlen |
+| Tests       | Rust-Unit-Tests, E2E mit [WebdriverIO](https://webdriver.io) + [tauri-driver](https://v2.tauri.app/develop/tests/webdriver/) (`e2e/`) |
 
-Alles läuft **lokal** — kein Server, keine Cloud, keine externen Dienste außer deiner Jira-Instanz.
+Alles läuft **lokal** — kein Server, keine Cloud, keine externen Dienste außer deiner Jira-Instanz. Die App öffnet keinen Port und läuft nur als Desktop-App, nicht im Browser.
+
+Daten: `%APPDATA%\jiraworklog-ng\jiraworklog.db` (derselbe Ordner wie bei der Electron-Version bis 0.8.0), Log `tauri-main.log` daneben.
 
 ---
 
 ## Schnellstart
 
+Voraussetzungen (Windows):
+
+- [Rust](https://rustup.rs) über rustup. Die Version ist in `rust-toolchain.toml` festgelegt (1.94.0), rustup lädt sie beim ersten Build selbst. Dazu die MSVC-Build-Tools („Desktop development with C++“).
+- Node.js 24 (siehe `.node-version`)
+- WebView2-Runtime (bei Windows 10/11 vorinstalliert)
+
 ```bash
 # Abhängigkeiten installieren
 npm install
+npm --prefix ui install
 
-# Datenbank migrieren
-npm run db:migrate
-
-# Dev-Server starten
-npm run dev
+# App im Entwicklungsmodus starten (Vite auf :1420 + App)
+npm run tauri:dev
 ```
 
-App läuft dann unter [http://localhost:3877](http://localhost:3877).
-
-### Desktop-App
+Ohne `JWL_DB_PATH` arbeitet die Dev-App auf der echten Datenbank in `%APPDATA%\jiraworklog-ng`. Zum Ausprobieren eine Kopie nehmen:
 
 ```bash
-# Entwickeln: Next-Dev-Server und Electron zusammen starten
-npm run electron:dev
+# Schreibgeschützter Schnappschuss der echten DB nach data/real-copy/ (Jira-Zugangsdaten geleert)
+npm run db:realcopy
 
-# Installer bauen (Ergebnis in release/JiraWorklog-<version>-setup.exe)
-npm run electron:build
+JWL_DB_PATH="$PWD/data/real-copy/jiraworklog.db" npm run tauri:dev
 ```
+
+### Befehle
+
+| Befehl | Zweck |
+|---|---|
+| `npm run tauri:dev` | Entwicklungsmodus (Vite + App, lädt bei Änderungen neu) |
+| `npm run tauri:build` | Release-Build und Installer in `target/release/bundle/nsis/JiraWorklog_<version>_x64-setup.exe` |
+| `npm run tauri:check` | Clippy (`-D warnings`), Rust-Tests, Lint und Typprüfung von UI und E2E |
+| `npm run tauri:e2e` | E2E-Suite (vorher einmal `npm --prefix e2e install`); `JWL_E2E_RELEASE=1` testet einen Release-Build |
+| `npm run tauri:bindings` | `ui/src/bindings.ts` nach Änderungen an Befehlen oder Typen neu erzeugen |
+| `npm run db:realcopy` | Kopie der echten DB nach `data/real-copy/` |
+| `npm run db:seed` / `db:unseed` | Beispieleinträge in `JWL_DB_PATH` (Standard `data/jiraworklog.db`) anlegen / entfernen |
+| `npm run icons` | Tray-Icons (`assets/tray-*.png`) und `assets/icon.png` neu erzeugen |
 
 ### E2E-Tests
 
 ```bash
-npm run test:e2e
+npm --prefix e2e install
+npm run tauri:e2e
 ```
+
+Die Suite baut eine eigene App-Variante (`target/e2e`, Cargo-Feature `e2e`), lädt `tauri-driver` und den passenden `msedgedriver` nach `target/tools` und startet die App pro Spec-Datei mit einer frischen Datenbank. Die Fenster erscheinen dabei kurz auf dem Bildschirm. Jira wird lokal gemockt.
+
+Mehr zum Aufbau: [docs/tauri-migration.md](docs/tauri-migration.md).
 
 ### Jira Cloud
 
 In den Einstellungen die Cloud-URL eintragen (z. B. `https://yourorg.atlassian.net`, ohne Pfad am Ende), Atlassian-E-Mail und API-Token hinterlegen, dann „Verbindung testen“.
 
-### TLS (optional)
+### TLS
 
-Jira Cloud nutzt öffentliche Zertifikate. Für Legacy-On-Prem mit internem CA akzeptiert die App standardmäßig auch nicht vertrauenswürdige Zertifikate (`src/instrumentation.ts`). Zum Erzwingen echter Prüfung: `JIRA_TLS_STRICT=1` setzen und den Server neu starten.
+Jira Cloud nutzt öffentliche Zertifikate. Die App prüft das Zertifikat immer gegen den Windows-Zertifikatspeicher. Für ein On-Prem-Jira mit firmeneigener CA muss diese CA in Windows als vertrauenswürdig installiert sein (bei Firmenrechnern meist schon über die IT verteilt). `JIRA_TLS_STRICT` gibt es nicht mehr. Ein Proxy wird aus den üblichen Umgebungsvariablen übernommen.
 
 ---
 

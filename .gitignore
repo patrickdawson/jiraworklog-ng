@@ -1,12 +1,6 @@
 /node_modules
-/.next
-/out
-/build
 /data
-/release
-/dist-electron
 *.tsbuildinfo
-next-env.d.ts
 .env*
 .DS_Store
 
@@ -19,8 +13,12 @@ next-env.d.ts
 *.log
 npm-debug.log*
 
-# playwright e2e
-/tests/.tmp/
-/test-results/
-/playwright-report/
-/playwright/.cache/
+# Tauri app
+/target
+/ui/node_modules
+/ui/dist
+/e2e/node_modules
+/src-tauri/gen/schemas
+
+# Old Electron installers, mapped into the sandbox upgrade test.
+/release
