@@ -321,7 +321,7 @@ if ($Scenario -eq "tauri-update") {
   # NSIS runs a copy of the uninstaller from %TEMP%\~nsu*.tmp and the started
   # one exits at once: wait until that copy is done.
   $tempCopies = { @(Get-CimInstance Win32_Process | Where-Object { "$($_.ExecutablePath)" -like "$env:TEMP\~nsu*" }) }
-  WaitFor "uninstaller copy in %TEMP% finished" 120 { (& $tempCopies).Count -eq 0 -and -not (Test-Path $tauriExe) }
+  WaitFor "uninstaller copy in %TEMP% finished" 120 { @(& $tempCopies).Count -eq 0 -and -not (Test-Path $tauriExe) }
   Check "Uninstall entry gone" (-not (Test-Path $tauriUninst))
   Check "Run value gone" ($null -eq (RegValue $runKey "JiraWorklog"))
   Check "StartupApproved value gone" ($null -eq (RegValue $approvedKey "JiraWorklog"))
