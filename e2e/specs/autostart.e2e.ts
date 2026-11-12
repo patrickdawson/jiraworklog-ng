@@ -21,6 +21,8 @@ describe("autostart", () => {
       await expect
         .poll(async () => runValue(NAME)?.trimEnd().toLowerCase() ?? null)
         .toBe(APP_EXE.toLowerCase());
+      // Never for all users, also when the app runs elevated (as on CI).
+      expect(runValue(NAME, "HKLM")).toBeNull();
 
       await page.reload();
       await expect(page.getByLabel("JiraWorklog automatisch beim Windows-Anmelden starten")).toBeChecked();
