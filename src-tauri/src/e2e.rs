@@ -41,6 +41,28 @@ const FAKE_CLOCK: &str = r#"
 })();
 "#;
 
+/// What wry passes to WebView2 when the window sets no arguments of its own.
+const WRY_DEFAULT_BROWSER_ARGS: &str =
+    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --autoplay-policy=no-user-gesture-required";
+
+/// msedgedriver asks for WebView2's debug port through the environment
+/// variable `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`. wry always sets its own
+/// arguments through the WebView2 API, and the runtime on GitHub's runners
+/// (156) then ignores the variable: the port never opens and the session
+/// fails with "DevToolsActivePort file doesn't exist". So the test build puts
+/// the variable's arguments into the window's own list, after wry's defaults.
+pub fn pass_driver_browser_args(context: &mut tauri::Context<Wry>) {
+    let Some(extra) = std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS")
+        .ok()
+        .filter(|a| !a.trim().is_empty())
+    else {
+        return;
+    };
+    for window in &mut context.config_mut().app.windows {
+        window.additional_browser_args = Some(format!("{WRY_DEFAULT_BROWSER_ARGS} {extra}"));
+    }
+}
+
 /// What a test asks for, as the payload of an `e2e-hook` event
 /// (e2e/support/page.ts: `menuClick`, `appReport`, `powerEvent`).
 #[derive(Debug, Deserialize)]

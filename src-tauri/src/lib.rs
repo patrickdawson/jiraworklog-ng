@@ -83,6 +83,15 @@ fn log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 
 /// Writes every panic to the app log before the default hook runs. Release
 /// builds use `panic = "abort"`, so this line is all that is left of a panic.
+/// The app's context from tauri.conf.json; the E2E build adjusts it.
+fn context() -> tauri::Context<tauri::Wry> {
+    #[allow(unused_mut)]
+    let mut context = tauri::generate_context!();
+    #[cfg(feature = "e2e")]
+    e2e::pass_driver_browser_args(&mut context);
+    context
+}
+
 /// A click on a tray or app menu entry. The E2E hooks call it too.
 fn on_menu_event(app: &tauri::AppHandle, id: &str) {
     let _ = tray::on_menu_event(app, id) || menu::on_menu_event(app, id);
@@ -156,7 +165,7 @@ pub fn run() {
                 tray::refresh(webview.app_handle());
             }
         })
-        .run(tauri::generate_context!())
+        .run(context())
         .expect("error while running JiraWorklog");
 }
 
