@@ -146,6 +146,47 @@ function RunInstaller([string] $exe, [string[]] $arguments, [int] $timeoutSecond
   return $p.ExitCode
 }
 
+function CrashesSince([datetime] $since) {
+  # The Application log's "Application Error" entries (event 1000) name the
+  # faulting app and module. Only those since $since: an older one, of any
+  # app, would name the wrong module. The entry appears a moment after the
+  # crash (0.2 s in a test), so wait a little first.
+  Start-Sleep -Seconds 2
+  $events = @(Get-WinEvent -FilterHashtable @{ LogName = "Application"; Id = 1000; StartTime = $since } -ErrorAction SilentlyContinue)
+  if ($events.Count -eq 0) { return "no Application Error event since $($since.ToString('HH:mm:ss'))" }
+  return ($events | ForEach-Object { "$($_.TimeCreated.ToString('HH:mm:ss')) $($_.Message -replace '\s+', ' ')" }) -join " | "
+}
+
+function StartHeartbeat([string] $file) {
+  # A hung job has left no log at all so far: the runner stopped reporting,
+  # ignored the cancel and never ran the steps that collect the data. Every
+  # 15 s this writes the installer and app processes to a file the workflow
+  # collects, and to the step log, which the browser shows live during a hang.
+  Start-ThreadJob -ArgumentList $file -ScriptBlock {
+    param($file)
+    while ($true) {
+      $now = Get-Date -Format HH:mm:ss
+      try {
+        # -match ignores case. The command line tells apart the Electron
+        # processes, which all run JiraWorklog.exe (--type=renderer, ...).
+        $procs = Get-CimInstance Win32_Process -ErrorAction Stop |
+          Where-Object { "$($_.ExecutablePath)" -match "jiraworklog|setup|uninst|~nsu" } |
+          ForEach-Object {
+            $cmd = if ($_.CommandLine) { $_.CommandLine } else { $_.ExecutablePath }
+            "  $($_.ProcessId) (parent $($_.ParentProcessId)) $cmd"
+          }
+        $lines = @("heartbeat $now") + @($procs)
+      } catch {
+        $lines = @("heartbeat $now failed: $_")
+      }
+      Add-Content -Path $file -Value $lines
+      # One write, so the lines stay together next to the script's output.
+      [Console]::Out.WriteLine($lines -join [Environment]::NewLine)
+      Start-Sleep -Seconds 15
+    }
+  } | Out-Null
+}
+
 function DbState {
   if (-not (Test-Path $db)) { return $null }
   $json = node $dbTool state $db 2>$null
@@ -210,17 +251,25 @@ Write-Output "# Scenario $Scenario"
 Write-Output "new installer: $NewInstaller"
 if ($OldInstaller) { Write-Output "old installer: $OldInstaller" }
 Write-Output "latest migration: $latestMigration"
+if ($env:INSTALLER_TEST_HEARTBEAT) {
+  StartHeartbeat $env:INSTALLER_TEST_HEARTBEAT
+  Write-Output "heartbeat: $env:INSTALLER_TEST_HEARTBEAT"
+}
 
 # ── Scenarios ────────────────────────────────────────────────────────────────
 
 if ($Scenario -like "electron-*") {
   Step "Install Electron 0.8.0 and create its database"
-  # The old electron-builder installer crashed once on a runner (0xC0000005)
-  # and installed nothing. It is only the starting point here, so retry it.
-  for ($attempt = 1; $attempt -le 3; $attempt++) {
+  # The old electron-builder installer sometimes crashes on a runner
+  # (0xC0000005) within a second and installs nothing, three times in a row
+  # on 2026-11-12. It is only the starting point here, so retry it with a
+  # growing pause and log which module crashed.
+  for ($attempt = 1; $attempt -le 5; $attempt++) {
+    $started = Get-Date
     $code = RunInstaller $OldInstaller @("/S")
     if ($code -eq 0 -and (Test-Path $electronExe)) { break }
-    Write-Output "INFO  Electron install attempt $attempt failed (exit $code), retrying"
+    Write-Output "INFO  Electron install attempt $attempt failed (exit $code): $(CrashesSince $started)"
+    if ($attempt -lt 5) { Start-Sleep -Seconds (10 * $attempt) }
   }
   Check "Electron installer exit code 0" ($code -eq 0) "$code"
   WaitFor "Electron exe installed" 60 { Test-Path $electronExe }

@@ -107,6 +107,10 @@ jobs:
     name: Installer test (${{ matrix.scenario }})
     needs: installer-build
     runs-on: windows-latest
+    # A normal run takes 1-2 minutes. After this GitHub cancels the job, but a
+    # hung runner ignored a cancel twice (and once the step timeout below);
+    # then only a force-cancel ends the job.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -131,6 +135,8 @@ jobs:
         # A hang fails the step, so the data is still collected below.
         timeout-minutes: 15
         shell: pwsh
+        env:
+          INSTALLER_TEST_HEARTBEAT: ${{ runner.temp }}\heartbeat.log
         run: |
           $params = @{
             Scenario     = '${{ matrix.scenario }}'
@@ -139,12 +145,17 @@ jobs:
           if (Test-Path old) { $params.OldInstaller = (Get-ChildItem old -Filter *.exe).FullName }
           ./scripts/installer-test/installer-test.ps1 @params
       - name: Collect the app data
-        if: failure()
+        if: failure() || cancelled()
         shell: pwsh
-        # Test database, upgrade.log and the app log (tauri-main.log).
-        run: Copy-Item "$env:APPDATA\jiraworklog-ng" installer-test-data -Recurse -ErrorAction SilentlyContinue
+        # Test database, upgrade.log, the app log (tauri-main.log) and the
+        # script's process heartbeat. Copy the app data first: into an
+        # existing folder it would land in installer-test-data\jiraworklog-ng.
+        run: |
+          Copy-Item "$env:APPDATA\jiraworklog-ng" installer-test-data -Recurse -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force installer-test-data | Out-Null
+          Copy-Item "$env:RUNNER_TEMP\heartbeat.log" installer-test-data -ErrorAction SilentlyContinue
       - uses: actions/upload-artifact@v7
-        if: failure()
+        if: failure() || cancelled()
         with:
           name: installer-test-${{ matrix.scenario }}
           path: installer-test-data/
