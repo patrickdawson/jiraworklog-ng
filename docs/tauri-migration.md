@@ -528,8 +528,8 @@ checks; "diff" = Rust output compared with the old TS on the real copy;
 
 | Old | New | Verified |
 |---|---|---|
-| `GET /api/timer/status` (tray poll) | `timer::running_status`, tray thread every 1 s | open (tray not clicked, M4) |
-| `POST /api/timer/stop` (tray) | tray menu `tray-stop` + `TimerStopped` event | open (tray not clicked, M4) |
+| `GET /api/timer/status` (tray poll) | `timer::running_status`, tray thread every 1 s | e2e `tray.e2e.ts` (hook) |
+| `POST /api/timer/stop` (tray) | tray menu `tray-stop` + `TimerStopped` event | e2e `tray.e2e.ts` (hook) |
 | `GET /api/report/pdf` | `export_worklog_pdf` | diff + CDP 7 |
 | `GET /api/report/category-pdf` | `export_category_pdf` | diff + CDP 7 |
 | shared-secret header (`electron-ipc.ts`) | not needed: no HTTP server | — |
@@ -539,12 +539,12 @@ checks; "diff" = Rust output compared with the old TS on the real copy;
 | Old | New | Verified |
 |---|---|---|
 | `isElectron` (shows Einstellungen → Desktop) | section appears once `get_auto_launch` answered | CDP 8 |
-| `onTimerStopped` | `events.timerStopped` | open (tray stop not clicked) |
+| `onTimerStopped` | `events.timerStopped` | e2e `tray.e2e.ts` (hook) |
 | `onAwayEnded` | `events.awayEnded` (power watcher) | simulated lock (M4) |
 | `onNavigate` | `events.navigate` | CDP 8 (event emitted from the WebView) |
 | `showWindow` | `show_window` | by hand (M4, away dialog) |
 | `getAutoLaunch` | `get_auto_launch` | CDP 8 (read only) |
-| `setAutoLaunch` | `set_auto_launch` (autostart plugin, Run key `JiraWorklog`) | open (registry, never toggled) |
+| `setAutoLaunch` | `set_auto_launch` (autostart plugin, Run key `JiraWorklog`) | e2e `autostart.e2e.ts`, CI only (real Run key) |
 
 ### Electron main process (`electron/main.ts`)
 
@@ -557,14 +557,14 @@ checks; "diff" = Rust output compared with the old TS on the real copy;
 | renderer warnings/errors → `main.log` | `lib/log.ts` → `tauri-main.log` | by hand (M4) |
 | `did-fail-load` logged | no equivalent; load errors reach `tauri-main.log` via `window.onerror` only | deviation, harmless |
 | close → hide to tray | `on_window_event` `CloseRequested` | by hand (M4) |
-| tray: status label, "Timer stoppen", show/hide label, "Beenden", tooltip, idle/running icon, left click shows | `tray.rs` | unit test (format); open (not clicked) |
-| menu Datei: "Fenster schließen" (Ctrl+W), "Beenden" (Ctrl+Q) | `menu.rs` | open (native menu) |
+| tray: status label, "Timer stoppen", show/hide label, "Beenden", tooltip, idle/running icon, left click shows | `tray.rs` | unit tests (view); e2e `tray.e2e.ts` reads the native menu back; "Beenden", left click and the icon on screen by hand |
+| menu Datei: "Fenster schließen" (Ctrl+W), "Beenden" (Ctrl+Q) | `menu.rs` | e2e (hook) for "Fenster schließen"; "Beenden" and shortcuts by hand |
 | menu Bearbeiten: undo, redo, cut, copy, paste, select all | `PredefinedMenuItem`s | open (native menu) |
-| menu Ansicht: reload, devtools (dev only), zoom reset/in/out, fullscreen | `menu.rs` custom items, `Zoom` state | open (native menu); zoom steps unit test |
+| menu Ansicht: reload, devtools (dev only), zoom reset/in/out, fullscreen | `menu.rs` custom items, `Zoom` state | zoom steps unit test; e2e (hook) for zoom and fullscreen |
 | menu Hilfe: "Anleitung" (F1), "Was ist neu" | `open_route` → `Navigate` event | CDP 8 for the UI side; native click open |
 | menu Hilfe: "Datenordner öffnen" | opener `open_path(data_dir())` (follows `JWL_DB_PATH`) | open (opens Explorer) |
 | menu Hilfe: "Über JiraWorklog" | `show_about` message dialog | unit test of the text; dialog open |
-| away detection: lock/unlock, suspend/resume | `power.rs` hidden window | simulated (M4); real Win+L/sleep open |
+| away detection: lock/unlock, suspend/resume | `power.rs` hidden window | message mapping unit test; e2e injects lock/sleep into the watcher (`away-check.e2e.ts`); real Win+L/sleep open |
 | autostart via `setLoginItemSettings` (`electron.app.JiraWorklog`) | autostart plugin (`JiraWorklog`); installer moves the value (`electron_upgrade`) | unit tests (fake registry); sandbox test open |
 | electron-builder one-click NSIS, per user | Tauri NSIS, per user, German, replaces the Electron install | built + script reviewed; sandbox test open |
 | `backgroundThrottling: false` | not needed: tray and away detection run in Rust; the UI recomputes from timestamps when shown | — |
@@ -644,6 +644,18 @@ checks; "diff" = Rust output compared with the old TS on the real copy;
   neither.
 
 ### Open checks from milestone 4
+
+Update 2026-11-12: the tray, the app menu, lock/sleep and autostart now have
+E2E tests through the `e2e-hook` event of the test build (`src-tauri/src/e2e.rs`):
+a test sends a menu id to the same handler a click calls, reads the tray
+entries back from the native menu, and feeds lock/sleep notifications with
+chosen times into the power watcher. A manual test of beta.3 found a bug:
+the tray replaced its menu every second while a timer ran, which closed it
+(fixed in 0.9.0-beta.4; the tray test now checks that the label updates in
+place). Still by hand: the icon on screen, the click
+itself, "Beenden", keyboard shortcuts, and that Windows delivers lock and
+sleep.
+
 
 - The tray icon itself (menu, tooltip, "Timer stoppen" from the tray) has not
   been clicked yet; automation could not reach it.
