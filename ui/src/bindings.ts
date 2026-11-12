@@ -46,7 +46,10 @@ export const commands = {
 	showWindow: () => __TAURI_INVOKE<void>("show_window"),
 	/**  Whether the app starts at Windows login. */
 	getAutoLaunch: () => typedError<boolean, CommandError>(__TAURI_INVOKE("get_auto_launch")),
-	/**  Turns start at login on or off; returns the state that applies now. */
+	/**
+	 *  Turns start at login on or off for the current user; returns the state
+	 *  that applies now.
+	 */
 	setAutoLaunch: (enabled: boolean) => typedError<boolean, CommandError>(__TAURI_INVOKE("set_auto_launch", { enabled })),
 	/**  What booking one day would send, without sending anything. */
 	previewDayBooking: (dayKey: string) => typedError<BookingPlan, CommandError>(__TAURI_INVOKE("preview_day_booking", { dayKey })),

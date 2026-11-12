@@ -62,8 +62,8 @@ impl From<jwl_core::Error> for CommandError {
     }
 }
 
-impl From<tauri_plugin_autostart::Error> for CommandError {
-    fn from(e: tauri_plugin_autostart::Error) -> Self {
+impl From<std::io::Error> for CommandError {
+    fn from(e: std::io::Error) -> Self {
         Self(e.to_string())
     }
 }

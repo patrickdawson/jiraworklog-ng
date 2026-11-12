@@ -36,13 +36,19 @@ pub fn run() -> i32 {
             return 1;
         }
     };
-    #[cfg(windows)]
-    let mut reg = registry::CurrentUser;
-    #[cfg(not(windows))]
-    let mut reg = jwl_core::electron_upgrade::FakeStartupRegistry::default();
+    let mut reg = user_registry();
     let report = run_with(&mut reg, &state::db_path(), &exe, from_electron);
     append_log(&report.lines);
     i32::from(!report.ok)
+}
+
+/// The current user's startup keys; also used by the autostart setting
+/// (`commands::set_auto_launch`).
+pub(crate) fn user_registry() -> impl StartupRegistry {
+    #[cfg(windows)]
+    return registry::CurrentUser;
+    #[cfg(not(windows))]
+    return jwl_core::electron_upgrade::FakeStartupRegistry::default();
 }
 
 /// What [`run_with`] did, one line per action, for the log.

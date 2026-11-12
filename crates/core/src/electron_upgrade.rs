@@ -63,6 +63,32 @@ pub fn approved_is_enabled(bytes: Option<&[u8]>) -> bool {
     }
 }
 
+/// Whether the app starts at login: its Run value exists and Task Manager
+/// has not disabled it. Same rule as `auto-launch`'s `is_enabled`, but only
+/// the current user's keys.
+pub fn autostart_enabled(reg: &impl StartupRegistry) -> std::io::Result<bool> {
+    Ok(reg.run_value(TAURI_RUN_VALUE)?.is_some()
+        && approved_is_enabled(reg.approved(TAURI_RUN_VALUE)?.as_deref()))
+}
+
+/// Einstellungen → Desktop → Autostart. Always the current user's keys, in
+/// the plugin's format, so the installer and the uninstaller find the value.
+/// (`tauri-plugin-autostart` wrote to HKLM, for all users, whenever the app
+/// ran elevated.) Returns the state that applies afterwards.
+pub fn set_autostart(
+    reg: &mut impl StartupRegistry,
+    exe: &str,
+    enabled: bool,
+) -> std::io::Result<bool> {
+    if enabled {
+        reg.set_run_value(TAURI_RUN_VALUE, &autostart_command(exe, &[]))?;
+        reg.set_approved_if_key_exists(TAURI_RUN_VALUE, &STARTUP_APPROVED_ENABLED)?;
+    } else {
+        reg.delete_run_value(TAURI_RUN_VALUE)?;
+    }
+    autostart_enabled(reg)
+}
+
 /// What [`migrate_autostart`] found and did.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AutostartOutcome {
@@ -320,5 +346,33 @@ mod tests {
         );
         migrate_autostart(&mut r, NEW_EXE).unwrap();
         assert_eq!(r.run.get(TAURI_RUN_VALUE).unwrap(), &format!("{NEW_EXE} "));
+    }
+    #[test]
+    fn set_autostart_writes_the_user_value_and_removes_it() {
+        // Without a StartupApproved key: only the Run value.
+        let mut r = reg(&[], None);
+        assert!(set_autostart(&mut r, NEW_EXE, true).unwrap());
+        assert_eq!(r.run.get(TAURI_RUN_VALUE).unwrap(), &format!("{NEW_EXE} "));
+        assert!(r.approved.is_none());
+        assert!(!set_autostart(&mut r, NEW_EXE, false).unwrap());
+        assert!(r.run.is_empty());
+
+        // With the key: marked enabled, as auto-launch does. Turning it on
+        // again also re-enables it after a Task Manager "disable".
+        let disabled: &[u8] = &[3, 0, 0, 0, 0x10, 0x8e, 0xa4, 0x2b, 0x9c, 0x5e, 0xdb, 0x01];
+        let mut r = reg(&[(TAURI_RUN_VALUE, "x ")], Some(&[(TAURI_RUN_VALUE, disabled)]));
+        assert!(!autostart_enabled(&r).unwrap());
+        assert!(set_autostart(&mut r, NEW_EXE, true).unwrap());
+        assert_eq!(
+            r.approved.as_ref().unwrap().get(TAURI_RUN_VALUE).unwrap(),
+            &STARTUP_APPROVED_ENABLED.to_vec()
+        );
+    }
+
+    #[test]
+    fn autostart_is_off_without_a_value() {
+        assert!(!autostart_enabled(&reg(&[], None)).unwrap());
+        assert!(!autostart_enabled(&reg(&[(ELECTRON_RUN_VALUE, OLD_EXE)], None)).unwrap());
+        assert!(autostart_enabled(&reg(&[(TAURI_RUN_VALUE, NEW_EXE)], Some(&[]))).unwrap());
     }
 }

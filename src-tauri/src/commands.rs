@@ -17,10 +17,9 @@ use jwl_core::settings::{self, Settings, SettingsInput};
 use jwl_core::store::{self, GroupColor};
 use jwl_core::time::now_iso;
 use jwl_core::timer::{self, EntriesTextInput, EntryInput, StartTimerResult, StopTimerResult};
-use jwl_core::{category_report, pdf, worklog_report, AppInfo};
+use jwl_core::{category_report, electron_upgrade, pdf, worklog_report, AppInfo};
 use rusqlite::Connection;
 use tauri::{AppHandle, Manager, State};
-use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_dialog::DialogExt;
 
 use crate::state::{CommandError, CommandResult, Db, ForceBooking};
@@ -248,21 +247,21 @@ pub fn show_window(app: AppHandle) {
 /// Whether the app starts at Windows login.
 #[tauri::command]
 #[specta::specta]
-pub fn get_auto_launch(app: AppHandle) -> CommandResult<bool> {
-    Ok(app.autolaunch().is_enabled()?)
+pub fn get_auto_launch() -> CommandResult<bool> {
+    Ok(electron_upgrade::autostart_enabled(&crate::upgrade::user_registry())?)
 }
 
-/// Turns start at login on or off; returns the state that applies now.
+/// Turns start at login on or off for the current user; returns the state
+/// that applies now.
 #[tauri::command]
 #[specta::specta]
-pub fn set_auto_launch(app: AppHandle, enabled: bool) -> CommandResult<bool> {
-    let launcher = app.autolaunch();
-    if enabled {
-        launcher.enable()?;
-    } else {
-        launcher.disable()?;
-    }
-    Ok(launcher.is_enabled()?)
+pub fn set_auto_launch(enabled: bool) -> CommandResult<bool> {
+    let exe = std::env::current_exe()?.display().to_string();
+    Ok(electron_upgrade::set_autostart(
+        &mut crate::upgrade::user_registry(),
+        &exe,
+        enabled,
+    )?)
 }
 
 // ── Jira ────────────────────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Behoben
 - Tray: Das Menü nach einem Rechtsklick auf das Symbol bleibt offen, auch wenn ein Timer läuft. Bisher schloss es sich nach spätestens einer Sekunde wieder.
+- Autostart: Der Schalter gilt immer nur für den eigenen Windows-Benutzer. Lief die App mit Administratorrechten, galt er bisher für alle Benutzer des PCs und blieb nach einer Deinstallation bestehen.
 
 ## [0.9.0-beta.3] - 2026-11-12
 
