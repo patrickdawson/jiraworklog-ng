@@ -39,12 +39,15 @@ export function DesktopBridge() {
       e.preventDefault();
       void openUrl(a.href);
     }
-    document.addEventListener("click", onClick);
+    // Capture phase: links such as IssueKeyLink stop propagation so the rows
+    // around them do not react, which would hide the click from a bubbling
+    // listener.
+    document.addEventListener("click", onClick, true);
 
     return () => {
       offTimer();
       offNavigate();
-      document.removeEventListener("click", onClick);
+      document.removeEventListener("click", onClick, true);
     };
   }, [router]);
 

@@ -24,8 +24,8 @@ export function JiraUrlProvider({
 }
 
 /**
- * An issue key that opens the issue in Jira. `target="_blank"` makes Electron
- * hand the URL to the default browser (see `setWindowOpenHandler`). Without a
+ * An issue key that opens the issue in Jira. `DesktopBridge` catches the click
+ * in the capture phase and hands the URL to the default browser. Without a
  * configured Jira URL the key renders as plain text.
  */
 export function IssueKeyLink({
