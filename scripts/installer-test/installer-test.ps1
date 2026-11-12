@@ -75,7 +75,7 @@ $latestMigration = ($journal.entries | Measure-Object -Property when -Maximum).M
 
 $script:fails = 0
 
-function Step([string] $text) { Write-Output ""; Write-Output "## $text" }
+function Step([string] $text) { Write-Output ""; Write-Output "## $(Get-Date -Format HH:mm:ss) $text" }
 
 function Check([string] $name, [bool] $ok, [string] $detail = "") {
   $tag = if ($ok) { "PASS" } else { "FAIL"; $script:fails++ }
@@ -88,10 +88,15 @@ function RegValue([string] $key, [string] $name) {
 }
 
 function SetApproved([string] $name, [byte] $state) {
-  # Task Manager's format: 12 bytes, state (2 = on, 3 = off) + 3 zero bytes + FILETIME.
+  # Task Manager's format: 12 bytes, state (2 = on, 3 = off) + 3 zero bytes +
+  # FILETIME. Disabling stores when it happened; enabling stores zero. The app
+  # (like tauri-plugin-autostart) reads a non-zero time as "disabled".
   if (-not (Test-Path $approvedKey)) { New-Item -Path $approvedKey -Force | Out-Null }
   $bytes = [byte[]]::new(12)
   $bytes[0] = $state
+  if ($state -eq 3) {
+    [BitConverter]::GetBytes((Get-Date).ToFileTimeUtc()).CopyTo($bytes, 4)
+  }
   New-ItemProperty -Path $approvedKey -Name $name -PropertyType Binary -Value $bytes -Force | Out-Null
 }
 
@@ -124,11 +129,20 @@ function WaitFor([string] $what, [int] $seconds, [scriptblock] $condition) {
   throw "Timed out after $seconds s waiting for: $what"
 }
 
-function RunInstaller([string] $exe, [string[]] $arguments) {
+function RunInstaller([string] $exe, [string[]] $arguments, [int] $timeoutSeconds = 300) {
   # Write-Host: anything written to the output stream would join the return value.
-  Write-Host "> $exe $($arguments -join ' ')"
-  # -Wait also waits for child processes (the NSIS uninstaller re-runs itself from %TEMP%).
-  $p = Start-Process -FilePath $exe -ArgumentList $arguments -Wait -PassThru
+  Write-Host "$(Get-Date -Format HH:mm:ss) > $exe $($arguments -join ' ')"
+  # Waits for the installer process only. Start-Process -Wait would also wait
+  # for every process it leaves behind (a crash reporter, an app it starts)
+  # and could hang the job. An uninstaller that re-runs itself from %TEMP%
+  # exits at once; its caller waits for the result instead.
+  $p = Start-Process -FilePath $exe -ArgumentList $arguments -PassThru
+  $null = $p.Handle # keep the handle, or ExitCode is empty after the exit
+  if (-not $p.WaitForExit($timeoutSeconds * 1000)) {
+    Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+    throw "Timed out after $timeoutSeconds s: $exe $($arguments -join ' ')"
+  }
+  Write-Host "$(Get-Date -Format HH:mm:ss)   exit $($p.ExitCode)"
   return $p.ExitCode
 }
 
@@ -304,7 +318,10 @@ if ($Scenario -eq "tauri-update") {
   $uninstaller = $uninstallString.Trim('"')
   $code = RunInstaller $uninstaller @("/S")
   Check "Uninstaller exit code 0" ($code -eq 0) "$code"
-  WaitFor "exe removed" 60 { -not (Test-Path $tauriExe) }
+  # NSIS runs a copy of the uninstaller from %TEMP%\~nsu*.tmp and the started
+  # one exits at once: wait until that copy is done.
+  $tempCopies = { @(Get-CimInstance Win32_Process | Where-Object { "$($_.ExecutablePath)" -like "$env:TEMP\~nsu*" }) }
+  WaitFor "uninstaller copy in %TEMP% finished" 120 { (& $tempCopies).Count -eq 0 -and -not (Test-Path $tauriExe) }
   Check "Uninstall entry gone" (-not (Test-Path $tauriUninst))
   Check "Run value gone" ($null -eq (RegValue $runKey "JiraWorklog"))
   Check "StartupApproved value gone" ($null -eq (RegValue $approvedKey "JiraWorklog"))

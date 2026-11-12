@@ -60,6 +60,16 @@ jobs:
       # Builds the E2E exe, fetches tauri-driver and the msedgedriver that
       # matches the runner's WebView2, then runs every spec.
       - run: npm run tauri:e2e
+        # The suite takes ~1 min plus the build; a hang fails the step, so the
+        # logs are still uploaded below.
+        timeout-minutes: 30
+      - name: Show the driver and WebdriverIO logs
+        if: failure()
+        shell: pwsh
+        run: |
+          foreach ($f in @("target/e2e/run/tauri-driver.log", "target/e2e/run/wdio-logs/wdio.log")) {
+            if (Test-Path $f) { Write-Output "--- $f"; Get-Content $f -Tail 60 }
+          }
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -118,6 +128,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release download v0.8.0 --pattern 'JiraWorklog-0.8.0-setup.exe' --dir old
       - name: Run the scenario
+        # A hang fails the step, so the data is still collected below.
+        timeout-minutes: 15
         shell: pwsh
         run: |
           $params = @{
