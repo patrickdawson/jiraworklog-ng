@@ -544,7 +544,7 @@ checks; "diff" = Rust output compared with the old TS on the real copy;
 | `onNavigate` | `events.navigate` | CDP 8 (event emitted from the WebView) |
 | `showWindow` | `show_window` | by hand (M4, away dialog) |
 | `getAutoLaunch` | `get_auto_launch` | CDP 8 (read only) |
-| `setAutoLaunch` | `set_auto_launch` (autostart plugin, Run key `JiraWorklog`) | e2e `autostart.e2e.ts`, CI only (real Run key) |
+| `setAutoLaunch` | `set_auto_launch` (`electron_upgrade::set_autostart`, HKCU Run value `JiraWorklog`) | e2e `autostart.e2e.ts`, CI only (real Run key) |
 
 ### Electron main process (`electron/main.ts`)
 
@@ -565,7 +565,7 @@ checks; "diff" = Rust output compared with the old TS on the real copy;
 | menu Hilfe: "Datenordner öffnen" | opener `open_path(data_dir())` (follows `JWL_DB_PATH`) | open (opens Explorer) |
 | menu Hilfe: "Über JiraWorklog" | `show_about` message dialog | unit test of the text; dialog open |
 | away detection: lock/unlock, suspend/resume | `power.rs` hidden window | message mapping unit test; e2e injects lock/sleep into the watcher (`away-check.e2e.ts`); real Win+L/sleep open |
-| autostart via `setLoginItemSettings` (`electron.app.JiraWorklog`) | autostart plugin (`JiraWorklog`); installer moves the value (`electron_upgrade`) | unit tests (fake registry); sandbox test open |
+| autostart via `setLoginItemSettings` (`electron.app.JiraWorklog`) | HKCU Run value `JiraWorklog` (`electron_upgrade::set_autostart`; the plugin until beta.3); installer moves the value (`electron_upgrade`) | unit tests (fake registry); sandbox test open |
 | electron-builder one-click NSIS, per user | Tauri NSIS, per user, German, replaces the Electron install | built + script reviewed; sandbox test open |
 | `backgroundThrottling: false` | not needed: tray and away detection run in Rust; the UI recomputes from timestamps when shown | — |
 | embedded Next server, port, `server.log` | gone (no server) | — |
@@ -767,6 +767,11 @@ Tauri's NSIS template (read in `target/release/nsis/x64/installer.nsi`) with
      unquoted path plus one trailing space. Its `is_enabled` only checks
      that the Run value exists and is not disabled in StartupApproved, so
      Einstellungen → Desktop shows "on" after the upgrade.
+     Since 0.9.0-beta.4 the plugin is gone: `auto-launch` writes to HKLM,
+     for all users, whenever the app runs elevated (found by the CI
+     autostart test). The setting now uses `electron_upgrade::set_autostart`
+     / `autostart_enabled` on the same `StartupRegistry` (HKCU only), with
+     the same value format and the same `is_enabled` rule.
    - Appends what it did to `%APPDATA%\jiraworklog-ng\upgrade.log`; exit
      code ≠ 0 only adds a `DetailPrint` (the install stays). Registry access
      is `windows-registry` 0.6 (the crate auto-launch uses) behind the
