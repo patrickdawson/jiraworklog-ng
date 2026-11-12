@@ -12,6 +12,9 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 ### Geändert
 - Version: Die erste Tauri-Version heißt 0.9.0 statt 0.10.0. Wer eine Testversion 0.10.0-beta.x installiert hat, wählt beim Installieren einmal „Vor der Installation deinstallieren“. Daten und Autostart bleiben erhalten.
 
+### Behoben
+- Tray: Das Menü nach einem Rechtsklick auf das Symbol bleibt offen, auch wenn ein Timer läuft. Bisher schloss es sich nach spätestens einer Sekunde wieder.
+
 ## [0.9.0-beta.3] - 2026-11-12
 
 ### Geändert

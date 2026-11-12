@@ -20,9 +20,30 @@ const TRAY_ID: &str = "main";
 const IDLE_ICON: &[u8] = include_bytes!("../../assets/tray-idle.png");
 const RUNNING_ICON: &[u8] = include_bytes!("../../assets/tray-running.png");
 
-/// The last rendered state, so the tray is only rebuilt when it changes.
-#[derive(Default)]
-pub struct TrayState(Mutex<Option<String>>);
+/// What the tray shows, computed from the timer and the window.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrayView {
+    pub status: String,
+    pub stop_enabled: bool,
+    pub toggle: String,
+    pub tooltip: String,
+    pub running: bool,
+}
+
+/// The menu entries that change. The menu is built once and only these are
+/// updated: replacing the whole menu (`set_menu`) closes it while it is open,
+/// and the running timer changes the label every second.
+struct TrayItems {
+    status: MenuItem<Wry>,
+    stop: MenuItem<Wry>,
+    toggle: MenuItem<Wry>,
+}
+
+pub struct TrayState {
+    items: TrayItems,
+    /// The last applied view, so only what changed is touched.
+    last: Mutex<Option<TrayView>>,
+}
 
 /// `h:mm:ss`, or `m:ss` below an hour.
 pub fn format_elapsed(total_seconds: f64) -> String {
@@ -36,10 +57,37 @@ pub fn format_elapsed(total_seconds: f64) -> String {
 }
 
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
-    app.manage(TrayState::default());
+    let initial = view(None, window::is_visible(app));
+    let items = TrayItems {
+        status: MenuItem::with_id(app, "tray-status", &initial.status, false, None::<&str>)?,
+        stop: MenuItem::with_id(
+            app,
+            "tray-stop",
+            "Timer stoppen",
+            initial.stop_enabled,
+            None::<&str>,
+        )?,
+        toggle: MenuItem::with_id(app, "tray-toggle", &initial.toggle, true, None::<&str>)?,
+    };
+    let menu = Menu::with_items(
+        app,
+        &[
+            &items.status,
+            &PredefinedMenuItem::separator(app)?,
+            &items.stop,
+            &items.toggle,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "tray-quit", "Beenden", true, None::<&str>)?,
+        ],
+    )?;
+    app.manage(TrayState {
+        items,
+        last: Mutex::new(Some(initial.clone())),
+    });
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(Image::from_bytes(IDLE_ICON)?)
-        .tooltip("JiraWorklog")
+        .tooltip(&initial.tooltip)
+        .menu(&menu)
         .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
@@ -101,59 +149,9 @@ fn status(app: &AppHandle) -> Option<RunningStatus> {
         .flatten()
 }
 
-/// Re-renders the tray if anything it shows has changed.
-pub fn refresh(app: &AppHandle) {
-    let (Some(tray), Some(state)) = (app.tray_by_id(TRAY_ID), app.try_state::<TrayState>()) else {
-        return;
-    };
-    let running = status(app);
-    let visible = window::is_visible(app);
-    let key = match &running {
-        Some(r) => format!(
-            "run|{}|{}|{visible}",
-            r.effective_seconds.floor(),
-            r.description
-        ),
-        None => format!("idle|{visible}"),
-    };
-    {
-        let mut last = state.0.lock().unwrap_or_else(|e| e.into_inner());
-        if last.as_deref() == Some(key.as_str()) {
-            return;
-        }
-        *last = Some(key);
-    }
-
-    match build_menu(app, running.as_ref(), visible) {
-        Ok(menu) => {
-            let _ = tray.set_menu(Some(menu));
-        }
-        Err(e) => log::error!("tray menu: {e}"),
-    }
-    let tooltip = match &running {
-        Some(r) => format!(
-            "JiraWorklog — läuft {}",
-            format_elapsed(r.effective_seconds)
-        ),
-        None => "JiraWorklog — kein laufender Timer".into(),
-    };
-    let _ = tray.set_tooltip(Some(tooltip));
-    let icon = if running.is_some() {
-        RUNNING_ICON
-    } else {
-        IDLE_ICON
-    };
-    if let Ok(img) = Image::from_bytes(icon) {
-        let _ = tray.set_icon(Some(img));
-    }
-}
-
-fn build_menu(
-    app: &AppHandle,
-    running: Option<&RunningStatus>,
-    visible: bool,
-) -> tauri::Result<Menu<Wry>> {
-    let label = match running {
+/// What the tray shows for this timer and window state.
+pub fn view(running: Option<&RunningStatus>, visible: bool) -> TrayView {
+    let (status, tooltip) = match running {
         Some(r) => {
             let text = r.description.trim();
             let text = if text.is_empty() {
@@ -161,37 +159,103 @@ fn build_menu(
             } else {
                 text
             };
-            format!("▶ {} — {text}", format_elapsed(r.effective_seconds))
+            let elapsed = format_elapsed(r.effective_seconds);
+            (
+                format!("▶ {elapsed} — {text}"),
+                format!("JiraWorklog — läuft {elapsed}"),
+            )
         }
-        None => "Kein laufender Timer".into(),
+        None => (
+            "Kein laufender Timer".into(),
+            "JiraWorklog — kein laufender Timer".into(),
+        ),
     };
     let toggle = if visible {
         "Fenster ausblenden"
     } else {
         "Fenster anzeigen"
     };
-    Menu::with_items(
-        app,
-        &[
-            &MenuItem::with_id(app, "tray-status", label, false, None::<&str>)?,
-            &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(
-                app,
-                "tray-stop",
-                "Timer stoppen",
-                running.is_some(),
-                None::<&str>,
-            )?,
-            &MenuItem::with_id(app, "tray-toggle", toggle, true, None::<&str>)?,
-            &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "tray-quit", "Beenden", true, None::<&str>)?,
-        ],
-    )
+    TrayView {
+        status,
+        stop_enabled: running.is_some(),
+        toggle: toggle.into(),
+        tooltip,
+        running: running.is_some(),
+    }
+}
+
+/// Updates the tray entries, tooltip and icon that changed. Never replaces
+/// the menu, so an open menu stays open while the timer ticks.
+pub fn refresh(app: &AppHandle) {
+    let (Some(tray), Some(state)) = (app.tray_by_id(TRAY_ID), app.try_state::<TrayState>()) else {
+        return;
+    };
+    let next = view(status(app).as_ref(), window::is_visible(app));
+    let prev = {
+        let mut last = state.last.lock().unwrap_or_else(|e| e.into_inner());
+        if last.as_ref() == Some(&next) {
+            return;
+        }
+        last.replace(next.clone())
+    };
+    let items = &state.items;
+    let differs = |a: Option<&str>, b: &str| a != Some(b);
+    if differs(prev.as_ref().map(|p| p.status.as_str()), &next.status) {
+        let _ = items.status.set_text(&next.status);
+    }
+    if prev.as_ref().map(|p| p.stop_enabled) != Some(next.stop_enabled) {
+        let _ = items.stop.set_enabled(next.stop_enabled);
+    }
+    if differs(prev.as_ref().map(|p| p.toggle.as_str()), &next.toggle) {
+        let _ = items.toggle.set_text(&next.toggle);
+    }
+    if differs(prev.as_ref().map(|p| p.tooltip.as_str()), &next.tooltip) {
+        let _ = tray.set_tooltip(Some(&next.tooltip));
+    }
+    if prev.as_ref().map(|p| p.running) != Some(next.running) {
+        let icon = if next.running {
+            RUNNING_ICON
+        } else {
+            IDLE_ICON
+        };
+        if let Ok(img) = Image::from_bytes(icon) {
+            let _ = tray.set_icon(Some(img));
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::format_elapsed;
+    use super::{format_elapsed, view};
+    use jwl_core::timer::RunningStatus;
+
+    #[test]
+    fn view_of_an_idle_timer() {
+        let v = view(None, true);
+        assert_eq!(v.status, "Kein laufender Timer");
+        assert_eq!(v.tooltip, "JiraWorklog — kein laufender Timer");
+        assert_eq!(v.toggle, "Fenster ausblenden");
+        assert!(!v.stop_enabled && !v.running);
+        assert_eq!(view(None, false).toggle, "Fenster anzeigen");
+    }
+
+    #[test]
+    fn view_of_a_running_timer() {
+        let r = RunningStatus {
+            description: " TXR-1 Fix ".into(),
+            effective_seconds: 3725.4,
+        };
+        let v = view(Some(&r), false);
+        assert_eq!(v.status, "▶ 1:02:05 — TXR-1 Fix");
+        assert_eq!(v.tooltip, "JiraWorklog — läuft 1:02:05");
+        assert!(v.stop_enabled && v.running);
+
+        let blank = RunningStatus {
+            description: "  ".into(),
+            effective_seconds: 5.0,
+        };
+        assert_eq!(view(Some(&blank), true).status, "▶ 0:05 — Ohne Beschreibung");
+    }
 
     #[test]
     fn elapsed_format_matches_the_electron_tray() {
