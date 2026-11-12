@@ -13,7 +13,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 ### Zeiterfassung
 - **Timer starten/stoppen** — Ein-Klick-Timer mit Live-Anzeige der laufenden Zeit
 - **Beschreibungsformat** `Merksatz  ISSUE-123  Worklogtext` — Jira-Issue-Key wird automatisch aus der Beschreibung extrahiert
-- **Vorschläge im Timer-Feld** — Beim Fokus zeigt das Feld die acht zuletzt genutzten Einträge der letzten 30 Tage (mit Issue-Key bzw. Kategorie, Anzahl und Gesamtzeit). Tippen filtert, Pfeiltasten wählen, Enter startet den Timer.
+- **Vorschläge im Timer-Feld** — Beim Fokus zeigt das Feld die zuletzt genutzten Einträge der letzten 30 Tage, standardmäßig 15 (in den Einstellungen 1 bis 50) (mit Issue-Key bzw. Kategorie, Anzahl und Gesamtzeit). Tippen filtert, Pfeiltasten wählen, Enter startet den Timer.
 - **Startzeit des laufenden Timers korrigieren** — Zu spät auf Start gedrückt? Die Startzeit lässt sich direkt nachträglich vorverlegen. Ein Klick auf „Gestartet“ zeigt zuerst die Uhrzeit, daneben das Datum.
 - **Manuelle Einträge** — Zeiteinträge mit Start- und Endzeit manuell anlegen oder nachträglich bearbeiten. Das Feld „Beschreibung“ im Dialog zeigt dieselben Vorschläge wie das Timer-Feld. Ein Vorschlag übernimmt Beschreibung, Allgemein-Haken und Kategorie; gespeichert wird erst mit „Speichern“.
 - **Gruppen bearbeiten** — Einträge mit gleicher Beschreibung am selben Tag bilden eine Gruppe. „Gruppe bearbeiten“ ändert Beschreibung, Allgemein-Haken und Kategorie aller Einträge der Gruppe auf einmal (auch mit Vorschlägen). Die Zeiten bleiben gleich. Passt die neue Beschreibung zu einer anderen Gruppe des Tages, werden beide zu einer Gruppe.
@@ -93,7 +93,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - Jira-URL, Atlassian-E-Mail, API-Token, Projekt-Keys, Buchungsmodus, „Verbindung testen“
 - Sprint-Ankerdatum, Sprint-Länge und Ziel für die Quote konkreter Issues
 - Saldo-Korridor für den Saldo-Verlauf: Mitte und Spanne ± in ganzen Stunden (Standard 100 ± 40)
-- Farbschema: System, Hell oder Dunkel
+- Darstellung: Farbschema (System, Hell oder Dunkel) und Anzahl der Vorschläge im Beschreibungsfeld (Standard 15, höchstens 50)
 - Desktop: Autostart
 - Datenpflege: alte Einträge löschen (Aufbewahrungsdauer in Tagen). Der Überstundensaldo bleibt dabei erhalten, weil die gelöschten Tage in den Startwert wandern.
 - Gefahrenzone: Force-Buchung (gilt nur bis zum Neustart)

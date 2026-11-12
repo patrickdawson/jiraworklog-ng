@@ -7,6 +7,9 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Geändert
+- Vorschläge im Beschreibungsfeld: Die Auswahl zeigt jetzt 15 statt 8 zuletzt genutzte Einträge. Die Anzahl lässt sich unter Einstellungen → Darstellung von 1 bis 50 einstellen.
+
 ## [0.10.0-beta.2] - 2026-11-12
 
 ### Behoben

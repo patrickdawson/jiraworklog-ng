@@ -130,8 +130,10 @@ export function HilfePage() {
               und starte den Timer. Die Zeit läuft live mit.
             </li>
             <li>
-              <b>Vorschläge</b> — Klicke in das Feld. Du siehst die acht zuletzt
-              genutzten Einträge der letzten 30 Tage. Tippe zum Filtern. Wähle
+              <b>Vorschläge</b> — Klicke in das Feld. Du siehst die zuletzt genutzten
+              Einträge der letzten 30 Tage, standardmäßig 15. Wie viele, legst
+              du unter <Ui>Einstellungen</Ui> → <Ui>Darstellung</Ui> fest
+              (höchstens 50). Tippe zum Filtern. Wähle
               mit den Pfeiltasten. <Kbd>Enter</Kbd> startet den Timer.
             </li>
             <li>
@@ -442,7 +444,8 @@ export function HilfePage() {
               Quote und der Saldo-Korridor (Mitte und Spanne in Stunden).
             </li>
             <li>
-              <b>Darstellung</b> — System, Hell oder Dunkel.
+              <b>Darstellung</b> — System, Hell oder Dunkel. Dazu die Anzahl
+              der Vorschläge im Beschreibungsfeld (1 bis 50).
             </li>
             <li>
               <b>Datenpflege</b> — alte Einträge löschen. Der Saldo bleibt
