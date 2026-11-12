@@ -107,8 +107,9 @@ jobs:
     name: Installer test (${{ matrix.scenario }})
     needs: installer-build
     runs-on: windows-latest
-    # A normal run takes 1-2 minutes. Twice the runner stopped reporting and
-    # the step timeout below never fired; this one is enforced by GitHub.
+    # A normal run takes 1-2 minutes. After this GitHub cancels the job, but a
+    # hung runner ignored a cancel twice (and once the step timeout below);
+    # then only a force-cancel ends the job.
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -147,7 +148,8 @@ jobs:
         if: failure() || cancelled()
         shell: pwsh
         # Test database, upgrade.log, the app log (tauri-main.log) and the
-        # script's process heartbeat.
+        # script's process heartbeat. Copy the app data first: into an
+        # existing folder it would land in installer-test-data\jiraworklog-ng.
         run: |
           Copy-Item "$env:APPDATA\jiraworklog-ng" installer-test-data -Recurse -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force installer-test-data | Out-Null
