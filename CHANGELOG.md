@@ -7,17 +7,22 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-## [0.10.0-beta.3] - 2026-11-12
+## [0.9.0-beta.4] - 2026-11-12
+
+### Geändert
+- Version: Die erste Tauri-Version heißt 0.9.0 statt 0.10.0. Wer eine Testversion 0.10.0-beta.x installiert hat, wählt beim Installieren einmal „Vor der Installation deinstallieren“. Daten und Autostart bleiben erhalten.
+
+## [0.9.0-beta.3] - 2026-11-12
 
 ### Geändert
 - Vorschläge im Beschreibungsfeld: Die Auswahl zeigt jetzt 15 statt 8 zuletzt genutzte Einträge. Die Anzahl lässt sich unter Einstellungen → Darstellung von 1 bis 50 einstellen.
 
-## [0.10.0-beta.2] - 2026-11-12
+## [0.9.0-beta.2] - 2026-11-12
 
 ### Behoben
 - Issue-Keys: Ein Klick öffnet das Issue wieder im Browser. Seit der Umstellung auf Tauri passierte dabei nichts.
 
-## [0.10.0-beta.1] - 2026-11-12
+## [0.9.0-beta.1] - 2026-11-12
 
 ### Geändert
 - Desktop-App: Die App ist neu gebaut, mit Tauri statt Electron. Der Installer ist rund 3 MB statt 96 MB groß, die installierte App rund 8 MB statt 328 MB. Daten und Einstellungen bleiben im selben Ordner und gehen nicht verloren.
