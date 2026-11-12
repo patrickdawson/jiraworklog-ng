@@ -146,6 +146,29 @@ function RunInstaller([string] $exe, [string[]] $arguments, [int] $timeoutSecond
   return $p.ExitCode
 }
 
+function LastCrash {
+  # The Application log's "Application Error" entry names the faulting module.
+  $e = Get-WinEvent -FilterHashtable @{ LogName = "Application"; Id = 1000 } -MaxEvents 1 -ErrorAction SilentlyContinue
+  if ($e) { return "$($e.TimeCreated.ToString('HH:mm:ss')) $($e.Message -replace '\s+', ' ')" }
+  return "no Application Error event"
+}
+
+function StartHeartbeat([string] $file) {
+  # A hung job has left no log at all so far: the runner stopped reporting and
+  # the step timeout never fired. Every 15 s this writes the installer and app
+  # processes to a file that the workflow collects even after a cancel.
+  Start-ThreadJob -ArgumentList $file -ScriptBlock {
+    param($file)
+    while ($true) {
+      $procs = Get-CimInstance Win32_Process |
+        Where-Object { "$($_.ExecutablePath)" -match "JiraWorklog|jiraworklog|setup|uninst|~nsu" } |
+        ForEach-Object { "  $($_.ProcessId) $($_.ExecutablePath)" }
+      Add-Content -Path $file -Value (@("$(Get-Date -Format HH:mm:ss)") + @($procs))
+      Start-Sleep -Seconds 15
+    }
+  } | Out-Null
+}
+
 function DbState {
   if (-not (Test-Path $db)) { return $null }
   $json = node $dbTool state $db 2>$null
@@ -210,17 +233,24 @@ Write-Output "# Scenario $Scenario"
 Write-Output "new installer: $NewInstaller"
 if ($OldInstaller) { Write-Output "old installer: $OldInstaller" }
 Write-Output "latest migration: $latestMigration"
+if ($env:INSTALLER_TEST_HEARTBEAT) {
+  StartHeartbeat $env:INSTALLER_TEST_HEARTBEAT
+  Write-Output "heartbeat: $env:INSTALLER_TEST_HEARTBEAT"
+}
 
 # ── Scenarios ────────────────────────────────────────────────────────────────
 
 if ($Scenario -like "electron-*") {
   Step "Install Electron 0.8.0 and create its database"
-  # The old electron-builder installer crashed once on a runner (0xC0000005)
-  # and installed nothing. It is only the starting point here, so retry it.
-  for ($attempt = 1; $attempt -le 3; $attempt++) {
+  # The old electron-builder installer sometimes crashes on a runner
+  # (0xC0000005) within a second and installs nothing, three times in a row
+  # on 2026-11-12. It is only the starting point here, so retry it with a
+  # growing pause and log which module crashed.
+  for ($attempt = 1; $attempt -le 5; $attempt++) {
     $code = RunInstaller $OldInstaller @("/S")
     if ($code -eq 0 -and (Test-Path $electronExe)) { break }
-    Write-Output "INFO  Electron install attempt $attempt failed (exit $code), retrying"
+    Write-Output "INFO  Electron install attempt $attempt failed (exit $code): $(LastCrash)"
+    if ($attempt -lt 5) { Start-Sleep -Seconds (10 * $attempt) }
   }
   Check "Electron installer exit code 0" ($code -eq 0) "$code"
   WaitFor "Electron exe installed" 60 { Test-Path $electronExe }
