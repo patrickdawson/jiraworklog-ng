@@ -146,11 +146,15 @@ function RunInstaller([string] $exe, [string[]] $arguments, [int] $timeoutSecond
   return $p.ExitCode
 }
 
-function LastCrash {
-  # The Application log's "Application Error" entry names the faulting module.
-  $e = Get-WinEvent -FilterHashtable @{ LogName = "Application"; Id = 1000 } -MaxEvents 1 -ErrorAction SilentlyContinue
-  if ($e) { return "$($e.TimeCreated.ToString('HH:mm:ss')) $($e.Message -replace '\s+', ' ')" }
-  return "no Application Error event"
+function CrashesSince([datetime] $since) {
+  # The Application log's "Application Error" entries (event 1000) name the
+  # faulting app and module. Only those since $since: an older one, of any
+  # app, would name the wrong module. The entry appears a moment after the
+  # crash (0.2 s in a test), so wait a little first.
+  Start-Sleep -Seconds 2
+  $events = @(Get-WinEvent -FilterHashtable @{ LogName = "Application"; Id = 1000; StartTime = $since } -ErrorAction SilentlyContinue)
+  if ($events.Count -eq 0) { return "no Application Error event since $($since.ToString('HH:mm:ss'))" }
+  return ($events | ForEach-Object { "$($_.TimeCreated.ToString('HH:mm:ss')) $($_.Message -replace '\s+', ' ')" }) -join " | "
 }
 
 function StartHeartbeat([string] $file) {
@@ -261,9 +265,10 @@ if ($Scenario -like "electron-*") {
   # on 2026-11-12. It is only the starting point here, so retry it with a
   # growing pause and log which module crashed.
   for ($attempt = 1; $attempt -le 5; $attempt++) {
+    $started = Get-Date
     $code = RunInstaller $OldInstaller @("/S")
     if ($code -eq 0 -and (Test-Path $electronExe)) { break }
-    Write-Output "INFO  Electron install attempt $attempt failed (exit $code): $(LastCrash)"
+    Write-Output "INFO  Electron install attempt $attempt failed (exit $code): $(CrashesSince $started)"
     if ($attempt -lt 5) { Start-Sleep -Seconds (10 * $attempt) }
   }
   Check "Electron installer exit code 0" ($code -eq 0) "$code"
