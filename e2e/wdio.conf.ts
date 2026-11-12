@@ -66,6 +66,23 @@ async function waitForDriver(): Promise<void> {
  */
 async function probeSession(): Promise<void> {
   const base = `http://127.0.0.1:${DRIVER_PORT}`;
+  // A session normally starts in 2-3 s. If it still waits after 15 s, note
+  // what runs now: the driver may close the app when it gives up.
+  let snapshot = "";
+  const timer = setTimeout(() => {
+    snapshot = `\n--- while the driver waited (15 s):${webviewDiagnostics()}`;
+  }, 15_000);
+  try {
+    await openAndCloseSession(base);
+  } catch (e) {
+    throw new Error(`${e instanceof Error ? e.message : String(e)}${snapshot}`);
+  } finally {
+    clearTimeout(timer);
+  }
+  console.log("[e2e] session probe ok");
+}
+
+async function openAndCloseSession(base: string): Promise<void> {
   const res = await fetch(`${base}/session`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -86,7 +103,6 @@ async function probeSession(): Promise<void> {
   await fetch(`${base}/session/${sessionId}`, { method: "DELETE" });
   // The probe's app must be gone before the first spec opens the database.
   killByExactPath(APP_EXE);
-  console.log("[e2e] session probe ok");
 }
 
 function driverLogTail(): string {
@@ -95,6 +111,35 @@ function driverLogTail(): string {
     return `\n--- tauri-driver.log (last 40 lines) ---\n${lines.slice(-40).join("\n")}`;
   } catch {
     return "";
+  }
+}
+
+/**
+ * What a failed setup leaves running, for the log: the command lines of the
+ * app and its WebView2 processes (debug port, data folder, runtime), the
+ * installed WebView2 runtimes and any DevToolsActivePort file. Read before
+ * the cleanup stops them.
+ */
+function webviewDiagnostics(): string {
+  const script = `
+    "--- processes"
+    Get-CimInstance Win32_Process |
+      Where-Object { $_.Name -in @('jiraworklog.exe', 'msedgewebview2.exe', 'msedgedriver.exe', 'tauri-driver.exe') } |
+      ForEach-Object { "$($_.ProcessId) $($_.ExecutablePath)"; "    $($_.CommandLine)" }
+    "--- WebView2 runtimes (EdgeUpdate pv)"
+    foreach ($k in @('HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+                     'HKCU:\\SOFTWARE\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}')) {
+      $p = Get-ItemProperty $k -ErrorAction SilentlyContinue
+      if ($p) { "$k = $($p.pv)" }
+    }
+    "--- DevToolsActivePort files"
+    foreach ($d in @($env:TEMP, (Join-Path $env:LOCALAPPDATA 'com.jiraworklog.ng'))) {
+      Get-ChildItem $d -Recurse -Filter DevToolsActivePort -ErrorAction SilentlyContinue | ForEach-Object FullName
+    }`;
+  try {
+    return `\n${execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8" })}`;
+  } catch (e) {
+    return `\n(diagnostics failed: ${String(e)})`;
   }
 }
 
