@@ -163,9 +163,14 @@ function StartHeartbeat([string] $file) {
     while ($true) {
       $now = Get-Date -Format HH:mm:ss
       try {
+        # -match ignores case. The command line tells apart the Electron
+        # processes, which all run JiraWorklog.exe (--type=renderer, ...).
         $procs = Get-CimInstance Win32_Process -ErrorAction Stop |
-          Where-Object { "$($_.ExecutablePath)" -match "JiraWorklog|jiraworklog|setup|uninst|~nsu" } |
-          ForEach-Object { "  $($_.ProcessId) $($_.ExecutablePath)" }
+          Where-Object { "$($_.ExecutablePath)" -match "jiraworklog|setup|uninst|~nsu" } |
+          ForEach-Object {
+            $cmd = if ($_.CommandLine) { $_.CommandLine } else { $_.ExecutablePath }
+            "  $($_.ProcessId) (parent $($_.ParentProcessId)) $cmd"
+          }
         $lines = @("heartbeat $now") + @($procs)
       } catch {
         $lines = @("heartbeat $now failed: $_")
