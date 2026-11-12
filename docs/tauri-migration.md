@@ -2,7 +2,7 @@
 
 Branch `tauri-rewrite` (not pushed). Last updated 2026-11-11, after milestone 11
 (cut-over): the repository holds only the Tauri app, now at version
-0.9.0-beta.4 (0.9.0 at the cut-over; the test builds were 1.0.0-beta.1 and
+0.9.0-beta.5 (0.9.0 at the cut-over; the test builds were 1.0.0-beta.1 and
 0.10.0-beta.1 to beta.3, renamed to 0.9.0-beta.1 to beta.3 on 2026-11-12:
 0.9.0 was never released, so the first Tauri release fills that gap).
 
@@ -767,7 +767,7 @@ Tauri's NSIS template (read in `target/release/nsis/x64/installer.nsi`) with
      unquoted path plus one trailing space. Its `is_enabled` only checks
      that the Run value exists and is not disabled in StartupApproved, so
      Einstellungen → Desktop shows "on" after the upgrade.
-     Since 0.9.0-beta.4 the plugin is gone: `auto-launch` writes to HKLM,
+     Since 0.9.0-beta.5 the plugin is gone: `auto-launch` writes to HKLM,
      for all users, whenever the app runs elevated (found by the CI
      autostart test). The setting now uses `electron_upgrade::set_autostart`
      / `autostart_enabled` on the same `StartupRegistry` (HKCU only), with
