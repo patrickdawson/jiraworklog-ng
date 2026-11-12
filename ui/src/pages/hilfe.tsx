@@ -421,6 +421,12 @@ export function HilfePage() {
               <b>Menü Hilfe</b> — öffnet diese Seite (<Kbd>F1</Kbd>), „Was ist
               neu“ und den Datenordner mit Datenbank und Logs.
             </li>
+            <li>
+              <b>Tastenkürzel</b> — <Kbd>Strg</Kbd>+<Kbd>W</Kbd> schließt das
+              Fenster in den Tray, <Kbd>Strg</Kbd>+<Kbd>Q</Kbd> beendet die App.{" "}
+              <Kbd>Strg</Kbd>+<Kbd>+</Kbd>/<Kbd>-</Kbd>/<Kbd>0</Kbd> zoomt,{" "}
+              <Kbd>F11</Kbd> schaltet Vollbild.
+            </li>
           </List>
         </Section>
 

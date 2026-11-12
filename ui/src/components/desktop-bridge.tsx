@@ -3,11 +3,13 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { desktop } from "@/lib/desktop";
 import { reloadAll } from "@/lib/query";
+import { listenForMenuShortcuts } from "@/lib/shortcuts";
 
 /**
  * Bridges shell events into the UI: reloads the data when the timer is stopped
  * from the tray, opens the routes picked in the app menu, and sends external
  * links to the default browser instead of navigating the app window away.
+ * It also catches the app menu's keyboard shortcuts.
  */
 export function DesktopBridge() {
   const navigate = useNavigate();
@@ -43,10 +45,12 @@ export function DesktopBridge() {
     // around them do not react, which would hide the click from a bubbling
     // listener.
     document.addEventListener("click", onClick, true);
+    const offShortcuts = listenForMenuShortcuts();
 
     return () => {
       offTimer();
       offNavigate();
+      offShortcuts();
       document.removeEventListener("click", onClick, true);
     };
   }, [navigate]);

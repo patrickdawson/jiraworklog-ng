@@ -45,6 +45,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::check_away_time,
             commands::resolve_away_time,
             commands::show_window,
+            commands::run_menu_shortcut,
             commands::get_auto_launch,
             commands::set_auto_launch,
             commands::preview_day_booking,

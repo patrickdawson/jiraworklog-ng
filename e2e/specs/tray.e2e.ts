@@ -3,6 +3,7 @@
 // same handler a real click calls, and reads the tray back from the native
 // menu. Not covered: that Windows shows the icon and delivers the click.
 import { browser } from "@wdio/globals";
+import { Key } from "webdriverio";
 import { getEntries, resetDb, seedEntries } from "../support/db.ts";
 import { expect, page } from "../support/page.ts";
 
@@ -105,5 +106,36 @@ describe("tray and app menu", () => {
     await expect.poll(async () => (await page.appReport()).fullscreen).toBe(true);
     await page.menuClick("fullscreen");
     await expect.poll(async () => (await page.appReport()).fullscreen).toBe(false);
+  });
+
+  // WebView2 keeps the keys while the page has focus, so the native
+  // accelerators never fire; the page catches them (ui/src/lib/shortcuts.ts).
+  // Ctrl+Q stays a manual check: it would end the test session.
+  it("menu shortcuts — the keys run their menu entries", async () => {
+    await openBuchen();
+
+    await browser.keys(Key.F1);
+    await expect(page.getByRole("heading", { name: "Hilfe", level: 1 })).toBeVisible();
+
+    const ratio = async () => (await browser.execute("return window.devicePixelRatio;")) as number;
+    const base = await ratio();
+    await browser.keys([Key.Ctrl, "+"]);
+    await expect.poll(ratio).toBeGreaterThan(base);
+    await browser.keys([Key.Ctrl, "0"]);
+    await expect.poll(ratio).toBe(base);
+    await browser.keys([Key.Ctrl, "-"]);
+    await expect.poll(ratio).toBeLessThan(base);
+    await browser.keys([Key.Ctrl, "0"]);
+    await expect.poll(ratio).toBe(base);
+
+    await browser.keys(Key.F11);
+    await expect.poll(async () => (await page.appReport()).fullscreen).toBe(true);
+    await browser.keys(Key.F11);
+    await expect.poll(async () => (await page.appReport()).fullscreen).toBe(false);
+
+    await browser.keys([Key.Ctrl, "w"]);
+    await expect.poll(async () => (await page.appReport()).visible).toBe(false);
+    await page.menuClick("tray-toggle");
+    await expect.poll(async () => (await page.appReport()).visible).toBe(true);
   });
 });

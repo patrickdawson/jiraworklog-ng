@@ -44,6 +44,12 @@ export const commands = {
 	resolveAwayTime: (input: ResolveAwayInput) => typedError<null, CommandError>(__TAURI_INVOKE("resolve_away_time", { input })),
 	/**  Brings the window to the front, also out of the tray. */
 	showWindow: () => __TAURI_INVOKE<void>("show_window"),
+	/**
+	 *  Runs an app menu entry by id, for its keyboard shortcut. WebView2 keeps
+	 *  the keys while the page has focus, so the menu's own accelerators never
+	 *  fire; the UI catches the keys instead (`ui/src/lib/shortcuts.ts`).
+	 */
+	runMenuShortcut: (id: string) => __TAURI_INVOKE<void>("run_menu_shortcut", { id }),
 	/**  Whether the app starts at Windows login. */
 	getAutoLaunch: () => typedError<boolean, CommandError>(__TAURI_INVOKE("get_auto_launch")),
 	/**

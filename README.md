@@ -80,7 +80,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Schließen = Minimieren** — Das Fenster geht in den Tray, der Timer läuft weiter
 - **Autostart** — Optional beim Windows-Anmelden starten, mit geöffnetem Fenster
 - **Nur eine Instanz** — Ein zweiter Start holt das vorhandene Fenster nach vorne
-- **Deutsches Menü** — Datei, Bearbeiten, Ansicht, Hilfe. Unter „Hilfe“: Anleitung (F1), Was ist neu, Datenordner öffnen, Über JiraWorklog
+- **Deutsches Menü** — Datei, Bearbeiten, Ansicht, Hilfe. Unter „Hilfe“: Anleitung (F1), Was ist neu, Datenordner öffnen, Über JiraWorklog. Tastenkürzel: Strg+W Fenster schließen, Strg+Q Beenden, Strg+Plus/Minus/0 Zoom, F11 Vollbild
 
 ### Hilfe in der App
 - **Anleitung** — Seite „Hilfe“ in der Seitenleiste mit Schritt-für-Schritt-Erklärungen

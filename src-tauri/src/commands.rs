@@ -244,6 +244,17 @@ pub fn show_window(app: AppHandle) {
     crate::window::show(&app);
 }
 
+/// Runs an app menu entry by id, for its keyboard shortcut. WebView2 keeps
+/// the keys while the page has focus, so the menu's own accelerators never
+/// fire; the UI catches the keys instead (`ui/src/lib/shortcuts.ts`).
+#[tauri::command]
+#[specta::specta]
+pub fn run_menu_shortcut(app: AppHandle, id: String) {
+    if !crate::menu::on_menu_event(&app, &id) {
+        log::warn!("menu shortcut: unknown id {id}");
+    }
+}
+
 /// Whether the app starts at Windows login.
 #[tauri::command]
 #[specta::specta]
