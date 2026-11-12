@@ -2184,7 +2184,7 @@ dependencies = [
 
 [[package]]
 name = "jiraworklog"
-version = "0.10.0-beta.2"
+version = "0.10.0-beta.3"
 dependencies = [
  "chrono",
  "jwl-core",
@@ -2285,7 +2285,7 @@ dependencies = [
 
 [[package]]
 name = "jwl-core"
-version = "0.10.0-beta.2"
+version = "0.10.0-beta.3"
 dependencies = [
  "base64 0.22.1",
  "chrono",
