@@ -154,7 +154,7 @@ jobs:
   detect-release:
     name: Detect release
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       version: ${{ steps.check.outputs.version }}
       release: ${{ steps.check.outputs.release }}
