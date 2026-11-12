@@ -74,6 +74,7 @@ e2e/                    WebdriverIO + tauri-driver suite, own package.json (mile
   specs/*.e2e.ts        the 15 ported specs
   support/              locators/assertions (page.ts), DB seeding (db.ts), Jira mock, driver lookup
 scripts/sandbox/        Windows Sandbox config + read-only check script for the installer test
+scripts/installer-test/ CI installer test: scenarios (installer-test.ps1), DB seed/state (db.mjs)
 scripts/*.mjs           real-db-copy, db-sample (seed), db-bench, gen-icons (plain Node)
 drizzle/                migration SQL + journal, embedded by crates/core/src/migrations.rs
 assets/                 tray icons (include_bytes! in src-tauri/src/tray.rs), icon.png
@@ -821,7 +822,33 @@ Measured with `npm run tauri:build` at each step (profile set through
 - `cargo bloat` was not run: installing it into `target/tools` was blocked
   by the session's permission rules. Not needed for the decision above.
 
-### Manual test: upgrade from Electron (open, needs the user)
+### Automated installer test (CI)
+
+`.github/workflows/ci.yml` builds the installer (job `installer-build`) and
+runs `scripts/installer-test/installer-test.ps1` once per scenario, each on a
+fresh GitHub runner (job `installer-test`). A release needs it to pass.
+
+| Scenario | Covers (manual steps below) |
+|---|---|
+| `electron-running` | 1 and 3: Electron 0.8.0 (from the GitHub release) running, autostart on, two entries and theme "dark" seeded |
+| `electron-stopped` | 2: Electron not running, autostart off |
+| `electron-disabled` | Electron autostart disabled in Task Manager: old values removed, nothing set |
+| `tauri-update` | 4 and 5: "uninstall first" (the uninstaller in place, `/S _?=<dir>`, as the installer runs it), in-place update with the app running, uninstall as Settings → Apps does it |
+
+Every install is silent (`/S`). The Electron scenarios run
+`scripts/sandbox/upgrade-check.ps1` before and after, check the
+`upgrade.log` line, then start the new app once: it must migrate to the
+newest migration (backup first), keep the entries and the theme and stay up.
+`db.mjs` reads and seeds the database with Node's built-in `node:sqlite`.
+
+The script refuses to run outside CI (`$env:CI`) without
+`-ThrowawayMachine`, and on any machine with JiraWorklog installed or a
+database present. Still manual: the GUI dialogs (the "close the old version?"
+question, the "already installed" page with a newer version, the finish
+page), "delete app data" on uninstall (a checkbox silent mode cannot set),
+and a real logon with autostart.
+
+### Manual test: upgrade from Electron (GUI parts only, see above)
 
 Never on the host. Windows Sandbox is **not enabled** on this machine (no
 `WindowsSandbox.exe`, no `CmService`; `Get-WindowsOptionalFeature` needs
@@ -918,9 +945,9 @@ Then:
 
 ### Open checks from milestone 10
 
-- **The whole manual test above** (needs Windows Sandbox or a VM; the user
-  has to enable the feature, admin + reboot). Nothing of the installer
-  logic has run yet; only the Rust part is unit-tested.
+- **The GUI parts of the manual test above** (needs Windows Sandbox or a VM;
+  the user has to enable the feature, admin + reboot). The silent paths run
+  in CI, see "Automated installer test (CI)".
 - Restart Manager on the Electron exe: expected to list all Electron
   processes (main, renderer, GPU, the Next server child, all
   `JiraWorklog.exe`) and stop them. If one survives, the old uninstaller's
