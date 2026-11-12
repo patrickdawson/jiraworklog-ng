@@ -100,7 +100,15 @@ function ProcessesOf([string] $exe) {
   @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $exe })
 }
 
-function IsRunning([string] $exe) { (ProcessesOf $exe).Count -gt 0 }
+# @(...) around every call that counts: a function returning an empty array
+# returns $null, and strict mode has no .Count on $null.
+function IsRunning([string] $exe) { @(ProcessesOf $exe).Count -gt 0 }
+
+function SetRunValue([string] $name, [string] $value) {
+  # A fresh CI user profile has no Run key yet; a normal one always has.
+  if (-not (Test-Path $runKey)) { New-Item -Path $runKey -Force | Out-Null }
+  New-ItemProperty -Path $runKey -Name $name -Value $value -Force | Out-Null
+}
 
 function StopByPath([string] $exe) {
   ProcessesOf $exe | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
@@ -193,7 +201,13 @@ Write-Output "latest migration: $latestMigration"
 
 if ($Scenario -like "electron-*") {
   Step "Install Electron 0.8.0 and create its database"
-  $code = RunInstaller $OldInstaller @("/S")
+  # The old electron-builder installer crashed once on a runner (0xC0000005)
+  # and installed nothing. It is only the starting point here, so retry it.
+  for ($attempt = 1; $attempt -le 3; $attempt++) {
+    $code = RunInstaller $OldInstaller @("/S")
+    if ($code -eq 0 -and (Test-Path $electronExe)) { break }
+    Write-Output "INFO  Electron install attempt $attempt failed (exit $code), retrying"
+  }
   Check "Electron installer exit code 0" ($code -eq 0) "$code"
   WaitFor "Electron exe installed" 60 { Test-Path $electronExe }
   StopByPath $electronExe # in case the installer started it
@@ -204,7 +218,7 @@ if ($Scenario -like "electron-*") {
   $autostart = if ($Scenario -eq "electron-stopped") { "Off" } else { "On" }
   if ($autostart -eq "On") {
     # What the old app's setLoginItemSettings wrote: the unquoted exe path.
-    New-ItemProperty -Path $runKey -Name "electron.app.JiraWorklog" -Value $electronExe -Force | Out-Null
+    SetRunValue "electron.app.JiraWorklog" $electronExe
   }
   if ($Scenario -eq "electron-disabled") {
     SetApproved "electron.app.JiraWorklog" 3
@@ -234,9 +248,9 @@ if ($Scenario -like "electron-*") {
   }
 
   Step "Start the new app on the old data"
-  Check "No migration backup before the first start" ((MigrationBackups).Count -eq 0)
+  Check "No migration backup before the first start" (@(MigrationBackups).Count -eq 0)
   StartNewAppAndCheckData 2 "dark"
-  Check "Migration backup made on the first start" ((MigrationBackups).Count -ge 1) (((MigrationBackups) | ForEach-Object Name) -join ", ")
+  Check "Migration backup made on the first start" (@(MigrationBackups).Count -ge 1) ((@(MigrationBackups) | ForEach-Object Name) -join ", ")
 }
 
 if ($Scenario -eq "tauri-update") {
@@ -252,7 +266,7 @@ if ($Scenario -eq "tauri-update") {
   WaitFor "new app created its database" 90 { $s = DbState; $s -and $s.lastMigration -ge $latestMigration }
   SeedDb
   # What Einstellungen → Desktop → Autostart writes.
-  New-ItemProperty -Path $runKey -Name "JiraWorklog" -Value $runValue -Force | Out-Null
+  SetRunValue "JiraWorklog" $runValue
   SetApproved "JiraWorklog" 2
 
   Step "Update with ""uninstall first"" while the app runs"
