@@ -98,6 +98,54 @@ describe("away check", () => {
     await expect(dialog()).toBeHidden();
   });
 
+  // From here on through the power watcher: the notifications go in where
+  // Windows' window messages arrive (src-tauri/src/power.rs), with chosen
+  // times, so the Rust side's away tracking is part of the test.
+
+  it("away check — a long screen lock reported by Windows asks", async () => {
+    await seedEntries([
+      { description: "TEST-1 Arbeit", startedAt: minutesAgo(120).toISOString(), endedAt: null },
+    ]);
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.waitForTimeout(500);
+
+    await page.powerEvent("lock", minutesAgo(30));
+    await page.powerEvent("unlock", new Date());
+    await expect(dialog()).toContainText("00:30 h weg");
+    await dialog().getByRole("button", { name: "Zeit behalten" }).click();
+    await expect(dialog()).toBeHidden();
+  });
+
+  it("away check — sleep and wake reported by Windows asks", async () => {
+    await seedEntries([
+      { description: "TEST-1 Arbeit", startedAt: minutesAgo(120).toISOString(), endedAt: null },
+    ]);
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.waitForTimeout(500);
+
+    await page.powerEvent("suspend", minutesAgo(20));
+    await page.powerEvent("resume", new Date());
+    await expect(dialog()).toContainText("00:20 h weg");
+    await dialog().getByRole("button", { name: "Zeit behalten" }).click();
+    await expect(dialog()).toBeHidden();
+  });
+
+  it("away check — a short screen lock reported by Windows does not ask", async () => {
+    await seedEntries([
+      { description: "Läuft", startedAt: minutesAgo(60).toISOString(), endedAt: null },
+    ]);
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.waitForTimeout(500);
+
+    await page.powerEvent("lock", minutesAgo(3));
+    await page.powerEvent("unlock", new Date());
+    await page.waitForTimeout(1000);
+    await expect(dialog()).toBeHidden();
+  });
+
   it("away check — turned off in the settings, it does not ask", async () => {
     await page.goto("/einstellungen");
     const toggle = page.getByLabel("Nach Abwesenheit fragen, ob die Zeit abgezogen werden soll");

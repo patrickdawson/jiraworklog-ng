@@ -9,7 +9,7 @@
 use std::sync::mpsc::{channel, Sender};
 use std::sync::OnceLock;
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use jwl_core::away::{AwayTracker, PowerEvent};
 use tauri::AppHandle;
 use tauri_specta::Event;
@@ -19,18 +19,19 @@ use crate::events::AwayEnded;
 /// Window class of the listener. A test can post messages to it.
 pub const CLASS_NAME: &str = "JiraWorklogPowerWatcher";
 
-static EVENTS: OnceLock<Sender<PowerEvent>> = OnceLock::new();
+/// Notifications with the time they arrived.
+static EVENTS: OnceLock<Sender<(PowerEvent, DateTime<Utc>)>> = OnceLock::new();
 
 pub fn start(app: AppHandle) {
-    let (tx, rx) = channel::<PowerEvent>();
+    let (tx, rx) = channel::<(PowerEvent, DateTime<Utc>)>();
     if EVENTS.set(tx).is_err() {
         return; // already running
     }
     std::thread::spawn(move || {
         let mut tracker = AwayTracker::default();
-        for event in rx {
+        for (event, at) in rx {
             log::info!("power event {event:?}");
-            if let Some(period) = tracker.on_event(event, Utc::now()) {
+            if let Some(period) = tracker.on_event(event, at) {
                 log::info!("away from {} to {}", period.from, period.to);
                 let _ = AwayEnded(period).emit(&app);
             }
@@ -40,9 +41,19 @@ pub fn start(app: AppHandle) {
     std::thread::spawn(win::run);
 }
 
+/// Feeds a notification as if Windows had sent it at `at`. Lets the E2E
+/// suite test a long lock without waiting (see `e2e.rs`).
+#[cfg(feature = "e2e")]
+pub fn inject(event: PowerEvent, at: DateTime<Utc>) {
+    if let Some(tx) = EVENTS.get() {
+        let _ = tx.send((event, at));
+    }
+}
+
 #[cfg(windows)]
 mod win {
     use super::{PowerEvent, CLASS_NAME, EVENTS};
+    use chrono::Utc;
     use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
     use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows_sys::Win32::System::Power::RegisterSuspendResumeNotification;
@@ -56,6 +67,17 @@ mod win {
         WTS_SESSION_UNLOCK,
     };
 
+/// The notification a window message stands for, if any.
+    pub(super) fn event_of(msg: u32, wparam: u32) -> Option<PowerEvent> {
+        match (msg, wparam) {
+            (WM_WTSSESSION_CHANGE, WTS_SESSION_LOCK) => Some(PowerEvent::Lock),
+            (WM_WTSSESSION_CHANGE, WTS_SESSION_UNLOCK) => Some(PowerEvent::Unlock),
+            (WM_POWERBROADCAST, PBT_APMSUSPEND) => Some(PowerEvent::Suspend),
+            (WM_POWERBROADCAST, PBT_APMRESUMEAUTOMATIC) => Some(PowerEvent::Resume),
+            _ => None,
+        }
+    }
+
     fn wide(s: &str) -> Vec<u16> {
         s.encode_utf16().chain(std::iter::once(0)).collect()
     }
@@ -66,15 +88,8 @@ mod win {
         wparam: WPARAM,
         lparam: LPARAM,
     ) -> LRESULT {
-        let event = match (msg, wparam as u32) {
-            (WM_WTSSESSION_CHANGE, WTS_SESSION_LOCK) => Some(PowerEvent::Lock),
-            (WM_WTSSESSION_CHANGE, WTS_SESSION_UNLOCK) => Some(PowerEvent::Unlock),
-            (WM_POWERBROADCAST, PBT_APMSUSPEND) => Some(PowerEvent::Suspend),
-            (WM_POWERBROADCAST, PBT_APMRESUMEAUTOMATIC) => Some(PowerEvent::Resume),
-            _ => None,
-        };
-        if let (Some(e), Some(tx)) = (event, EVENTS.get()) {
-            let _ = tx.send(e);
+        if let (Some(e), Some(tx)) = (event_of(msg, wparam as u32), EVENTS.get()) {
+            let _ = tx.send((e, Utc::now()));
         }
         DefWindowProcW(hwnd, msg, wparam, lparam)
     }
@@ -124,5 +139,26 @@ mod win {
                 DispatchMessageW(&msg);
             }
         }
+    }
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::win::event_of;
+    use super::PowerEvent;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        PBT_APMRESUMEAUTOMATIC, PBT_APMRESUMESUSPEND, PBT_APMSUSPEND, WM_POWERBROADCAST,
+        WM_WTSSESSION_CHANGE, WTS_SESSION_LOCK, WTS_SESSION_LOGON, WTS_SESSION_UNLOCK,
+    };
+
+    #[test]
+    fn window_messages_map_to_power_events() {
+        assert_eq!(event_of(WM_WTSSESSION_CHANGE, WTS_SESSION_LOCK), Some(PowerEvent::Lock));
+        assert_eq!(event_of(WM_WTSSESSION_CHANGE, WTS_SESSION_UNLOCK), Some(PowerEvent::Unlock));
+        assert_eq!(event_of(WM_POWERBROADCAST, PBT_APMSUSPEND), Some(PowerEvent::Suspend));
+        assert_eq!(event_of(WM_POWERBROADCAST, PBT_APMRESUMEAUTOMATIC), Some(PowerEvent::Resume));
+        // Other session and power notifications are ignored.
+        assert_eq!(event_of(WM_WTSSESSION_CHANGE, WTS_SESSION_LOGON), None);
+        assert_eq!(event_of(WM_POWERBROADCAST, PBT_APMRESUMESUSPEND), None);
     }
 }

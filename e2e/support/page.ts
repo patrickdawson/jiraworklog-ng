@@ -574,6 +574,19 @@ export const expect = Object.assign(expectImpl, {
 
 // ── The page ────────────────────────────────────────────────────────────────
 
+/** What `page.appReport()` returns. `tray` is read back from the native menu. */
+export type AppReport = {
+  tray: {
+    status: string;
+    stopEnabled: boolean;
+    toggle: string;
+    tooltip: string;
+    runningIcon: boolean;
+  } | null;
+  visible: boolean;
+  fullscreen: boolean | null;
+};
+
 let navigation = 0;
 
 class Page extends Loc {
@@ -645,6 +658,37 @@ class Page extends Loc {
       event,
       payload,
     );
+  }
+
+  /**
+   * A click on a tray or app menu entry, through the app's real handler
+   * (ids in src-tauri/src/tray.rs and menu.rs; hook in src-tauri/src/e2e.rs).
+   */
+  async menuClick(id: string): Promise<void> {
+    await this.emitEvent("e2e-hook", { action: "menu", id });
+  }
+
+  /**
+   * A lock, unlock, sleep or wake notification that arrived at `at`, fed to
+   * the power watcher as if Windows had sent it (src-tauri/src/power.rs).
+   */
+  async powerEvent(event: "lock" | "unlock" | "suspend" | "resume", at: Date): Promise<void> {
+    await this.emitEvent("e2e-hook", { action: "power", event, at: at.toISOString() });
+  }
+
+  /** The tray and window state as the app reports it (src-tauri/src/e2e.rs). */
+  async appReport(): Promise<AppReport> {
+    await browser.execute("window.__jwlE2eReport = undefined;");
+    await this.emitEvent("e2e-hook", { action: "report" });
+    let report: AppReport | null = null;
+    await pollUntil(
+      () => "the app's e2e report",
+      async () => {
+        report = (await browser.execute("return window.__jwlE2eReport ?? null;")) as AppReport | null;
+        return report !== null;
+      },
+    );
+    return report as unknown as AppReport;
   }
 
   /**

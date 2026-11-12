@@ -83,6 +83,11 @@ fn log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 
 /// Writes every panic to the app log before the default hook runs. Release
 /// builds use `panic = "abort"`, so this line is all that is left of a panic.
+/// A click on a tray or app menu entry. The E2E hooks call it too.
+fn on_menu_event(app: &tauri::AppHandle, id: &str) {
+    let _ = tray::on_menu_event(app, id) || menu::on_menu_event(app, id);
+}
+
 fn log_panics() {
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
@@ -115,10 +120,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(builder.invoke_handler())
         .menu(menu::build)
-        .on_menu_event(|app, event| {
-            let id = event.id().as_ref();
-            let _ = tray::on_menu_event(app, id) || menu::on_menu_event(app, id);
-        })
+        .on_menu_event(|app, event| on_menu_event(app, event.id().as_ref()))
         .setup(move |app| {
             builder.mount_events(app);
 

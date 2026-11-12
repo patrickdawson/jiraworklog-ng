@@ -149,6 +149,26 @@ fn status(app: &AppHandle) -> Option<RunningStatus> {
         .flatten()
 }
 
+/// The tray as it is now, for the E2E suite (`e2e.rs`): the menu entries are
+/// read back from the native menu; tooltip and icon from the last update.
+#[cfg(feature = "e2e")]
+pub fn snapshot(app: &AppHandle) -> Option<serde_json::Value> {
+    let state = app.try_state::<TrayState>()?;
+    let last = state
+        .last
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()?;
+    let items = &state.items;
+    Some(serde_json::json!({
+        "status": items.status.text().ok()?,
+        "stopEnabled": items.stop.is_enabled().ok()?,
+        "toggle": items.toggle.text().ok()?,
+        "tooltip": last.tooltip,
+        "runningIcon": last.running,
+    }))
+}
+
 /// What the tray shows for this timer and window state.
 pub fn view(running: Option<&RunningStatus>, visible: bool) -> TrayView {
     let (status, tooltip) = match running {
