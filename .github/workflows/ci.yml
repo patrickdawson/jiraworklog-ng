@@ -68,6 +68,76 @@ jobs:
           path: target/e2e/run/
           retention-days: 7
 
+  installer-build:
+    name: Build the installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+      - uses: Swatinem/rust-cache@v2
+      - run: npm ci
+      - run: npm ci --prefix ui
+      - run: npm run tauri:build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installer
+          path: target/release/bundle/nsis/*-setup.exe
+          retention-days: 7
+
+  # Each scenario on its own fresh runner: install, upgrade and uninstall for
+  # real, then check files, registry, autostart and the data. See
+  # scripts/installer-test/installer-test.ps1.
+  installer-test:
+    name: Installer test (${{ matrix.scenario }})
+    needs: installer-build
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [electron-running, electron-stopped, electron-disabled, tauri-update]
+    steps:
+      - uses: actions/checkout@v7
+      # Node runs scripts/installer-test/db.mjs (built-in node:sqlite, no npm ci).
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      - uses: actions/download-artifact@v7
+        with:
+          name: installer
+          path: installer
+      - name: Download the last Electron release
+        if: startsWith(matrix.scenario, 'electron-')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download v0.8.0 --pattern 'JiraWorklog-0.8.0-setup.exe' --dir old
+      - name: Run the scenario
+        shell: pwsh
+        run: |
+          $params = @{
+            Scenario     = '${{ matrix.scenario }}'
+            NewInstaller = (Get-ChildItem installer -Filter *-setup.exe | Select-Object -First 1).FullName
+          }
+          if (Test-Path old) { $params.OldInstaller = (Get-ChildItem old -Filter *.exe).FullName }
+          ./scripts/installer-test/installer-test.ps1 @params
+      - name: Collect the app data
+        if: failure()
+        shell: pwsh
+        # Test database, upgrade.log and the app log (tauri-main.log).
+        run: Copy-Item "$env:APPDATA\jiraworklog-ng" installer-test-data -Recurse -ErrorAction SilentlyContinue
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: installer-test-${{ matrix.scenario }}
+          path: installer-test-data/
+          retention-days: 7
+
   # A release is due when the version in package.json has no matching v<version> tag yet.
   detect-release:
     name: Detect release
@@ -92,7 +162,7 @@ jobs:
 
   release:
     name: Build and publish release
-    needs: [quality, e2e, detect-release]
+    needs: [quality, e2e, installer-test, detect-release]
     if: needs.detect-release.outputs.release == 'true'
     runs-on: windows-latest
     permissions:
