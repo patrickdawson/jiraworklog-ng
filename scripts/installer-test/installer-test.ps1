@@ -154,16 +154,25 @@ function LastCrash {
 }
 
 function StartHeartbeat([string] $file) {
-  # A hung job has left no log at all so far: the runner stopped reporting and
-  # the step timeout never fired. Every 15 s this writes the installer and app
-  # processes to a file that the workflow collects even after a cancel.
+  # A hung job has left no log at all so far: the runner stopped reporting,
+  # ignored the cancel and never ran the steps that collect the data. Every
+  # 15 s this writes the installer and app processes to a file the workflow
+  # collects, and to the step log, which the browser shows live during a hang.
   Start-ThreadJob -ArgumentList $file -ScriptBlock {
     param($file)
     while ($true) {
-      $procs = Get-CimInstance Win32_Process |
-        Where-Object { "$($_.ExecutablePath)" -match "JiraWorklog|jiraworklog|setup|uninst|~nsu" } |
-        ForEach-Object { "  $($_.ProcessId) $($_.ExecutablePath)" }
-      Add-Content -Path $file -Value (@("$(Get-Date -Format HH:mm:ss)") + @($procs))
+      $now = Get-Date -Format HH:mm:ss
+      try {
+        $procs = Get-CimInstance Win32_Process -ErrorAction Stop |
+          Where-Object { "$($_.ExecutablePath)" -match "JiraWorklog|jiraworklog|setup|uninst|~nsu" } |
+          ForEach-Object { "  $($_.ProcessId) $($_.ExecutablePath)" }
+        $lines = @("heartbeat $now") + @($procs)
+      } catch {
+        $lines = @("heartbeat $now failed: $_")
+      }
+      Add-Content -Path $file -Value $lines
+      # One write, so the lines stay together next to the script's output.
+      [Console]::Out.WriteLine($lines -join [Environment]::NewLine)
       Start-Sleep -Seconds 15
     }
   } | Out-Null
