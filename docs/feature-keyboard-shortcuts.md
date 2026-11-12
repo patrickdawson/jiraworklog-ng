@@ -9,14 +9,13 @@ and open the recent-entries dropdown in the timer field.
 
 ## Two kinds of shortcut
 
-The difference matters, because the cost is very different.
-
 ### In-app keys
 
-Handled in the renderer. They only work while the app window has focus.
+Handled in the WebView. They only work while the app window has focus.
 
-Cheap: one `keydown` listener in `BuchenView` (`src/components/buchen-view.tsx`).
-No Electron change, no new route, no migration.
+Cheap: one `keydown` listener in `BuchenView`
+(`ui/src/components/buchen-view.tsx`). No Rust change, no new command, no
+migration.
 
 Watch out for keys that fire while the user is typing in the description
 field or in a dialog. The listener has to ignore events whose target is an
@@ -24,34 +23,35 @@ input, a textarea or a `role="combobox"`.
 
 ### Global hotkeys
 
-Registered with Electron `globalShortcut` in `electron/main.ts`. They work
-while the app is hidden in the tray, which is the real value.
+Registered in Rust with `tauri-plugin-global-shortcut`. They work while the
+app is hidden in the tray, which is the real value.
 
-These cost much more, because the main process holds no database access —
-it is an HTTP client of the embedded Next server (see the `x-jwl-secret`
-contract in `electron/ipc-contract.ts`).
+These are cheap too, because the Rust side owns the database. The tray's
+"Timer stoppen" already shows the pattern (`src-tauri/src/tray.rs`): lock the
+connection, call `jwl_core::timer::stop`, emit `TimerStopped` so an open
+window reloads.
 
-A global *start* would need:
+- A global *stop* reuses exactly that code.
+- A global *start* calls `jwl_core::timer::start` the same way, plus a
+  `TimerStarted` event next to `TimerStopped` (`src-tauri/src/events.rs`,
+  registered in `src-tauri/src/lib.rs`, listened to in
+  `ui/src/lib/desktop.ts` and `ui/src/components/desktop-bridge.tsx`), so an
+  open window reloads after a start it did not trigger itself. Regenerate
+  `ui/src/bindings.ts` after adding the event.
 
-1. A new secret-guarded route `POST /api/timer/start`, mirroring
-   `src/app/api/timer/stop/route.ts` and reusing `assertLocalSecret` from
-   `src/lib/electron-ipc.ts`.
-2. A `"timer-started"` push event next to the existing `"timer-stopped"`
-   (`electron/preload.ts`, `electron/main.ts`, `src/components/electron-bridge.tsx`),
-   so an open window refreshes after a start it did not trigger itself.
-
-A global *stop* is cheaper — `POST /api/timer/stop` already exists and the
-tray menu already calls it.
+Registering the keys from Rust needs no entry in
+`src-tauri/capabilities/default.json`; only calls from the UI do.
 
 ## Open questions
 
 - Which actions get a key? Start, stop, toggle, show window, open the
   recents dropdown?
 - Fixed keys, or user-configurable under **Einstellungen**? Configurable
-  means a new settings column and a `drizzle/0005_*` migration.
+  means a new settings column and a `drizzle/0009_*` migration (with a
+  `when` above the last one, see `crates/core/src/migrations.rs`).
 - What happens when a global hotkey is already taken by another app?
-  `globalShortcut.register` returns `false`. Fail silently, or show a
-  warning in Einstellungen?
+  Registering it returns an error. Fail silently, or show a warning in
+  Einstellungen?
 - Should a global start reuse the last entry, or just show the window and
   let the user pick?
 - Do the in-app keys and the global keys use the same bindings, or
@@ -60,6 +60,6 @@ tray menu already calls it.
 ## Related
 
 The recent-entries dropdown in the timer field
-(`src/components/description-combobox.tsx`) already has full keyboard
+(`ui/src/components/description-combobox.tsx`) already has full keyboard
 control once the field has focus: arrows move, `Enter` picks, `Escape`
 closes. A "open the dropdown" shortcut only makes sense on top of that.
