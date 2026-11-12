@@ -68,6 +68,18 @@ pub struct SettingsInput {
     pub overtime_corridor_center_hours: i32,
     pub overtime_corridor_range_hours: i32,
     pub away_check_enabled: bool,
+    /// How many suggestions the description dropdown offers.
+    pub recent_entries_limit: i32,
+}
+
+/// Bounds of `recent_entries_limit`. The upper one keeps the dropdown usable.
+pub const RECENT_ENTRIES_LIMIT_MIN: i32 = 1;
+pub const RECENT_ENTRIES_LIMIT_MAX: i32 = 50;
+
+/// The suggestion count to use, clamped in case the stored value is out of range.
+pub fn recent_entries_limit(s: &SettingsInput) -> usize {
+    s.recent_entries_limit
+        .clamp(RECENT_ENTRIES_LIMIT_MIN, RECENT_ENTRIES_LIMIT_MAX) as usize
 }
 
 /// The stored settings: the editable values plus when they last changed.
@@ -90,7 +102,7 @@ const COLUMNS: &str = "regular_work_minutes, daily_target_minutes, breaks, auto_
     booking_mode, data_retention_days, jira_url, jira_project_keys, jira_auth_mode, jira_token,
     jira_user, jira_password, overtime_baseline_minutes, theme_mode, sprint_anchor_date,
     sprint_length_days, concrete_issue_target_percent, overtime_corridor_center_hours,
-    overtime_corridor_range_hours, away_check_enabled, updated_at";
+    overtime_corridor_range_hours, away_check_enabled, recent_entries_limit, updated_at";
 
 /// Returns the settings row, creating it with the column defaults on first use.
 pub fn get(conn: &Connection) -> Result<Settings> {
@@ -129,8 +141,9 @@ fn from_row(r: &Row) -> rusqlite::Result<Settings> {
             overtime_corridor_center_hours: r.get(17)?,
             overtime_corridor_range_hours: r.get(18)?,
             away_check_enabled: r.get(19)?,
+            recent_entries_limit: r.get(20)?,
         },
-        updated_at: r.get(20)?,
+        updated_at: r.get(21)?,
     })
 }
 
@@ -163,7 +176,8 @@ pub fn update(conn: &Connection, input: &SettingsInput) -> Result<()> {
             jira_user = ?11, jira_password = ?12, overtime_baseline_minutes = ?13,
             theme_mode = ?14, sprint_anchor_date = ?15, sprint_length_days = ?16,
             concrete_issue_target_percent = ?17, overtime_corridor_center_hours = ?18,
-            overtime_corridor_range_hours = ?19, away_check_enabled = ?20, updated_at = ?21
+            overtime_corridor_range_hours = ?19, away_check_enabled = ?20,
+            recent_entries_limit = ?21, updated_at = ?22
          WHERE id = 1",
         rusqlite::params![
             input.regular_work_minutes,
@@ -186,6 +200,7 @@ pub fn update(conn: &Connection, input: &SettingsInput) -> Result<()> {
             input.overtime_corridor_center_hours,
             input.overtime_corridor_range_hours,
             input.away_check_enabled,
+            input.recent_entries_limit,
             now_iso(),
         ],
     )?;
@@ -213,7 +228,8 @@ fn validate(s: &SettingsInput) -> Result<()> {
         && (1..=365).contains(&s.sprint_length_days)
         && (0..=100).contains(&s.concrete_issue_target_percent)
         && (-9999..=9999).contains(&s.overtime_corridor_center_hours)
-        && (1..=9999).contains(&s.overtime_corridor_range_hours);
+        && (1..=9999).contains(&s.overtime_corridor_range_hours)
+        && (RECENT_ENTRIES_LIMIT_MIN..=RECENT_ENTRIES_LIMIT_MAX).contains(&s.recent_entries_limit);
     if ok {
         Ok(())
     } else {
@@ -331,6 +347,7 @@ mod tests {
         assert_eq!(s.overtime_corridor_center_hours, 100);
         assert_eq!(s.overtime_corridor_range_hours, 40);
         assert!(s.away_check_enabled);
+        assert_eq!(s.recent_entries_limit, 15);
     }
 
     #[test]
@@ -345,6 +362,7 @@ mod tests {
         }];
         input.theme_mode = ThemeMode::Dark;
         input.overtime_corridor_center_hours = -20;
+        input.recent_entries_limit = 50;
         update(&conn, &input).unwrap();
 
         let s = get(&conn).unwrap().values;
@@ -353,6 +371,7 @@ mod tests {
         assert_eq!(s.breaks, input.breaks);
         assert_eq!(s.theme_mode, ThemeMode::Dark);
         assert_eq!(s.overtime_corridor_center_hours, -20);
+        assert_eq!(s.recent_entries_limit, 50);
 
         let raw: String = conn
             .query_row("SELECT breaks FROM settings", [], |r| r.get(0))
@@ -374,6 +393,8 @@ mod tests {
             Box::new(|s| s.sprint_length_days = 366),
             Box::new(|s| s.concrete_issue_target_percent = 101),
             Box::new(|s| s.overtime_corridor_range_hours = 0),
+            Box::new(|s| s.recent_entries_limit = 0),
+            Box::new(|s| s.recent_entries_limit = 51),
             Box::new(|s| {
                 s.breaks = vec![BreakWindow {
                     start: "12".into(),
@@ -397,6 +418,17 @@ mod tests {
         conn.execute("UPDATE settings SET theme_mode = 'neon'", [])
             .unwrap();
         assert_eq!(get(&conn).unwrap().values.theme_mode, ThemeMode::System);
+    }
+
+    #[test]
+    fn recent_entries_limit_is_clamped_on_use() {
+        let conn = open_in_memory().unwrap();
+        let mut s = get(&conn).unwrap().values;
+        assert_eq!(recent_entries_limit(&s), 15);
+        s.recent_entries_limit = 500;
+        assert_eq!(recent_entries_limit(&s), 50);
+        s.recent_entries_limit = -3;
+        assert_eq!(recent_entries_limit(&s), 1);
     }
 
     #[test]

@@ -141,6 +141,7 @@ const INTEGER_FIELDS = [
   "concreteIssueTargetPercent",
   "overtimeCorridorCenterHours",
   "overtimeCorridorRangeHours",
+  "recentEntriesLimit",
 ] as const;
 
 /**

@@ -13,8 +13,7 @@ use specta::Type;
 use crate::days::{day_key, day_key_of, days_ago_start_iso, is_weekend_key, local_midnight};
 use crate::entries::{
     build_day_groups, build_recent_entries, overtime_balance_minutes, seconds_by_day,
-    to_entry_view, AnalysisConfig, DurationRow, EntryView, RecentEntry, RECENT_LIMIT,
-    RECENT_WINDOW_DAYS,
+    to_entry_view, AnalysisConfig, DurationRow, EntryView, RecentEntry, RECENT_WINDOW_DAYS,
 };
 use crate::error::Result;
 use crate::report_range::{self, RangeKind, SprintConfig};
@@ -88,7 +87,7 @@ pub fn load<Tz: TimeZone>(
         &build_day_groups(&recent_rows, &cfg, now, tz),
         now,
         RECENT_WINDOW_DAYS,
-        RECENT_LIMIT,
+        settings::recent_entries_limit(&s),
         tz,
     );
 

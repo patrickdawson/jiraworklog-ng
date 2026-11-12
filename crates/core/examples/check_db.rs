@@ -63,7 +63,7 @@ fn check(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let set = |v: &Option<String>| v.as_deref().is_some_and(|t| !t.trim().is_empty());
     println!(
         "settings: work {} min, target {} min, {} breaks, mode {:?}, retention {} d, \
-         theme {:?}, corridor {}±{} h, away check {}, {} project keys",
+         theme {:?}, corridor {}±{} h, away check {}, {} suggestions, {} project keys",
         s.regular_work_minutes,
         s.daily_target_minutes,
         s.breaks.len(),
@@ -73,6 +73,7 @@ fn check(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
         s.overtime_corridor_center_hours,
         s.overtime_corridor_range_hours,
         s.away_check_enabled,
+        s.recent_entries_limit,
         s.jira_project_keys.len(),
     );
     println!(

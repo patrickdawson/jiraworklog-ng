@@ -64,6 +64,13 @@
       "when": 1779340767574,
       "tag": "0008_add_overtime_corridor",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1779340767575,
+      "tag": "0009_add_recent_entries_limit",
+      "breakpoints": true
     }
   ]
 }

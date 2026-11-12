@@ -57,7 +57,12 @@ type FormValues = {
   corridorCenter: string;
   corridorRange: string;
   awayCheck: boolean;
+  recentLimit: string;
 };
+
+/** Hard bounds of the suggestion count; Rust checks the same range. */
+const RECENT_LIMIT_MIN = 1;
+const RECENT_LIMIT_MAX = 50;
 
 function toFormValues(initial: Initial): FormValues {
   return {
@@ -79,6 +84,7 @@ function toFormValues(initial: Initial): FormValues {
     corridorCenter: String(initial.overtimeCorridorCenterHours),
     corridorRange: String(initial.overtimeCorridorRangeHours),
     awayCheck: initial.awayCheckEnabled,
+    recentLimit: String(initial.recentEntriesLimit),
   };
 }
 
@@ -109,6 +115,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
   const [corridorCenter, setCorridorCenter] = useState(saved.corridorCenter);
   const [corridorRange, setCorridorRange] = useState(saved.corridorRange);
   const [awayCheck, setAwayCheck] = useState(saved.awayCheck);
+  const [recentLimit, setRecentLimit] = useState(saved.recentLimit);
   const [forceBooking, setForceBookingState] = useState(initial.forceBooking);
 
   const values: FormValues = {
@@ -130,6 +137,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
     corridorCenter,
     corridorRange,
     awayCheck,
+    recentLimit,
   };
   const dirty = JSON.stringify(values) !== JSON.stringify(saved);
 
@@ -152,6 +160,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
     setCorridorCenter(saved.corridorCenter);
     setCorridorRange(saved.corridorRange);
     setAwayCheck(saved.awayCheck);
+    setRecentLimit(saved.recentLimit);
     setSaveStatus(null);
   }
 
@@ -289,6 +298,19 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
       });
       return;
     }
+    const recentN = Number(recentLimit);
+    if (
+      recentLimit.trim() === "" ||
+      !Number.isInteger(recentN) ||
+      recentN < RECENT_LIMIT_MIN ||
+      recentN > RECENT_LIMIT_MAX
+    ) {
+      setSaveStatus({
+        tone: "err",
+        msg: `Anzahl der Vorschläge bitte als ganze Zahl zwischen ${RECENT_LIMIT_MIN} und ${RECENT_LIMIT_MAX} angeben.`,
+      });
+      return;
+    }
     setPending(true);
     try {
       const res = await updateSettings({
@@ -312,6 +334,7 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         overtimeCorridorCenterHours: centerH,
         overtimeCorridorRangeHours: rangeH,
         awayCheckEnabled: awayCheck,
+        recentEntriesLimit: recentN,
       });
       if (res.ok) setSaved(values);
       setSaveStatus(
@@ -528,6 +551,23 @@ export function EinstellungenForm({ initial }: { initial: Initial }) {
         <div className="text-[12px]" style={{ color: "var(--text-3)" }}>
           Die Änderung greift sofort als Vorschau und wird mit „Speichern&rdquo;
           dauerhaft übernommen.
+        </div>
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <Field label="Vorschläge im Beschreibungsfeld (Anzahl)">
+            <TextInput
+              value={recentLimit}
+              onChange={setRecentLimit}
+              type="number"
+            />
+          </Field>
+          <div
+            className="col-span-2 text-[12px] self-end pb-2"
+            style={{ color: "var(--text-3)" }}
+          >
+            So viele zuletzt genutzte Einträge der letzten 30 Tage zeigt die
+            Auswahl im Timer-Feld und in den Eintrag-Dialogen,{" "}
+            {RECENT_LIMIT_MIN} bis {RECENT_LIMIT_MAX}.
+          </div>
         </div>
       </Section>
 

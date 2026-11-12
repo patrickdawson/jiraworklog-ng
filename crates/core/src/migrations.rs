@@ -45,6 +45,7 @@ pub const MIGRATIONS: &[Migration] = &[
     migration!("0006_add_away_check_and_group_colors", 1779340767572),
     migration!("0007_rename_group_colors", 1779340767573),
     migration!("0008_add_overtime_corridor", 1779340767574),
+    migration!("0009_add_recent_entries_limit", 1779340767575),
 ];
 
 const BREAKPOINT: &str = "--> statement-breakpoint";

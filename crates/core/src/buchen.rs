@@ -8,7 +8,7 @@ use specta::Type;
 use crate::days::{day_key, day_key_of, days_ago_start_iso, is_weekend_key};
 use crate::entries::{
     build_day_groups, build_recent_entries, overtime_balance_minutes, seconds_by_day,
-    AllgemeinesCategory, AnalysisConfig, DayGroup, RecentEntry, RECENT_LIMIT, RECENT_WINDOW_DAYS,
+    AllgemeinesCategory, AnalysisConfig, DayGroup, RecentEntry, RECENT_WINDOW_DAYS,
 };
 use crate::error::Result;
 use crate::settings::{self, BookingMode, BreakWindow};
@@ -86,7 +86,13 @@ pub fn load<Tz: TimeZone>(
         None => store::all_entries(conn)?,
     };
     let days = build_day_groups(&entries, &cfg, now, tz);
-    let recents = build_recent_entries(&days, now, RECENT_WINDOW_DAYS, RECENT_LIMIT, tz);
+    let recents = build_recent_entries(
+        &days,
+        now,
+        RECENT_WINDOW_DAYS,
+        settings::recent_entries_limit(&s),
+        tz,
+    );
 
     // Read directly: a timer started months ago is outside the window but runs.
     let running = store::running_entry(conn)?;

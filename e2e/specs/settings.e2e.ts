@@ -19,6 +19,7 @@ describe("settings", () => {
     await page.getByLabel("API-Token").fill(newToken);
     await page.getByLabel("Saldo-Korridor: Mitte (h)").fill("-10");
     await page.getByLabel("Saldo-Korridor: Spanne ± (h)").fill("25");
+    await page.getByLabel("Vorschläge im Beschreibungsfeld (Anzahl)").fill("25");
 
     // Add a fresh project key so we know the array path also persists.
     const newKeyInput = page.getByPlaceholder("z.B. TXR");
@@ -37,6 +38,7 @@ describe("settings", () => {
     expect(JSON.parse(after.jiraProjectKeys) as string[]).toContain("PW");
     expect(after.overtimeCorridorCenterHours).toBe(-10);
     expect(after.overtimeCorridorRangeHours).toBe(25);
+    expect(after.recentEntriesLimit).toBe(25);
 
     // Reload — values come back from the app.
     await page.reload();

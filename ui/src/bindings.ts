@@ -664,6 +664,8 @@ export type SettingsInput_Deserialize = {
 	overtimeCorridorCenterHours: number,
 	overtimeCorridorRangeHours: number,
 	awayCheckEnabled: boolean,
+	/**  How many suggestions the description dropdown offers. */
+	recentEntriesLimit: number,
 };
 
 /**  The editable settings, as the settings form sends them. */
@@ -688,6 +690,8 @@ export type SettingsInput_Serialize = {
 	overtimeCorridorCenterHours: number,
 	overtimeCorridorRangeHours: number,
 	awayCheckEnabled: boolean,
+	/**  How many suggestions the description dropdown offers. */
+	recentEntriesLimit: number,
 };
 
 /**  The stored settings: the editable values plus when they last changed. */

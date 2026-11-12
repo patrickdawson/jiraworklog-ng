@@ -48,6 +48,7 @@ export type SettingsRow = {
   overtimeCorridorCenterHours: number;
   overtimeCorridorRangeHours: number;
   awayCheckEnabled: boolean;
+  recentEntriesLimit: number;
   updatedAt: string;
 };
 
@@ -77,6 +78,7 @@ const BASELINE: SettingsPatch = {
   overtimeCorridorCenterHours: 100,
   overtimeCorridorRangeHours: 40,
   awayCheckEnabled: true,
+  recentEntriesLimit: 15,
 };
 
 const toSnake = (key: string) => key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);

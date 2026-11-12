@@ -139,8 +139,6 @@ pub const RECENT_WINDOW_DAYS: u32 = 30;
 /// Days of history the Buchen page shows by default (same as the suggestions,
 /// so the dropdown is never truncated by a shorter display window).
 pub const DEFAULT_HISTORY_DAYS: u32 = RECENT_WINDOW_DAYS;
-/// How many suggestions the timer dropdown offers at most.
-pub const RECENT_LIMIT: usize = 8;
 
 /// Identity of "the same piece of work": Allgemeines flag + category + the
 /// trimmed description, case-sensitive.
@@ -630,7 +628,7 @@ mod tests {
             ),
         ];
         let days = build_day_groups(&entries, &cfg(), now(), &Berlin);
-        let recents = build_recent_entries(&days, now(), RECENT_WINDOW_DAYS, RECENT_LIMIT, &Berlin);
+        let recents = build_recent_entries(&days, now(), RECENT_WINDOW_DAYS, 15, &Berlin);
 
         assert_eq!(
             recents
@@ -644,6 +642,11 @@ mod tests {
         assert_eq!(fix.total_seconds, 5400.0);
         assert_eq!(fix.last_started_at, "2026-11-10T08:00:00.000Z");
         assert_eq!(fix.key, "P|Fix TXR-1 a");
+
+        // The limit keeps the most recent ones.
+        let first = build_recent_entries(&days, now(), RECENT_WINDOW_DAYS, 1, &Berlin);
+        assert_eq!(first.len(), 1);
+        assert_eq!(first[0].description, "Meeting");
     }
 
     #[test]
