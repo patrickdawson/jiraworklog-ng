@@ -20,7 +20,7 @@
     "better-sqlite3": "^12.10.0",
     "expect": "^30.5.2",
     "expect-webdriverio": "8.0.0",
-    "typescript": "^5",
+    "typescript": "^7.0.0",
     "webdriverio": "10.2.0"
   }
 }
