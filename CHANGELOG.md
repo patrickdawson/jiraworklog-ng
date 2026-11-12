@@ -7,6 +7,8 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.9.0-beta.6] - 2026-11-12
+
 ### Behoben
 - Tastenkürzel: F1, Strg+W, Strg+Q, Strg+Plus/Minus/0 und F11 funktionieren wieder. Bisher wirkten sie nur über das Menü, nicht über die Tastatur.
 
