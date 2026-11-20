@@ -7,6 +7,9 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Behoben
+- Dunkles Design: Das Kalender-Symbol in Datumsfeldern ist jetzt hell und gut sichtbar. Auch Scrollleisten und Auswahllisten folgen dem Design.
+
 ## [0.9.1-beta.1] - 2026-11-20
 
 ### Hinzugefügt
