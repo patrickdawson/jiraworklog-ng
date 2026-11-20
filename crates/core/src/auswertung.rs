@@ -137,7 +137,16 @@ pub fn load<Tz: TimeZone>(
     let this_week_seconds: f64 = this_week.day_keys().iter().map(|k| seconds_on(k)).sum();
     let week_target = f64::from(s.regular_work_minutes * 5);
 
-    let weeks_in_range = (day_keys.len() as f64 / 7.0).max(1.0);
+    // Only days that have passed and lie after the first entry: future days of
+    // the month or sprint, and the years before tracking began, would pull the
+    // average down. "Alle" starts in 2000.
+    let today_key = day_key(now, tz);
+    let first_tracked = worked.keys().next();
+    let elapsed_days = day_keys
+        .iter()
+        .filter(|k| first_tracked.is_some_and(|f| *k >= f) && **k <= today_key)
+        .count();
+    let weeks_in_range = (elapsed_days as f64 / 7.0).max(1.0);
     let range_minutes = range_seconds / 60.0;
 
     let group_totals = seconds_by_group(
@@ -151,7 +160,7 @@ pub fn load<Tz: TimeZone>(
         worked,
         s.regular_work_minutes,
         &day_keys,
-        &day_key(now, tz),
+        &today_key,
         s.overtime_baseline_minutes,
     );
 
@@ -369,6 +378,21 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["cat:QA", "issue:TXR-1"]
         );
+    }
+
+    #[test]
+    fn avg_per_week_counts_only_elapsed_tracked_days() {
+        let conn = open_in_memory().unwrap();
+        seed(&conn);
+        let now = parse_iso("2026-11-11T10:00:00.000Z").unwrap();
+
+        // November: 1.–11.11. are 11 days, 12.–30.11. lie ahead.
+        let month = load(&conn, RangeKind::Month, None, now, &Berlin).unwrap();
+        assert_eq!(month.avg_per_week_minutes, 15.0 * 60.0 / (11.0 / 7.0));
+
+        // Alle: from the first entry (5 Oct) to today, 38 days, not from 2000.
+        let all = load(&conn, RangeKind::All, None, now, &Berlin).unwrap();
+        assert_eq!(all.avg_per_week_minutes, 16.0 * 60.0 / (38.0 / 7.0));
     }
 
     #[test]

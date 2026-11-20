@@ -7,6 +7,9 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Behoben
+- Auswertung: „Ø Arbeitszeit / Woche“ zählt nur noch Tage bis heute und ab dem ersten Eintrag. Vorher drückten die restlichen Tage des Monats oder Sprints den Wert, und unter „Alle“ lag er fast bei 0, weil der Zeitraum im Jahr 2000 begann.
+
 ## [0.9.0] - 2026-11-12
 
 ### Geändert
