@@ -7,6 +7,11 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.10.0-beta.4] - 2026-11-20
+
+### Geändert
+- Version: Die nächste Version heißt 0.10.0 statt 0.9.1, weil sie neue Funktionen bringt. Sie zählt nach den alten Testversionen 0.10.0-beta.1 bis beta.3 weiter. Eine installierte 0.9.1-beta wird ganz normal aktualisiert.
+
 ## [0.9.1-beta.3] - 2026-11-20
 
 ### Geändert
