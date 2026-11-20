@@ -10,7 +10,7 @@ use rusqlite::Connection;
 use serde::Serialize;
 use specta::Type;
 
-use crate::absences::{self, AbsenceKind};
+use crate::absences::{self, Absence};
 use crate::days::{day_key, day_key_of, days_ago_start_iso, is_weekend_key, local_midnight};
 use crate::entries::{
     build_day_groups, build_recent_entries, overtime_balance_minutes, seconds_by_day,
@@ -48,8 +48,8 @@ pub struct KalenderData {
     pub running_in_week: bool,
     /// Target of the running entry's day if it is not yet in the overtime.
     pub running_day_target_minutes: i32,
-    /// Absent days of this week, day key → kind.
-    pub absences: BTreeMap<String, AbsenceKind>,
+    /// Every absence that overlaps this week.
+    pub absences: Vec<Absence>,
 }
 
 /// The week containing `anchor` (default: this week).
@@ -123,8 +123,9 @@ pub fn load<Tz: TimeZone>(
     let this_week =
         report_range::resolve(RangeKind::Week, Some(&day_key(now, tz)), now, &sprint, tz);
 
-    let mut absences = absences::days(conn)?;
-    absences.retain(|k, _| day_keys.contains(k));
+    let (first_key, last_key) = (day_keys[0].as_str(), day_keys[day_keys.len() - 1].as_str());
+    let mut absences = absences::list(conn)?;
+    absences.retain(|a| a.from_day.as_str() <= last_key && a.to_day.as_str() >= first_key);
 
     Ok(KalenderData {
         week_label: week.label.clone(),
@@ -231,21 +232,27 @@ mod tests {
         assert_eq!(d.recents.len(), 3);
         assert!(d.absences.is_empty());
 
-        // An absence from the week before into Tuesday shows on its days here.
-        absences::create(
-            &conn,
-            &absences::AbsenceInput {
-                from_day: "2026-11-05".into(),
-                to_day: "2026-11-10".into(),
-                kind: AbsenceKind::Krank,
-                note: String::new(),
-            },
-        )
-        .unwrap();
+        // An absence from the week before into Tuesday belongs to this week;
+        // one that ends in the week before does not.
+        for (from, to) in [("2026-11-05", "2026-11-10"), ("2026-11-02", "2026-11-04")] {
+            absences::create(
+                &conn,
+                &absences::AbsenceInput {
+                    from_day: from.into(),
+                    to_day: to.into(),
+                    kind: absences::AbsenceKind::Krank,
+                    note: String::new(),
+                },
+            )
+            .unwrap();
+        }
         let d = load(&conn, None, now, &Berlin).unwrap();
         assert_eq!(
-            d.absences.keys().map(String::as_str).collect::<Vec<_>>(),
-            ["2026-11-09", "2026-11-10"]
+            d.absences
+                .iter()
+                .map(|a| (a.from_day.as_str(), a.to_day.as_str()))
+                .collect::<Vec<_>>(),
+            [("2026-11-05", "2026-11-10")]
         );
 
         let prev = load(&conn, Some(&d.prev_anchor), now, &Berlin).unwrap();

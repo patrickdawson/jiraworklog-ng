@@ -311,8 +311,10 @@ export function HilfePage() {
               <b>Wochensaldo</b> — zeigt die Über- oder Minusstunden der Woche.
             </li>
             <li>
-              <b>Abwesenheiten</b> — Urlaub, Krank oder Feiertag steht grün im
-              Tageskopf.
+              <b>Abwesenheiten</b> — Ein Klick auf einen Tageskopf trägt Urlaub,
+              Krankheit oder einen Feiertag ein (siehe{" "}
+              <SectionLink id="abwesenheiten">Abwesenheiten</SectionLink>). Ein
+              abwesender Tag ist grün hinterlegt, die Art steht im Tageskopf.
             </li>
           </List>
         </Section>
@@ -388,34 +390,41 @@ export function HilfePage() {
 
         <Section id="abwesenheiten">
           <P>
-            Unter <Ui>Abwesenheiten</Ui> trägst du Urlaub, Krankheit und
-            Feiertage ein, auch über mehrere Tage.
+            Urlaub, Krankheit und Feiertage trägst du im Kalender ein, auch über
+            mehrere Tage.
           </P>
           <Steps>
             <li>
-              Wähle <Ui>Von</Ui> und <Ui>Bis</Ui>. Für einen einzelnen Tag reicht{" "}
-              <Ui>Von</Ui>, <Ui>Bis</Ui> wird mitgesetzt.
+              Klicke im <Ui>Kalender</Ui> auf den Kopf des ersten Tages, z. B.{" "}
+              <Ui>Mo 14.09.</Ui>. <Ui>Von</Ui> und <Ui>Bis</Ui> sind schon auf
+              diesen Tag gesetzt.
+            </li>
+            <li>
+              Für mehrere Tage stellst du <Ui>Bis</Ui> auf den letzten Tag, auch
+              in einer späteren Woche.
             </li>
             <li>
               Wähle die <Ui>Art</Ui>: Urlaub, Krank oder Feiertag. Eine Notiz ist
-              optional.
-            </li>
-            <li>
-              Klicke <Ui>Hinzufügen</Ui>.
+              optional. Klicke <Ui>Speichern</Ui>.
             </li>
           </Steps>
           <List>
             <li>
-              Die Liste zeigt jede Abwesenheit mit ihren Arbeitstagen. Mit dem
-              Stift bearbeitest du sie, mit dem Kreuz löschst du sie.
+              Ein Klick auf den Kopf eines abwesenden Tages öffnet die
+              Abwesenheit. Dort änderst oder löschst du sie.
+            </li>
+            <li>
+              Die Seite <Ui>Abwesenheiten</Ui> zeigt alle Abwesenheiten mit
+              ihren Arbeitstagen. Mit dem Stift bearbeitest du eine, mit dem
+              Kreuz löschst du sie. <Ui>Neue Abwesenheit</Ui> trägt eine ein,
+              ohne dass du im Kalender blättern musst.
             </li>
             <li>
               Zwei Abwesenheiten dürfen sich nicht überschneiden.
             </li>
             <li>
               Abwesende Tage zählen nicht in <Ui>Ø Arbeitszeit / Woche</Ui> und
-              senken das Wochensoll unter <Ui>Diese Woche</Ui>. Der Kalender
-              zeigt die Art im Tageskopf.
+              senken das Wochensoll unter <Ui>Diese Woche</Ui>.
             </li>
             <li>
               Den Überstundensaldo ändert eine Abwesenheit nicht. Ein Tag ohne

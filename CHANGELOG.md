@@ -7,6 +7,9 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Geändert
+- Abwesenheiten: Du trägst sie jetzt im Kalender ein. Ein Klick auf einen Tageskopf öffnet einen Dialog mit Von und Bis an diesem Tag; ein Klick auf einen abwesenden Tag öffnet die Abwesenheit zum Ändern oder Löschen. Abwesende Tage sind grün hinterlegt. Die Seite „Abwesenheiten“ bleibt die Übersicht, mit „Neue Abwesenheit“ statt des Formulars.
+
 ## [0.9.1-beta.2] - 2026-11-20
 
 ### Behoben

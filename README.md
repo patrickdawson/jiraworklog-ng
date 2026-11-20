@@ -31,11 +31,11 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Lücken** — Nicht erfasste Zeit zwischen erstem und letztem Eintrag eines Tages erscheint grau gestrichelt umrandet
 - **Pausen** — Konfigurierte Pausenfenster sind grau und zählen nicht als Lücke
 - **Direkt korrigieren** — Klick auf einen Eintrag öffnet denselben Bearbeiten-Dialog wie in „Buchen“. Der laufende Timer wächst live mit, ist hier aber nicht bearbeitbar.
-- **Abwesenheiten** — Urlaub, Krank oder Feiertag steht im Tageskopf
+- **Abwesenheiten** — Klick auf einen Tageskopf trägt Urlaub, Krankheit oder einen Feiertag ein, oder öffnet die vorhandene Abwesenheit. Abwesende Tage sind grün hinterlegt, die Art steht im Tageskopf.
 
 ### Abwesenheiten
-- **Urlaub, Krank, Feiertag** — Eigene Seite in der Seitenleiste. Ein Eintrag hat Von, Bis, Art und eine optionale Notiz, für einen oder mehrere Tage.
-- **Liste** — Zeigt jede Abwesenheit mit ihren Arbeitstagen (Montag bis Freitag). Bearbeiten und Löschen direkt in der Liste. Zwei Abwesenheiten dürfen sich nicht überschneiden.
+- **Urlaub, Krank, Feiertag** — Ein Eintrag hat Von, Bis, Art und eine optionale Notiz, für einen oder mehrere Tage. Eintragen per Klick auf einen Tag im Kalender (Von und Bis sind dann schon gesetzt) oder mit „Neue Abwesenheit“.
+- **Übersicht** — Die Seite „Abwesenheiten“ in der Seitenleiste zeigt jede Abwesenheit mit ihren Arbeitstagen (Montag bis Freitag). Bearbeiten und Löschen direkt in der Liste. Zwei Abwesenheiten dürfen sich nicht überschneiden.
 - **Wirkung** — Abwesende Tage zählen nicht in „Ø Arbeitszeit / Woche“ und senken das Wochensoll unter „Diese Woche“. Den Überstundensaldo ändern sie nicht, denn ein Tag ohne Buchung zählt dort ohnehin nicht.
 
 ### KPI-Dashboard

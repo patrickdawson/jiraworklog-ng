@@ -525,8 +525,8 @@ export type KalenderData_Deserialize = {
 	runningInWeek: boolean,
 	/**  Target of the running entry's day if it is not yet in the overtime. */
 	runningDayTargetMinutes: number,
-	/**  Absent days of this week, day key → kind. */
-	absences: { [key in string]: AbsenceKind },
+	/**  Every absence that overlaps this week. */
+	absences: Absence[],
 };
 
 export type KalenderData_Serialize = {
@@ -552,8 +552,8 @@ export type KalenderData_Serialize = {
 	runningInWeek: boolean,
 	/**  Target of the running entry's day if it is not yet in the overtime. */
 	runningDayTargetMinutes: number,
-	/**  Absent days of this week, day key → kind. */
-	absences: { [key in string]: AbsenceKind },
+	/**  Every absence that overlaps this week. */
+	absences: Absence[],
 };
 
 /**  The app menu asks the UI to open a route, e.g. `/hilfe`. */

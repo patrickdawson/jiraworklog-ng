@@ -1,5 +1,6 @@
 import { Link } from "react-router";
-import type { AbsenceKind } from "@/bindings";
+import type { Absence } from "@/bindings";
+import { AbsenceDialog } from "@/components/absence-dialog";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EditEntryDialog, type EntryDraft } from "@/components/entry-dialogs";
 import { GroupColorsProvider, useGroupColors } from "@/components/group-colors-context";
@@ -34,8 +35,8 @@ export type KalenderData = {
   runningInWeek: boolean;
   /** Target of the running entry's day if it is not yet in the overtime. */
   runningDayTargetMinutes: number;
-  /** Absent days of this week, day key → kind. */
-  absences: Partial<Record<string, AbsenceKind>>;
+  /** Every absence that overlaps this week. */
+  absences: Absence[];
 };
 
 /** Vertical scale of the grid before the user zooms. */
@@ -95,6 +96,19 @@ function KalenderInner({ data }: { data: KalenderData }) {
   const now = useNow();
   const [editEntry, setEditEntry] = useState<EntryView | null>(null);
   const [newDraft, setNewDraft] = useState<EntryDraft | null>(null);
+  const [absenceDialog, setAbsenceDialog] = useState<
+    { absence: Absence } | { day: string } | null
+  >(null);
+
+  // Day keys sort like dates, so the range test works on the text.
+  const absenceByDay = useMemo(() => {
+    const map = new Map<string, Absence>();
+    for (const key of data.dayKeys) {
+      const a = data.absences.find((x) => x.fromDay <= key && key <= x.toDay);
+      if (a) map.set(key, a);
+    }
+    return map;
+  }, [data.absences, data.dayKeys]);
 
   // Before the first client tick `now` is null; the running entry is then left
   // out, so server and client render the same markup.
@@ -350,7 +364,11 @@ function KalenderInner({ data }: { data: KalenderData }) {
                 workedMinutes={workedMinutes(d.dayKey)}
                 targetMinutes={isWeekendKey(d.dayKey) ? 0 : data.regularWorkMinutes}
                 running={d.dayKey === runningDayKey}
-                absence={data.absences[d.dayKey]}
+                absence={absenceByDay.get(d.dayKey)}
+                onClick={() => {
+                  const absence = absenceByDay.get(d.dayKey);
+                  setAbsenceDialog(absence ? { absence } : { day: d.dayKey });
+                }}
               />
             ))}
           </div>
@@ -395,6 +413,7 @@ function KalenderInner({ data }: { data: KalenderData }) {
                   toY={toY}
                   entryById={entryById}
                   nowMin={d.dayKey === todayKey ? nowMin : null}
+                  absent={absenceByDay.has(d.dayKey)}
                   onEdit={setEditEntry}
                   onFillGap={(g) => setNewDraft(gapDraft(d.dayKey, g))}
                 />
@@ -417,6 +436,9 @@ function KalenderInner({ data }: { data: KalenderData }) {
           onClose={() => setNewDraft(null)}
           recents={data.recents}
         />
+      )}
+      {absenceDialog && (
+        <AbsenceDialog {...absenceDialog} onClose={() => setAbsenceDialog(null)} />
       )}
     </main>
   );
@@ -511,24 +533,35 @@ function DayHeader({
   targetMinutes,
   running,
   absence,
+  onClick,
 }: {
   day: DayTimeline;
   isToday: boolean;
   workedMinutes: number;
   targetMinutes: number;
   running: boolean;
-  absence: AbsenceKind | undefined;
+  absence: Absence | undefined;
+  onClick: () => void;
 }) {
+  const heading = dayHeading(day.dayKey);
+  const action = absence
+    ? `${absence.kind} am ${heading} bearbeiten`
+    : `Abwesenheit am ${heading} eintragen`;
   return (
-    <div
-      className="flex items-center justify-between gap-1 px-2 py-2 border-l text-[12.5px] font-semibold"
+    // A click on the header enters an absence for the day, or edits it.
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={action}
+      title={action}
+      className="flex cursor-pointer items-center justify-between gap-1 px-2 py-2 border-l text-left text-[12.5px] font-semibold hover:bg-[var(--surface-2)]"
       style={{
         borderColor: "var(--border)",
         color: isToday ? "var(--accent)" : "var(--text)",
       }}
     >
       <span className="flex flex-col">
-        <span>{dayHeading(day.dayKey)}</span>
+        <span>{heading}</span>
         {workedMinutes > 0 && (
           <span
             data-testid="kalender-day-worked"
@@ -547,7 +580,7 @@ function DayHeader({
             className="text-[11px] font-normal"
             style={{ color: "var(--pos)" }}
           >
-            {absence}
+            {absence.kind}
           </span>
         )}
       </span>
@@ -571,7 +604,7 @@ function DayHeader({
           </span>
         )}
       </span>
-    </div>
+    </button>
   );
 }
 
@@ -583,6 +616,7 @@ function DayColumn({
   toY,
   entryById,
   nowMin,
+  absent,
   onEdit,
   onFillGap,
 }: {
@@ -594,6 +628,8 @@ function DayColumn({
   toY: (min: number) => number;
   entryById: Map<number, EntryView>;
   nowMin: number | null;
+  /** Urlaub, Krank or Feiertag: the column is tinted. */
+  absent: boolean;
   onEdit: (entry: EntryView) => void;
   onFillGap: (gap: Interval) => void;
 }) {
@@ -610,8 +646,13 @@ function DayColumn({
   return (
     <div
       className="relative border-l"
-      style={{ height, borderColor: "var(--border)" }}
+      style={{
+        height,
+        borderColor: "var(--border)",
+        background: absent ? "var(--pos-soft)" : undefined,
+      }}
       data-day={day.dayKey}
+      data-absent={absent || undefined}
     >
       {hours.map((h) => (
         <div
