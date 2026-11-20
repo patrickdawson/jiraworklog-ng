@@ -355,7 +355,12 @@ export function HilfePage() {
               <SectionLink id="abwesenheiten">Abwesenheiten</SectionLink>). Arbeit
               am Wochenende erhöht den Wert.
             </li>
-            <li>Durchschnitt pro Arbeitstag, Wochenstatus.</li>
+            <li>Durchschnitt pro Arbeitstag.</li>
+            <li>
+              <b>Diese Woche</b> — deine Zeit in dieser Woche und was bis zum
+              Wochensoll fehlt. Jeder abwesende Arbeitstag senkt das Soll um
+              deine Regelarbeitszeit.
+            </li>
             <li>
               <b>Quote konkrete Issues</b> — Anteil der Zeit auf echten
               Jira-Issues. Das Ziel stellst du unter <Ui>Sprint &amp; KPI</Ui>{" "}
@@ -408,8 +413,9 @@ export function HilfePage() {
               Zwei Abwesenheiten dürfen sich nicht überschneiden.
             </li>
             <li>
-              Abwesende Tage zählen nicht in <Ui>Ø Arbeitszeit / Woche</Ui>. Der
-              Kalender zeigt die Art im Tageskopf.
+              Abwesende Tage zählen nicht in <Ui>Ø Arbeitszeit / Woche</Ui> und
+              senken das Wochensoll unter <Ui>Diese Woche</Ui>. Der Kalender
+              zeigt die Art im Tageskopf.
             </li>
             <li>
               Den Überstundensaldo ändert eine Abwesenheit nicht. Ein Tag ohne

@@ -136,7 +136,14 @@ pub fn load<Tz: TimeZone>(
 
     let this_week = report_range::resolve(RangeKind::Week, None, now, &sprint, tz);
     let this_week_seconds: f64 = this_week.day_keys().iter().map(|k| seconds_on(k)).sum();
-    let week_target = f64::from(s.regular_work_minutes * 5);
+    // Every workday of this week owes the regular time, unless it is an absence.
+    let absent = absences::days(conn)?;
+    let week_workdays = this_week
+        .day_keys()
+        .iter()
+        .filter(|k| !is_weekend_key(k) && !absent.contains_key(*k))
+        .count();
+    let week_target = f64::from(s.regular_work_minutes) * week_workdays as f64;
 
     // A week is five workdays. Only workdays that have passed, lie after the
     // first entry and are not absences count: future days of the month or
@@ -144,7 +151,6 @@ pub fn load<Tz: TimeZone>(
     // weekends and vacation would pull the average down.
     let today_key = day_key(now, tz);
     let first_tracked = worked.keys().next();
-    let absent = absences::days(conn)?;
     let workdays = day_keys
         .iter()
         .filter(|k| first_tracked.is_some_and(|f| *k >= f) && **k <= today_key)
@@ -412,6 +418,26 @@ mod tests {
         .unwrap();
         let all = load(&conn, RangeKind::All, None, now, &Berlin).unwrap();
         assert_eq!(all.avg_per_week_minutes, 16.0 * 60.0 / (23.0 / 5.0));
+    }
+
+    #[test]
+    fn absent_days_lower_the_week_target() {
+        let conn = open_in_memory().unwrap();
+        seed(&conn);
+        // Thursday to Sunday off: three workdays of 7 h remain, 15 h are done.
+        absences::create(
+            &conn,
+            &absences::AbsenceInput {
+                from_day: "2026-11-12".into(),
+                to_day: "2026-11-15".into(),
+                kind: absences::AbsenceKind::Urlaub,
+                note: String::new(),
+            },
+        )
+        .unwrap();
+        let now = parse_iso("2026-11-11T10:00:00.000Z").unwrap();
+        let d = load(&conn, RangeKind::Week, None, now, &Berlin).unwrap();
+        assert_eq!(d.week_remaining_minutes, 21.0 * 60.0 - 15.0 * 60.0);
     }
 
     #[test]

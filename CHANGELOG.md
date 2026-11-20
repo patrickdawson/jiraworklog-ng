@@ -8,7 +8,7 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Hinzugefügt
-- Abwesenheiten: Neue Seite für Urlaub, Krankheit und Feiertage, mit Von und Bis auch über mehrere Tage. Abwesende Tage zählen nicht in „Ø Arbeitszeit / Woche“. Der Kalender zeigt sie im Tageskopf.
+- Abwesenheiten: Neue Seite für Urlaub, Krankheit und Feiertage, mit Von und Bis auch über mehrere Tage. Abwesende Tage zählen nicht in „Ø Arbeitszeit / Woche“ und senken das Wochensoll unter „Diese Woche“. Der Kalender zeigt sie im Tageskopf.
 
 ### Geändert
 - Auswertung: „Ø Arbeitszeit / Woche“ rechnet eine Woche als 5 Arbeitstage statt 7 Kalendertage. So fällt eine Woche Urlaub ganz heraus. Arbeit am Wochenende erhöht den Wert.

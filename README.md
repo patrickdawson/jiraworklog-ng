@@ -36,7 +36,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 ### Abwesenheiten
 - **Urlaub, Krank, Feiertag** — Eigene Seite in der Seitenleiste. Ein Eintrag hat Von, Bis, Art und eine optionale Notiz, für einen oder mehrere Tage.
 - **Liste** — Zeigt jede Abwesenheit mit ihren Arbeitstagen (Montag bis Freitag). Bearbeiten und Löschen direkt in der Liste. Zwei Abwesenheiten dürfen sich nicht überschneiden.
-- **Wirkung** — Abwesende Tage zählen nicht in „Ø Arbeitszeit / Woche“. Den Überstundensaldo ändern sie nicht, denn ein Tag ohne Buchung zählt dort ohnehin nicht.
+- **Wirkung** — Abwesende Tage zählen nicht in „Ø Arbeitszeit / Woche“ und senken das Wochensoll unter „Diese Woche“. Den Überstundensaldo ändern sie nicht, denn ein Tag ohne Buchung zählt dort ohnehin nicht.
 
 ### KPI-Dashboard
 - **Heute erfasst** — Gesamte erfasste Zeit des aktuellen Tages (inkl. laufendem Timer) mit Fortschrittsbalken
@@ -70,7 +70,7 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Sprints** — Sprint-Ankerdatum und Sprint-Länge (Tage) in den Einstellungen festlegen
 - **Statistische KPIs** — Durchschnittliche Arbeitszeit pro Woche und pro Arbeitstag. Eine Woche sind 5 Arbeitstage; es zählen Montag bis Freitag bis heute und ab dem ersten Eintrag, ohne Abwesenheiten.
 - **Quote konkrete Issues** — Anteil der Zeit auf echten Jira-Issues (statt Allgemeines), mit Zielwert in % und Diagramm pro Tag
-- **Wochenstatus** — Verbleibende Zeit bis das Wochensoll erreicht ist
+- **Wochenstatus** — Verbleibende Zeit bis das Wochensoll erreicht ist. Abwesende Tage senken das Wochensoll.
 - **Stundenzettel als PDF** — Alle Einträge des gewählten Zeitraums als PDF herunterladen
 - **Axapta-Bericht als PDF** — Zeit pro Allgemeines-Kategorie für einen Monat, aufgeteilt in Blöcke von max. 24 h, mit Prüftabelle pro Tag. Zeit auf konkreten Issues zählt als `Implementierung`.
 
