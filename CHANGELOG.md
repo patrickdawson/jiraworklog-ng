@@ -7,6 +7,32 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.10.0-beta.4] - 2026-11-20
+
+### Geändert
+- Version: Die nächste Version heißt 0.10.0 statt 0.9.1, weil sie neue Funktionen bringt. Sie zählt nach den alten Testversionen 0.10.0-beta.1 bis beta.3 weiter. Eine installierte 0.9.1-beta wird ganz normal aktualisiert.
+
+## [0.9.1-beta.3] - 2026-11-20
+
+### Geändert
+- Abwesenheiten: Du trägst sie jetzt im Kalender ein. Ein Klick auf einen Tageskopf öffnet einen Dialog mit Von und Bis an diesem Tag; ein Klick auf einen abwesenden Tag öffnet die Abwesenheit zum Ändern oder Löschen. Abwesende Tage sind grün hinterlegt. Die Seite „Abwesenheiten“ bleibt die Übersicht, mit „Neue Abwesenheit“ statt des Formulars.
+
+## [0.9.1-beta.2] - 2026-11-20
+
+### Behoben
+- Dunkles Design: Das Kalender-Symbol in Datumsfeldern ist jetzt hell und gut sichtbar. Auch Scrollleisten und Auswahllisten folgen dem Design.
+
+## [0.9.1-beta.1] - 2026-11-20
+
+### Hinzugefügt
+- Abwesenheiten: Neue Seite für Urlaub, Krankheit und Feiertage, mit Von und Bis auch über mehrere Tage. Abwesende Tage zählen nicht in „Ø Arbeitszeit / Woche“ und senken das Wochensoll unter „Diese Woche“. Der Kalender zeigt sie im Tageskopf.
+
+### Geändert
+- Auswertung: „Ø Arbeitszeit / Woche“ rechnet eine Woche als 5 Arbeitstage statt 7 Kalendertage. So fällt eine Woche Urlaub ganz heraus. Arbeit am Wochenende erhöht den Wert.
+
+### Behoben
+- Auswertung: „Ø Arbeitszeit / Woche“ zählt nur noch Tage bis heute und ab dem ersten Eintrag. Vorher drückten die restlichen Tage des Monats oder Sprints den Wert, und unter „Alle“ lag er fast bei 0, weil der Zeitraum im Jahr 2000 begann.
+
 ## [0.9.0] - 2026-11-12
 
 ### Geändert

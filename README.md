@@ -31,6 +31,12 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Lücken** — Nicht erfasste Zeit zwischen erstem und letztem Eintrag eines Tages erscheint grau gestrichelt umrandet
 - **Pausen** — Konfigurierte Pausenfenster sind grau und zählen nicht als Lücke
 - **Direkt korrigieren** — Klick auf einen Eintrag öffnet denselben Bearbeiten-Dialog wie in „Buchen“. Der laufende Timer wächst live mit, ist hier aber nicht bearbeitbar.
+- **Abwesenheiten** — Klick auf einen Tageskopf trägt Urlaub, Krankheit oder einen Feiertag ein, oder öffnet die vorhandene Abwesenheit. Abwesende Tage sind grün hinterlegt, die Art steht im Tageskopf.
+
+### Abwesenheiten
+- **Urlaub, Krank, Feiertag** — Ein Eintrag hat Von, Bis, Art und eine optionale Notiz, für einen oder mehrere Tage. Eintragen per Klick auf einen Tag im Kalender (Von und Bis sind dann schon gesetzt) oder mit „Neue Abwesenheit“.
+- **Übersicht** — Die Seite „Abwesenheiten“ in der Seitenleiste zeigt jede Abwesenheit mit ihren Arbeitstagen (Montag bis Freitag). Bearbeiten und Löschen direkt in der Liste. Zwei Abwesenheiten dürfen sich nicht überschneiden.
+- **Wirkung** — Abwesende Tage zählen nicht in „Ø Arbeitszeit / Woche“ und senken das Wochensoll unter „Diese Woche“. Den Überstundensaldo ändern sie nicht, denn ein Tag ohne Buchung zählt dort ohnehin nicht.
 
 ### KPI-Dashboard
 - **Heute erfasst** — Gesamte erfasste Zeit des aktuellen Tages (inkl. laufendem Timer) mit Fortschrittsbalken
@@ -62,9 +68,9 @@ Eine lokale App zum Erfassen von Arbeitszeiten und direkten Buchen als Worklogs 
 - **Saldo-Verlauf** — Überstundensaldo am Ende jedes Tages im Zeitraum als Liniendiagramm. Die Werte sind absolut, der letzte Punkt entspricht der KPI. Ein grünes Band zeigt den erlaubten Saldo-Korridor (Standard 100 ± 40 h, in den Einstellungen änderbar). Die y-Achse zeigt diesen Korridor und wird nur größer, wenn der Saldo ihn verlässt. Außerhalb ist die Linie rot. Ein Tag ohne Buchung lässt den Saldo unverändert.
 - **Zeitraum-Filter** — Woche, Sprint, Monat, YTD oder alle Daten, mit Vor/Zurück-Navigation
 - **Sprints** — Sprint-Ankerdatum und Sprint-Länge (Tage) in den Einstellungen festlegen
-- **Statistische KPIs** — Durchschnittliche Arbeitszeit pro Woche und pro Arbeitstag
+- **Statistische KPIs** — Durchschnittliche Arbeitszeit pro Woche und pro Arbeitstag. Eine Woche sind 5 Arbeitstage; es zählen Montag bis Freitag bis heute und ab dem ersten Eintrag, ohne Abwesenheiten.
 - **Quote konkrete Issues** — Anteil der Zeit auf echten Jira-Issues (statt Allgemeines), mit Zielwert in % und Diagramm pro Tag
-- **Wochenstatus** — Verbleibende Zeit bis das Wochensoll erreicht ist
+- **Wochenstatus** — Verbleibende Zeit bis das Wochensoll erreicht ist. Abwesende Tage senken das Wochensoll.
 - **Stundenzettel als PDF** — Alle Einträge des gewählten Zeitraums als PDF herunterladen
 - **Axapta-Bericht als PDF** — Zeit pro Allgemeines-Kategorie für einen Monat, aufgeteilt in Blöcke von max. 24 h, mit Prüftabelle pro Tag. Zeit auf konkreten Issues zählt als `Implementierung`.
 

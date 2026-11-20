@@ -38,6 +38,11 @@ export const commands = {
 	deleteEntry: (id: number) => typedError<null, CommandError>(__TAURI_INVOKE("delete_entry", { id })),
 	/**  Stores a group's color; `null` resets it. */
 	setGroupColor: (groupKey: string, color: GroupColor | null) => typedError<null, CommandError>(__TAURI_INVOKE("set_group_color", { groupKey, color })),
+	/**  Every absence, newest first. */
+	listAbsences: () => typedError<Absence[], CommandError>(__TAURI_INVOKE("list_absences")),
+	createAbsence: (input: AbsenceInput) => typedError<null, CommandError>(__TAURI_INVOKE("create_absence", { input })),
+	updateAbsence: (id: number, input: AbsenceInput) => typedError<null, CommandError>(__TAURI_INVOKE("update_absence", { id, input })),
+	deleteAbsence: (id: number) => typedError<null, CommandError>(__TAURI_INVOKE("delete_absence", { id })),
 	/**  Whether an away span (from the `away-ended` event) is worth a question. */
 	checkAwayTime: (period: AwayPeriod) => typedError<AwayCheck | null, CommandError>(__TAURI_INVOKE("check_away_time", { period })),
 	/**  Cuts the away span out of the running timer. */
@@ -92,6 +97,27 @@ export const events = {
 };
 
 /* Types */
+export type Absence = {
+	id: number,
+	/**  First day, `YYYY-MM-DD`. */
+	fromDay: string,
+	/**  Last day, inclusive. */
+	toDay: string,
+	kind: AbsenceKind,
+	note: string,
+	/**  Monday to Friday within the range. */
+	workdays: number,
+};
+
+export type AbsenceInput = {
+	fromDay: string,
+	toDay: string,
+	kind: AbsenceKind,
+	note: string,
+};
+
+export type AbsenceKind = "Urlaub" | "Krank" | "Feiertag";
+
 /**  Report category of an Allgemeines entry. */
 export type AllgemeinesCategory = "Projektorganisation" | "Implementierung" | "QA" | "Release";
 
@@ -499,6 +525,8 @@ export type KalenderData_Deserialize = {
 	runningInWeek: boolean,
 	/**  Target of the running entry's day if it is not yet in the overtime. */
 	runningDayTargetMinutes: number,
+	/**  Every absence that overlaps this week. */
+	absences: Absence[],
 };
 
 export type KalenderData_Serialize = {
@@ -524,6 +552,8 @@ export type KalenderData_Serialize = {
 	runningInWeek: boolean,
 	/**  Target of the running entry's day if it is not yet in the overtime. */
 	runningDayTargetMinutes: number,
+	/**  Every absence that overlaps this week. */
+	absences: Absence[],
 };
 
 /**  The app menu asks the UI to open a route, e.g. `/hilfe`. */

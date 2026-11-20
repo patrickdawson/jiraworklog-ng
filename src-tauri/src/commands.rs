@@ -4,6 +4,7 @@
 use std::sync::atomic::Ordering;
 
 use chrono::{Local, Utc};
+use jwl_core::absences::{self, Absence, AbsenceInput};
 use jwl_core::auswertung::{self, AuswertungData, GroupEntriesInput, GroupEntriesPage};
 use jwl_core::away::{self, AwayCheck, AwayPeriod, ResolveAwayInput};
 use jwl_core::booking::{self, BookingPlan, Plan, SubmitResult};
@@ -217,6 +218,33 @@ pub fn set_group_color(
     color: Option<GroupColor>,
 ) -> CommandResult<()> {
     Ok(store::set_group_color(&db.lock(), &group_key, color)?)
+}
+
+// ── Absences ────────────────────────────────────────────────────────────────
+
+/// Every absence, newest first.
+#[tauri::command]
+#[specta::specta]
+pub fn list_absences(db: State<'_, Db>) -> CommandResult<Vec<Absence>> {
+    Ok(absences::list(&db.lock())?)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn create_absence(db: State<'_, Db>, input: AbsenceInput) -> CommandResult<()> {
+    Ok(absences::create(&db.lock(), &input)?)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn update_absence(db: State<'_, Db>, id: i32, input: AbsenceInput) -> CommandResult<()> {
+    Ok(absences::update(&db.lock(), id, &input)?)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn delete_absence(db: State<'_, Db>, id: i32) -> CommandResult<()> {
+    Ok(absences::delete(&db.lock(), id)?)
 }
 
 // ── Away time ───────────────────────────────────────────────────────────────

@@ -43,6 +43,18 @@ const ICONS = {
       <path d="M3 10h18M8 3v4M16 3v4" />
     </svg>
   ),
+  abwesenheiten: (
+    <svg
+      className="h-[18px] w-[18px] flex-shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </svg>
+  ),
   einstellungen: (
     <svg
       className="h-[18px] w-[18px] flex-shrink-0"
@@ -82,6 +94,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Kalender",
     section: "overview",
     icon: ICONS.kalender,
+  },
+  {
+    href: "/abwesenheiten",
+    label: "Abwesenheiten",
+    section: "overview",
+    icon: ICONS.abwesenheiten,
   },
   {
     href: "/einstellungen",

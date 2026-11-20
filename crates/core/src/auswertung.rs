@@ -7,7 +7,8 @@ use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::days::{day_key, parse_iso};
+use crate::absences;
+use crate::days::{day_key, is_weekend_key, parse_iso};
 use crate::entries::{
     group_total_id, overtime_balance_minutes, overtime_balance_series, seconds_by_day,
     seconds_by_group, to_entry_view, AnalysisConfig, BalancePoint, GroupTotal,
@@ -135,9 +136,27 @@ pub fn load<Tz: TimeZone>(
 
     let this_week = report_range::resolve(RangeKind::Week, None, now, &sprint, tz);
     let this_week_seconds: f64 = this_week.day_keys().iter().map(|k| seconds_on(k)).sum();
-    let week_target = f64::from(s.regular_work_minutes * 5);
+    // Every workday of this week owes the regular time, unless it is an absence.
+    let absent = absences::days(conn)?;
+    let week_workdays = this_week
+        .day_keys()
+        .iter()
+        .filter(|k| !is_weekend_key(k) && !absent.contains_key(*k))
+        .count();
+    let week_target = f64::from(s.regular_work_minutes) * week_workdays as f64;
 
-    let weeks_in_range = (day_keys.len() as f64 / 7.0).max(1.0);
+    // A week is five workdays. Only workdays that have passed, lie after the
+    // first entry and are not absences count: future days of the month or
+    // sprint, the years before tracking began ("Alle" starts in 2000),
+    // weekends and vacation would pull the average down.
+    let today_key = day_key(now, tz);
+    let first_tracked = worked.keys().next();
+    let workdays = day_keys
+        .iter()
+        .filter(|k| first_tracked.is_some_and(|f| *k >= f) && **k <= today_key)
+        .filter(|k| !is_weekend_key(k) && !absent.contains_key(*k))
+        .count();
+    let weeks_in_range = (workdays as f64 / 5.0).max(1.0);
     let range_minutes = range_seconds / 60.0;
 
     let group_totals = seconds_by_group(
@@ -151,7 +170,7 @@ pub fn load<Tz: TimeZone>(
         worked,
         s.regular_work_minutes,
         &day_keys,
-        &day_key(now, tz),
+        &today_key,
         s.overtime_baseline_minutes,
     );
 
@@ -369,6 +388,56 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["cat:QA", "issue:TXR-1"]
         );
+    }
+
+    #[test]
+    fn avg_per_week_counts_elapsed_workdays_without_absences() {
+        let conn = open_in_memory().unwrap();
+        seed(&conn);
+        let now = parse_iso("2026-11-11T10:00:00.000Z").unwrap();
+
+        // November: 8 workdays up to Wednesday 11.11.; the rest lies ahead.
+        let month = load(&conn, RangeKind::Month, None, now, &Berlin).unwrap();
+        assert_eq!(month.avg_per_week_minutes, 15.0 * 60.0 / (8.0 / 5.0));
+
+        // Alle: from the first entry (Monday 5 Oct), not from 2000. October
+        // has 20 workdays from then, November 8: 28.
+        let all = load(&conn, RangeKind::All, None, now, &Berlin).unwrap();
+        assert_eq!(all.avg_per_week_minutes, 16.0 * 60.0 / (28.0 / 5.0));
+
+        // A week of vacation leaves the average; its weekend never counted.
+        absences::create(
+            &conn,
+            &absences::AbsenceInput {
+                from_day: "2026-10-12".into(),
+                to_day: "2026-10-18".into(),
+                kind: absences::AbsenceKind::Urlaub,
+                note: String::new(),
+            },
+        )
+        .unwrap();
+        let all = load(&conn, RangeKind::All, None, now, &Berlin).unwrap();
+        assert_eq!(all.avg_per_week_minutes, 16.0 * 60.0 / (23.0 / 5.0));
+    }
+
+    #[test]
+    fn absent_days_lower_the_week_target() {
+        let conn = open_in_memory().unwrap();
+        seed(&conn);
+        // Thursday to Sunday off: three workdays of 7 h remain, 15 h are done.
+        absences::create(
+            &conn,
+            &absences::AbsenceInput {
+                from_day: "2026-11-12".into(),
+                to_day: "2026-11-15".into(),
+                kind: absences::AbsenceKind::Urlaub,
+                note: String::new(),
+            },
+        )
+        .unwrap();
+        let now = parse_iso("2026-11-11T10:00:00.000Z").unwrap();
+        let d = load(&conn, RangeKind::Week, None, now, &Berlin).unwrap();
+        assert_eq!(d.week_remaining_minutes, 21.0 * 60.0 - 15.0 * 60.0);
     }
 
     #[test]

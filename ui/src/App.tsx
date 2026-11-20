@@ -8,6 +8,7 @@ import { DesktopBridge } from "@/components/desktop-bridge";
 import { JiraUrlProvider } from "@/components/issue-key-link";
 import { Sidebar } from "@/components/sidebar";
 import { orThrow, queryClient } from "@/lib/query";
+import { AbwesenheitenPage } from "@/pages/abwesenheiten";
 import { AuswertungPage } from "@/pages/auswertung";
 import { BuchenPage } from "@/pages/buchen";
 import { EinstellungenPage } from "@/pages/einstellungen";
@@ -42,6 +43,7 @@ function Layout() {
               <Route path="/" element={<BuchenPage />} />
               <Route path="/kalender" element={<KalenderPage />} />
               <Route path="/auswertung" element={<AuswertungPage />} />
+              <Route path="/abwesenheiten" element={<AbwesenheitenPage />} />
               <Route path="/einstellungen" element={<EinstellungenPage />} />
               <Route path="/hilfe" element={<HilfePage />} />
               <Route path="/hilfe/neu" element={<WasIstNeuPage />} />

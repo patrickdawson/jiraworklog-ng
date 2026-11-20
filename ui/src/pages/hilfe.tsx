@@ -15,6 +15,7 @@ const SECTIONS = [
   { id: "farben", title: "Ticket-Farben" },
   { id: "kalender", title: "Kalender" },
   { id: "auswertung", title: "KPIs und Auswertung" },
+  { id: "abwesenheiten", title: "Abwesenheiten" },
   { id: "pausen", title: "Pausen und Abwesenheit" },
   { id: "desktop", title: "Desktop-App" },
   { id: "einstellungen", title: "Einstellungen" },
@@ -309,6 +310,12 @@ export function HilfePage() {
             <li>
               <b>Wochensaldo</b> — zeigt die Über- oder Minusstunden der Woche.
             </li>
+            <li>
+              <b>Abwesenheiten</b> — Ein Klick auf einen Tageskopf trägt Urlaub,
+              Krankheit oder einen Feiertag ein (siehe{" "}
+              <SectionLink id="abwesenheiten">Abwesenheiten</SectionLink>). Ein
+              abwesender Tag ist grün hinterlegt, die Art steht im Tageskopf.
+            </li>
           </List>
         </Section>
 
@@ -342,7 +349,20 @@ export function HilfePage() {
               rot. Mitte und Spanne stellst du unter <Ui>Sprint &amp; KPI</Ui>{" "}
               ein.
             </li>
-            <li>Durchschnitt pro Woche und pro Arbeitstag, Wochenstatus.</li>
+            <li>
+              <b>Ø Arbeitszeit / Woche</b> — Zeit im Zeitraum geteilt durch die
+              Wochen. Eine Woche sind 5 Arbeitstage. Es zählen nur Montag bis
+              Freitag bis heute und ab deinem ersten Eintrag. Abwesenheiten
+              zählen nicht (siehe{" "}
+              <SectionLink id="abwesenheiten">Abwesenheiten</SectionLink>). Arbeit
+              am Wochenende erhöht den Wert.
+            </li>
+            <li>Durchschnitt pro Arbeitstag.</li>
+            <li>
+              <b>Diese Woche</b> — deine Zeit in dieser Woche und was bis zum
+              Wochensoll fehlt. Jeder abwesende Arbeitstag senkt das Soll um
+              deine Regelarbeitszeit.
+            </li>
             <li>
               <b>Quote konkrete Issues</b> — Anteil der Zeit auf echten
               Jira-Issues. Das Ziel stellst du unter <Ui>Sprint &amp; KPI</Ui>{" "}
@@ -364,6 +384,51 @@ export function HilfePage() {
               <b>Axapta-Bericht</b> — Zeit pro Allgemeines-Kategorie für einen
               Monat, als PDF. Die Zeit ist in Blöcke von max. 24 h geteilt. Zeit
               auf konkreten Issues zählt als <Code>Implementierung</Code>.
+            </li>
+          </List>
+        </Section>
+
+        <Section id="abwesenheiten">
+          <P>
+            Urlaub, Krankheit und Feiertage trägst du im Kalender ein, auch über
+            mehrere Tage.
+          </P>
+          <Steps>
+            <li>
+              Klicke im <Ui>Kalender</Ui> auf den Kopf des ersten Tages, z. B.{" "}
+              <Ui>Mo 14.09.</Ui>. <Ui>Von</Ui> und <Ui>Bis</Ui> sind schon auf
+              diesen Tag gesetzt.
+            </li>
+            <li>
+              Für mehrere Tage stellst du <Ui>Bis</Ui> auf den letzten Tag, auch
+              in einer späteren Woche.
+            </li>
+            <li>
+              Wähle die <Ui>Art</Ui>: Urlaub, Krank oder Feiertag. Eine Notiz ist
+              optional. Klicke <Ui>Speichern</Ui>.
+            </li>
+          </Steps>
+          <List>
+            <li>
+              Ein Klick auf den Kopf eines abwesenden Tages öffnet die
+              Abwesenheit. Dort änderst oder löschst du sie.
+            </li>
+            <li>
+              Die Seite <Ui>Abwesenheiten</Ui> zeigt alle Abwesenheiten mit
+              ihren Arbeitstagen. Mit dem Stift bearbeitest du eine, mit dem
+              Kreuz löschst du sie. <Ui>Neue Abwesenheit</Ui> trägt eine ein,
+              ohne dass du im Kalender blättern musst.
+            </li>
+            <li>
+              Zwei Abwesenheiten dürfen sich nicht überschneiden.
+            </li>
+            <li>
+              Abwesende Tage zählen nicht in <Ui>Ø Arbeitszeit / Woche</Ui> und
+              senken das Wochensoll unter <Ui>Diese Woche</Ui>.
+            </li>
+            <li>
+              Den Überstundensaldo ändert eine Abwesenheit nicht. Ein Tag ohne
+              Buchung zählt dort ohnehin nicht.
             </li>
           </List>
         </Section>
