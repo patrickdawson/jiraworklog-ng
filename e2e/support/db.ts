@@ -155,6 +155,7 @@ export async function resetDb(): Promise<void> {
     db.transaction(() => {
       db.prepare("DELETE FROM time_entries").run();
       db.prepare("DELETE FROM group_colors").run();
+      db.prepare("DELETE FROM absences").run();
       const existing = db.prepare("SELECT id FROM settings WHERE id = 1").get();
       if (existing) updateSettingsRow(db, BASELINE);
       else insert(db, "settings", toRow(BASELINE));

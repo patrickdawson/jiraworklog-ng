@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import type { AbsenceKind } from "@/bindings";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EditEntryDialog, type EntryDraft } from "@/components/entry-dialogs";
 import { GroupColorsProvider, useGroupColors } from "@/components/group-colors-context";
@@ -33,6 +34,8 @@ export type KalenderData = {
   runningInWeek: boolean;
   /** Target of the running entry's day if it is not yet in the overtime. */
   runningDayTargetMinutes: number;
+  /** Absent days of this week, day key → kind. */
+  absences: Partial<Record<string, AbsenceKind>>;
 };
 
 /** Vertical scale of the grid before the user zooms. */
@@ -347,6 +350,7 @@ function KalenderInner({ data }: { data: KalenderData }) {
                 workedMinutes={workedMinutes(d.dayKey)}
                 targetMinutes={isWeekendKey(d.dayKey) ? 0 : data.regularWorkMinutes}
                 running={d.dayKey === runningDayKey}
+                absence={data.absences[d.dayKey]}
               />
             ))}
           </div>
@@ -506,12 +510,14 @@ function DayHeader({
   workedMinutes,
   targetMinutes,
   running,
+  absence,
 }: {
   day: DayTimeline;
   isToday: boolean;
   workedMinutes: number;
   targetMinutes: number;
   running: boolean;
+  absence: AbsenceKind | undefined;
 }) {
   return (
     <div
@@ -533,6 +539,15 @@ function DayHeader({
             }`}
           >
             {formatHm(workedMinutes)}
+          </span>
+        )}
+        {absence && (
+          <span
+            data-testid="kalender-day-absence"
+            className="text-[11px] font-normal"
+            style={{ color: "var(--pos)" }}
+          >
+            {absence}
           </span>
         )}
       </span>

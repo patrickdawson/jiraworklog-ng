@@ -936,7 +936,7 @@ function Section({
   );
 }
 
-function Field({
+export function Field({
   label,
   children,
 }: {
@@ -953,7 +953,7 @@ function Field({
   );
 }
 
-function TextInput({
+export function TextInput({
   value,
   onChange,
   placeholder,
@@ -982,7 +982,7 @@ function TextInput({
   );
 }
 
-function Select({
+export function Select({
   value,
   onChange,
   options,

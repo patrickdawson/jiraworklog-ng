@@ -71,6 +71,13 @@
       "when": 1779340767575,
       "tag": "0009_add_recent_entries_limit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1779340767576,
+      "tag": "0010_add_absences",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@
 //! events, the tray and the window. Keeping them here makes them testable with
 //! a plain `cargo test`.
 
+pub mod absences;
 pub mod auswertung;
 pub mod away;
 pub mod booking;

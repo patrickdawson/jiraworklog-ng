@@ -10,6 +10,7 @@ use rusqlite::Connection;
 use serde::Serialize;
 use specta::Type;
 
+use crate::absences::{self, AbsenceKind};
 use crate::days::{day_key, day_key_of, days_ago_start_iso, is_weekend_key, local_midnight};
 use crate::entries::{
     build_day_groups, build_recent_entries, overtime_balance_minutes, seconds_by_day,
@@ -47,6 +48,8 @@ pub struct KalenderData {
     pub running_in_week: bool,
     /// Target of the running entry's day if it is not yet in the overtime.
     pub running_day_target_minutes: i32,
+    /// Absent days of this week, day key → kind.
+    pub absences: BTreeMap<String, AbsenceKind>,
 }
 
 /// The week containing `anchor` (default: this week).
@@ -120,6 +123,9 @@ pub fn load<Tz: TimeZone>(
     let this_week =
         report_range::resolve(RangeKind::Week, Some(&day_key(now, tz)), now, &sprint, tz);
 
+    let mut absences = absences::days(conn)?;
+    absences.retain(|k, _| day_keys.contains(k));
+
     Ok(KalenderData {
         week_label: week.label.clone(),
         prev_anchor: week
@@ -142,6 +148,7 @@ pub fn load<Tz: TimeZone>(
         regular_work_minutes: s.regular_work_minutes,
         running_in_week,
         running_day_target_minutes,
+        absences,
         day_keys,
     })
 }
@@ -222,6 +229,24 @@ mod tests {
         assert_eq!(d.worked_minutes_by_day["2026-11-09"], 480.0);
         assert_eq!(d.prev_anchor, "2026-11-02");
         assert_eq!(d.recents.len(), 3);
+        assert!(d.absences.is_empty());
+
+        // An absence from the week before into Tuesday shows on its days here.
+        absences::create(
+            &conn,
+            &absences::AbsenceInput {
+                from_day: "2026-11-05".into(),
+                to_day: "2026-11-10".into(),
+                kind: AbsenceKind::Krank,
+                note: String::new(),
+            },
+        )
+        .unwrap();
+        let d = load(&conn, None, now, &Berlin).unwrap();
+        assert_eq!(
+            d.absences.keys().map(String::as_str).collect::<Vec<_>>(),
+            ["2026-11-09", "2026-11-10"]
+        );
 
         let prev = load(&conn, Some(&d.prev_anchor), now, &Berlin).unwrap();
         assert!(!prev.is_current_week);

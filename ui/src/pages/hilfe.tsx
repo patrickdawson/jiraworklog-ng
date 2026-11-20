@@ -15,6 +15,7 @@ const SECTIONS = [
   { id: "farben", title: "Ticket-Farben" },
   { id: "kalender", title: "Kalender" },
   { id: "auswertung", title: "KPIs und Auswertung" },
+  { id: "abwesenheiten", title: "Abwesenheiten" },
   { id: "pausen", title: "Pausen und Abwesenheit" },
   { id: "desktop", title: "Desktop-App" },
   { id: "einstellungen", title: "Einstellungen" },
@@ -309,6 +310,10 @@ export function HilfePage() {
             <li>
               <b>Wochensaldo</b> — zeigt die Über- oder Minusstunden der Woche.
             </li>
+            <li>
+              <b>Abwesenheiten</b> — Urlaub, Krank oder Feiertag steht grün im
+              Tageskopf.
+            </li>
           </List>
         </Section>
 
@@ -342,7 +347,15 @@ export function HilfePage() {
               rot. Mitte und Spanne stellst du unter <Ui>Sprint &amp; KPI</Ui>{" "}
               ein.
             </li>
-            <li>Durchschnitt pro Woche und pro Arbeitstag, Wochenstatus.</li>
+            <li>
+              <b>Ø Arbeitszeit / Woche</b> — Zeit im Zeitraum geteilt durch die
+              Wochen. Eine Woche sind 5 Arbeitstage. Es zählen nur Montag bis
+              Freitag bis heute und ab deinem ersten Eintrag. Abwesenheiten
+              zählen nicht (siehe{" "}
+              <SectionLink id="abwesenheiten">Abwesenheiten</SectionLink>). Arbeit
+              am Wochenende erhöht den Wert.
+            </li>
+            <li>Durchschnitt pro Arbeitstag, Wochenstatus.</li>
             <li>
               <b>Quote konkrete Issues</b> — Anteil der Zeit auf echten
               Jira-Issues. Das Ziel stellst du unter <Ui>Sprint &amp; KPI</Ui>{" "}
@@ -364,6 +377,43 @@ export function HilfePage() {
               <b>Axapta-Bericht</b> — Zeit pro Allgemeines-Kategorie für einen
               Monat, als PDF. Die Zeit ist in Blöcke von max. 24 h geteilt. Zeit
               auf konkreten Issues zählt als <Code>Implementierung</Code>.
+            </li>
+          </List>
+        </Section>
+
+        <Section id="abwesenheiten">
+          <P>
+            Unter <Ui>Abwesenheiten</Ui> trägst du Urlaub, Krankheit und
+            Feiertage ein, auch über mehrere Tage.
+          </P>
+          <Steps>
+            <li>
+              Wähle <Ui>Von</Ui> und <Ui>Bis</Ui>. Für einen einzelnen Tag reicht{" "}
+              <Ui>Von</Ui>, <Ui>Bis</Ui> wird mitgesetzt.
+            </li>
+            <li>
+              Wähle die <Ui>Art</Ui>: Urlaub, Krank oder Feiertag. Eine Notiz ist
+              optional.
+            </li>
+            <li>
+              Klicke <Ui>Hinzufügen</Ui>.
+            </li>
+          </Steps>
+          <List>
+            <li>
+              Die Liste zeigt jede Abwesenheit mit ihren Arbeitstagen. Mit dem
+              Stift bearbeitest du sie, mit dem Kreuz löschst du sie.
+            </li>
+            <li>
+              Zwei Abwesenheiten dürfen sich nicht überschneiden.
+            </li>
+            <li>
+              Abwesende Tage zählen nicht in <Ui>Ø Arbeitszeit / Woche</Ui>. Der
+              Kalender zeigt die Art im Tageskopf.
+            </li>
+            <li>
+              Den Überstundensaldo ändert eine Abwesenheit nicht. Ein Tag ohne
+              Buchung zählt dort ohnehin nicht.
             </li>
           </List>
         </Section>

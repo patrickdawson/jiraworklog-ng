@@ -2,6 +2,7 @@
 // queries afterwards, so every page shows the new state.
 import {
   commands,
+  type AbsenceInput,
   type AllgemeinesCategory,
   type AwayCheck,
   type BookingPlan,
@@ -126,6 +127,22 @@ export async function deleteEntry(id: number): Promise<void> {
 
 export async function setGroupColor(groupKey: string, color: GroupColor | null): Promise<void> {
   await unwrap(commands.setGroupColor(groupKey, color));
+}
+
+// ── Absences ────────────────────────────────────────────────────────────────
+
+export type { Absence, AbsenceInput, AbsenceKind } from "@/bindings";
+
+export function createAbsence(input: AbsenceInput): Promise<ActionResult> {
+  return toActionResult(commands.createAbsence(input));
+}
+
+export function updateAbsence(id: number, input: AbsenceInput): Promise<ActionResult> {
+  return toActionResult(commands.updateAbsence(id, input));
+}
+
+export async function deleteAbsence(id: number): Promise<void> {
+  await unwrap(commands.deleteAbsence(id));
 }
 
 // ── Settings ────────────────────────────────────────────────────────────────
