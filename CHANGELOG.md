@@ -7,6 +7,8 @@ Die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.9.1-beta.1] - 2026-11-20
+
 ### Hinzugefügt
 - Abwesenheiten: Neue Seite für Urlaub, Krankheit und Feiertage, mit Von und Bis auch über mehrere Tage. Abwesende Tage zählen nicht in „Ø Arbeitszeit / Woche“ und senken das Wochensoll unter „Diese Woche“. Der Kalender zeigt sie im Tageskopf.
 
